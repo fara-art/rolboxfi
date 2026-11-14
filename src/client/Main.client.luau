@@ -296,9 +296,14 @@ local luckValue = readout("luck", BLUE, "luck")
 local rollsValue = readout("rolls", LILAC, "rolls")
 local rebirthValue = readout("rebirths", TEXT, "rebirth")
 
-local showerBanner = text({ Size = UDim2.new(0.4, 0, 0, 22), Position = UDim2.new(0.3, 0, 0, 70), Text = "", TextColor3 = BLUE, FontFace = TITLE, TextStrokeColor3 = WHITE, TextStrokeTransparency = 0, Max = 18, Parent = gui })
+-- x2 luck progress bar
+local luckyBar = make("Frame", { Size = UDim2.new(0, 300, 0, 26), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 72), BackgroundColor3 = Color3.fromRGB(60, 66, 90), Parent = gui }, { corner(13), stroke(INK, 2.5) })
+local luckyFill = make("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = MINT, BorderSizePixel = 0, Parent = luckyBar }, { corner(13) })
+local luckyText = text({ Size = UDim2.new(1, 0, 1, 0), Text = "", FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 16, ZIndex = 2, Parent = luckyBar })
+
+local showerBanner = text({ Size = UDim2.new(0.4, 0, 0, 22), Position = UDim2.new(0.3, 0, 0, 102), Text = "", TextColor3 = BLUE, FontFace = TITLE, TextStrokeColor3 = WHITE, TextStrokeTransparency = 0, Max = 18, Parent = gui })
 local announce = text({
-	Size = UDim2.new(0.6, 0, 0, 30), Position = UDim2.new(0.2, 0, 0, 94), Text = "", TextTransparency = 1,
+	Size = UDim2.new(0.6, 0, 0, 30), Position = UDim2.new(0.2, 0, 0, 126), Text = "", TextTransparency = 1,
 	TextStrokeColor3 = WHITE, TextStrokeTransparency = 1, FontFace = TITLE, Max = 22, ZIndex = 50, Parent = gui,
 })
 local announceTween = nil
@@ -633,9 +638,10 @@ renderers[indexW] = function()
 		local complete = found == count
 		local claimed = state.indexClaims[indexTier .. ":" .. mutation.id] == true
 		local reward = tier.luck * (Config.IndexMutationMult[mutation.id] or 1)
+		local rewardStar = Stars.List[math.min(tier.last + 1, #Stars.List)]
 		local r = row(body, order, 64 + 52, WHITE)
 		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. count, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
-		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", reward), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", reward, Lang.item(lang, Items.key(rewardStar.id, mutation.id))), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
 		btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
 			if complete and not claimed then
 				ActionEv:FireServer("ClaimIndexRow", mutation.id, indexTier)
@@ -1171,35 +1177,73 @@ local function shakeCamera(duration: number, power: number)
 end
 
 -- The big reveal: darkness, a falling star, impact, shockwaves, particles, then the star and its odds
-local function bigReveal(key: string, chance: number, finder: string?)
+local function bigReveal(key: string, chance: number, finder: string?, ultra: boolean?)
 	local star, mutation = Items.parse(key)
 	if not star then
 		return
 	end
 	local glow = if mutation.id ~= "normal" then mutation.color else star.color
 	local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(6, 4, 20), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
-	TweenService:Create(root, TweenInfo.new(0.6), { BackgroundTransparency = 0.2 }):Play()
+	local introTime = 1
+	local meteor: Frame? = nil
 
-	-- 1) the falling star with a fiery trail
-	local meteor = make("Frame", { Size = UDim2.new(0, 80, 0, 80), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1.1, 0, -0.15, 0), BackgroundTransparency = 1, ZIndex = 205, Parent = root })
-	starIcon(star, mutation, { Size = UDim2.new(1, 0, 1, 0), ZIndex = 206, Parent = meteor })
-	local fall = TweenService:Create(meteor, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(0.5, 0, 0.42, 0), Rotation = 540 })
-	fall:Play()
-	task.spawn(function()
-		local stop = os.clock() + 1
-		while os.clock() < stop do
-			local dot = circle(math.random(14, 34), if math.random() < 0.5 then glow else Color3.fromRGB(255, 200, 120), 204, root)
-			dot.Position = meteor.Position
-			TweenService:Create(dot, TweenInfo.new(0.6), { Size = UDim2.new(0, 2, 0, 2), BackgroundTransparency = 1 }):Play()
-			task.delay(0.65, function()
-				dot:Destroy()
-			end)
-			task.wait(0.025)
+	if ultra then
+		-- ULTRA: pitch black for 5 s with a faint heartbeat of light, a strobe, then the star rushes at the screen
+		root.BackgroundColor3 = Color3.new(0, 0, 0)
+		root.BackgroundTransparency = 0
+		introTime = 5 + 12 * 0.08 + 0.7
+		task.spawn(function()
+			local core = circle(4, WHITE, 205, root)
+			core.Position = UDim2.new(0.5, 0, 0.42, 0)
+			for beat = 1, 5 do
+				TweenService:Create(core, TweenInfo.new(0.5, Enum.EasingStyle.Sine), { Size = UDim2.new(0, 8 + beat * 7, 0, 8 + beat * 7), BackgroundTransparency = 0.1 }):Play()
+				task.wait(0.5)
+				TweenService:Create(core, TweenInfo.new(0.5, Enum.EasingStyle.Sine), { Size = UDim2.new(0, 4, 0, 4), BackgroundTransparency = 0.7 }):Play()
+				task.wait(0.5)
+			end
+			core:Destroy()
+			local strobe = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 1, ZIndex = 225, Parent = root })
+			for flick = 1, 12 do
+				strobe.BackgroundColor3 = if flick % 3 == 0 then glow else WHITE
+				strobe.BackgroundTransparency = if flick % 2 == 0 then 1 else 0.05
+				task.wait(0.08)
+			end
+			strobe:Destroy()
+			local giant = make("Frame", { Size = UDim2.new(0, 10, 0, 10), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.42, 0), BackgroundTransparency = 1, ZIndex = 226, Parent = root })
+			starIcon(star, mutation, { Size = UDim2.new(1, 0, 1, 0), ZIndex = 227, Parent = giant })
+			TweenService:Create(giant, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = UDim2.new(0, 3200, 0, 3200), Rotation = 90 }):Play()
+			task.wait(0.7)
+			giant:Destroy()
+		end)
+	else
+		TweenService:Create(root, TweenInfo.new(0.6), { BackgroundTransparency = 0.2 }):Play()
+		-- 1) the falling star with a fiery trail
+		local falling = make("Frame", { Size = UDim2.new(0, 80, 0, 80), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1.1, 0, -0.15, 0), BackgroundTransparency = 1, ZIndex = 205, Parent = root })
+		meteor = falling
+		starIcon(star, mutation, { Size = UDim2.new(1, 0, 1, 0), ZIndex = 206, Parent = falling })
+		TweenService:Create(falling, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(0.5, 0, 0.42, 0), Rotation = 540 }):Play()
+		task.spawn(function()
+			local stop = os.clock() + 1
+			while os.clock() < stop do
+				local dot = circle(math.random(14, 34), if math.random() < 0.5 then glow else Color3.fromRGB(255, 200, 120), 204, root)
+				dot.Position = falling.Position
+				TweenService:Create(dot, TweenInfo.new(0.6), { Size = UDim2.new(0, 2, 0, 2), BackgroundTransparency = 1 }):Play()
+				task.delay(0.65, function()
+					dot:Destroy()
+				end)
+				task.wait(0.025)
+			end
+		end)
+	end
+
+	task.delay(introTime, function()
+		if meteor then
+			meteor:Destroy()
 		end
-	end)
-
-	task.delay(1, function()
-		meteor:Destroy()
+		if ultra then
+			root.BackgroundColor3 = Color3.fromRGB(6, 4, 20)
+			TweenService:Create(root, TweenInfo.new(0.8), { BackgroundTransparency = 0.2 }):Play()
+		end
 		-- 2) impact: flash, shockwaves, rays, particle burst, shake, sound
 		playSfx(if Config.Sounds.GlobalRare ~= "" then Config.Sounds.GlobalRare else Config.Sounds.Rebirth, 1)
 		shakeCamera(0.8, 1.6)
@@ -1294,9 +1338,17 @@ local function bigReveal(key: string, chance: number, finder: string?)
 	end)
 end
 
+local function wantsReveal(chance: number): boolean
+	local threshold = rareThreshold()
+	if threshold == math.huge then
+		return false -- reveals switched off
+	end
+	return chance >= threshold or chance >= Config.UltraRevealChance
+end
+
 GlobalRareEv.OnClientEvent:Connect(function(finder: string, key: string, chance: number)
-	if chance >= rareThreshold() then
-		bigReveal(key, chance, finder)
+	if wantsReveal(chance) then
+		bigReveal(key, chance, finder, chance >= Config.UltraRevealChance)
 	end
 end)
 
@@ -1688,6 +1740,9 @@ render = function()
 	rollsValue.Text = Format.number(state.totalRolls)
 	rebirthValue.Text = tostring(state.rebirths)
 	adminButton.Visible = state.isAdmin == true
+	local progress = state.luckyProgress or 0
+	luckyFill.Size = UDim2.new(progress / Config.LuckyRoll.every, 0, 1, 0)
+	luckyText.Text = t("luckyBar", Config.LuckyRoll.mult, Config.LuckyRoll.every - progress)
 	if buildMode then
 		renderBuildPanel()
 	end
@@ -1735,7 +1790,8 @@ end
 ---------------------------------------------------------------- Roll
 -- Big centered reveal for rare finds
 showRare = function(key: string)
-	bigReveal(key, Items.chance(key), nil)
+	local chance = Items.chance(key)
+	bigReveal(key, chance, nil, chance >= Config.UltraRevealChance)
 end
 
 local function doRoll()
@@ -1767,7 +1823,7 @@ local function doRoll()
 				best = key
 			end
 		end
-		if Items.chance(best) >= rareThreshold() and Items.chance(best) < Config.GlobalRareChance then
+		if wantsReveal(Items.chance(best)) and Items.chance(best) < Config.GlobalRareChance then
 			showRare(best)
 		end
 	end
@@ -1924,6 +1980,48 @@ task.spawn(function()
 			task.spawn(doRoll)
 		end
 		task.wait(0.1)
+	end
+end)
+
+---------------------------------------------------------------- Rarest find over every player's head
+local headTags: { [Player]: { gui: BillboardGui, label: TextLabel, best: string? } } = {}
+task.spawn(function()
+	while true do
+		for _, other in Players:GetPlayers() do
+			local character = other.Character
+			local head = character and character:FindFirstChild("Head")
+			local best = other:GetAttribute("Best")
+			local tag = headTags[other]
+			if head and type(best) == "string" and best ~= "" then
+				if not tag or tag.gui.Adornee ~= head then
+					if tag then
+						tag.gui:Destroy()
+					end
+					local billboard = make("BillboardGui", {
+						Adornee = head, Size = UDim2.new(0, 220, 0, 26), StudsOffset = Vector3.new(0, 2.4, 0), MaxDistance = 70,
+						LightInfluence = 0, ResetOnSpawn = false, Parent = player:WaitForChild("PlayerGui"),
+					})
+					tag = { gui = billboard, label = text({ Size = UDim2.new(1, 0, 1, 0), Text = "", FontFace = TITLE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 18, Parent = billboard }), best = nil }
+					headTags[other] = tag
+				end
+				if tag.best ~= best .. lang then
+					local star = Items.parse(best)
+					tag.label.Text = Lang.item(lang, best) .. "  " .. t("oneIn", Format.number(Items.chance(best)))
+					tag.label.TextColor3 = if star then star.color:Lerp(WHITE, 0.2) else WHITE
+					tag.best = best .. lang
+				end
+			elseif tag then
+				tag.gui:Destroy()
+				headTags[other] = nil
+			end
+		end
+		for other, tag in headTags do
+			if not other.Parent then
+				tag.gui:Destroy()
+				headTags[other] = nil
+			end
+		end
+		task.wait(1)
 	end
 end)
 

@@ -39,6 +39,7 @@ local function default()
 		best = "", -- rarest item ever found (leaderboard)
 		rebirthRolls = -1, -- rolls since the last rebirth (roll rewards); -1 = not migrated yet
 		floors = 1, -- museum floors
+		luckyProgress = 0, -- rolls towards the next x2 luck roll
 		theme = "sky",
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}

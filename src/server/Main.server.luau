@@ -153,6 +153,7 @@ local function pushState(player: Player)
 		discovered = data.discovered,
 		totalRolls = data.totalRolls,
 		rebirthRolls = data.rebirthRolls,
+		luckyProgress = data.luckyProgress,
 		floors = data.floors,
 		theme = data.theme,
 		rebirths = data.rebirths,
@@ -178,9 +179,19 @@ local function takeFromInventory(data, key: string, count: number): boolean
 	return true
 end
 
+local function showBest(player: Player, data)
+	player:SetAttribute("Best", data.best)
+	local stats = player:FindFirstChild("leaderstats")
+	local best = stats and stats:FindFirstChild("Best")
+	if best then
+		best.Value = if data.best ~= "" then "1/" .. Format.number(Items.chance(data.best)) else "-"
+	end
+end
+
 local function discover(player: Player, data, key: string)
 	if Items.chance(key) > Items.chance(data.best) then
 		data.best = key
+		showBest(player, data)
 	end
 	if not data.index[key] then
 		data.index[key] = true
@@ -314,7 +325,11 @@ Players.PlayerAdded:Connect(function(player)
 		value.Value = info[3]
 		value.Parent = stats
 	end
+	local best = Instance.new("StringValue")
+	best.Name = "Best"
+	best.Parent = stats
 	stats.Parent = player
+	showBest(player, data)
 
 	recompute(player, data)
 	pushState(player)
@@ -407,7 +422,15 @@ RollFn.OnServerInvoke = function(player)
 	local luck = getLuck(player, data)
 	local results = {}
 	for i = 1, 1 + data.multiRollLevel do
-		local key = rollItem(luck)
+		-- lucky roll: every N rolls one gets boosted luck
+		data.luckyProgress += 1
+		local rollLuck = luck
+		if data.luckyProgress >= Config.LuckyRoll.every then
+			data.luckyProgress = 0
+			rollLuck *= Config.LuckyRoll.mult
+			toast(player, "luckyNow", { Config.LuckyRoll.mult }, Color3.fromRGB(60, 200, 120))
+		end
+		local key = rollItem(rollLuck)
 		results[i] = key
 		addToInventory(player, data, key, 1)
 		announceIfRare(player, key)
@@ -596,6 +619,10 @@ function actions.ClaimIndexRow(player, data, mutationId, tierNumber)
 	end
 	data.indexClaims[claimKey] = true
 	data.bonusLuck += tier.luck * (Config.IndexMutationMult[mutationId] or 1)
+	local rewardStar = Stars.List[math.min(tier.last + 1, #Stars.List)]
+	local rewardKey = Items.key(rewardStar.id, mutationId)
+	addToInventory(player, data, rewardKey, 1)
+	toast(player, "toastReward", { { item = rewardKey } }, rewardStar.color)
 end
 
 function actions.ClaimMilestone(player, data, number)

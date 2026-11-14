@@ -128,6 +128,10 @@ Config.ShowerLuck = 2
 
 Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
 Config.GlobalRareChance = 1000000000 -- 1 in a billion and rarer: cinematic for the whole server
+Config.UltraRevealChance = 500000 -- 1 in 500K and rarer: the long black-screen ultra reveal
+
+-- every N rolls the next roll gets x2 luck (progress bar under the header)
+Config.LuckyRoll = { every = 50, mult = 2 }
 
 -- Admin panel: the game owner (if the game belongs to a user), these user IDs, and anyone in Studio tests
 Config.AdminUserIds = {}
