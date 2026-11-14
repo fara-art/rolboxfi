@@ -105,6 +105,8 @@ Config.UiIcons = {
 	luck = "137487992289485",
 	rolls = "97966246674669",
 	settings = "104579262501708",
+	coins = "", -- ui_coins.png (header cash)
+	income = "", -- ui_income.png (header per second)
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

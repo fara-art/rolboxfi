@@ -201,6 +201,27 @@ img = shape(blank(), lambda d: d.polygon(star_points(C, C, 430, 330, 8, 0), fill
 img = shape(img, lambda d: d.ellipse((372, 372, 652, 652), fill=255), (90, 110, 150), (50, 60, 90), outline=20, gloss=False, shadow=False)
 icons["ui_settings"] = save(img, "ui_settings")
 
+# coins: a pile of gold coins
+from PIL import ImageFont
+DOLLAR = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 300)
+img = blank()
+for (x, y) in [(330, 760), (560, 780), (440, 650), (680, 660), (330, 560), (560, 540)]:
+    img = shape(img, lambda d, x=x, y=y: d.ellipse((x - 170, y - 70, x + 170, y + 70), fill=255), (255, 222, 100), (225, 150, 20), outline=24, gloss=False)
+img = shape(img, lambda d: d.ellipse((470, 160, 850, 540), fill=255), (255, 228, 110), (230, 150, 20), outline=28)
+img = shape(img, lambda d: d.ellipse((550, 240, 770, 460), fill=255), (255, 205, 70), (245, 175, 30), outline=14, gloss=False, shadow=False)
+img = shape(img, lambda d: d.polygon(star_points(660, 352, 90, 40), fill=255), (255, 250, 210), (255, 215, 90), outline=12, shadow=False, gloss=False)
+icons["ui_coins"] = save(sparkle(img, 300, 260, 70), "ui_coins")
+
+# income: a stack of dollar bills
+img = blank()
+for i, (dx, dy) in enumerate([(60, 120), (30, 60), (0, 0)]):
+    box = (150 + dx, 300 + dy, 870 + dx, 700 + dy)
+    img = shape(img, lambda d, box=box: d.rounded_rectangle(box, 40, fill=255), (130, 225, 120), (50, 160, 70), outline=26, gloss=(i == 2))
+img = shape(img, lambda d: d.ellipse((380, 370, 640, 630), fill=255), (210, 250, 200), (120, 210, 120), outline=16, gloss=False, shadow=False)
+img = shape(img, lambda d: d.text((512, 500), "$", font=DOLLAR, anchor="mm", fill=255), (40, 130, 60), (30, 100, 45), outline=10, gloss=False, shadow=False)
+img = shape(img, lambda d: (d.ellipse((200, 350, 280, 430), fill=255), d.ellipse((740, 570, 820, 650), fill=255)), (210, 250, 200), (150, 220, 140), outline=10, gloss=False, shadow=False)
+icons["ui_income"] = save(sparkle(img, 820, 230, 70), "ui_income")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))
