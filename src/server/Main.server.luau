@@ -363,6 +363,10 @@ World.onForge = function(player)
 	OpenWindowEv:FireClient(player, "forge")
 end
 
+World.onElevator = function(player, index, floor, floors)
+	OpenWindowEv:FireClient(player, "elevator", { plot = index, floor = floor, floors = floors })
+end
+
 World.onHole = function(player)
 	OpenWindowEv:FireClient(player, "hole")
 end
@@ -497,7 +501,7 @@ function actions.UpgradeMutation(player, data, itemKey)
 		return toast(player, "toastNeedSame", { nextMutation.copies })
 	end
 	local result = Items.key(star.id, nextMutation.id)
-	if not spend(player, data, Items.income(result) * Config.ForgeCostMult) then
+	if not spend(player, data, Config.UpgradeCost(star, Stars.List[star.index + 1], nextMutation)) then
 		return
 	end
 	takeFromInventory(data, itemKey, nextMutation.copies)
@@ -708,6 +712,12 @@ function actions.AdminGlobalTest(player, data, itemKey)
 	local key = if Items.parse(itemKey) then itemKey else "infinity|celestial"
 	GlobalRareEv:FireAllClients(player.DisplayName, key, Items.chance(key))
 	World.lightPillar(player, Items.parse(key).color)
+end
+
+function actions.Elevator(player, data, plotIndex, floor)
+	if type(plotIndex) == "number" and type(floor) == "number" and World.isNearPlot(player, plotIndex) then
+		World.teleportToFloor(player, plotIndex, math.floor(floor))
+	end
 end
 
 function actions.SetLang(player, data, lang)

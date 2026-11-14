@@ -70,6 +70,14 @@ Config.ForgeAmount = 5
 Config.ForgeCostMult = 10 -- cash cost = next star income * this
 Config.ForgeReach = 26
 
+-- forge price of a star (5 -> next star) and of a mutation upgrade (1 -> same star, next mutation)
+function Config.ForgeCost(star, nextStar): number
+	return (nextStar or star).income * Config.ForgeCostMult
+end
+function Config.UpgradeCost(star, nextStar, nextMutation): number
+	return math.floor(Config.ForgeCost(star, nextStar) * 3 * (nextMutation.chance / 1.5))
+end
+
 -- Black Hole / Rebirth
 function Config.RebirthCost(rebirths: number): number
 	return math.floor(100000 * 10 ^ rebirths)

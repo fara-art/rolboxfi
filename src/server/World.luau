@@ -20,6 +20,7 @@ World.onPlotTouched = nil :: ((Player, number) -> ())?
 World.onPedestal = nil :: ((Player, number, string) -> ())?
 World.onForge = nil :: ((Player) -> ())?
 World.onHole = nil :: ((Player) -> ())?
+World.onElevator = nil :: ((Player, number, number, number) -> ())?
 
 local RING = 150 -- distance from hub center to satellite islands
 local HUB_RADIUS = 50
@@ -90,6 +91,7 @@ local function worldText(adornee: BasePart, langKey: string, offset: number, stu
 		Size = UDim2.new(studsWide, 0, studsTall or 3, 0),
 		StudsOffset = Vector3.new(0, offset, 0),
 		MaxDistance = 160,
+		AlwaysOnTop = true, -- never hidden inside walls
 		LightInfluence = 0,
 		Parent = adornee,
 	})
@@ -441,24 +443,19 @@ local function buildBlackHole(folder: Folder, slot: number)
 		Parent = vortex,
 	})
 
-	-- burning meteors orbiting the hole: welded to one anchored hub that the server spins
-	local orbitHub = make("Part", { Name = "OrbitHub", Size = Vector3.one, CFrame = CFrame.new(holePos), Transparency = 1, CanCollide = false, CanQuery = false, Parent = folder })
+	-- burning meteors orbiting the hole: one anchored model, every client spins it locally (smooth at any FPS)
+	local orbit = make("Model", { Name = "OrbitRing", Parent = folder })
+	orbit.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
 	for i = 1, 14 do
 		local a = i / 14 * math.pi * 2
 		local r = rng:NextNumber(22, 32)
 		local size = rng:NextNumber(2, 4.5)
 		local rock = make("Part", {
-			Name = "Meteor", Shape = Enum.PartType.Ball, Size = Vector3.new(size, size * 0.85, size), Anchored = false, Massless = true,
+			Name = "Meteor", Shape = Enum.PartType.Ball, Size = Vector3.new(size, size * 0.85, size),
 			CFrame = CFrame.new(holePos + Vector3.new(math.cos(a) * r, rng:NextNumber(-7, 7), math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0),
-			Material = Enum.Material.Basalt, Color = Color3.fromRGB(55, 40, 45), CanCollide = false, CanQuery = false, Parent = folder,
+			Material = Enum.Material.Basalt, Color = Color3.fromRGB(55, 40, 45), CanCollide = false, CanQuery = false, Parent = orbit,
 		})
-		rock.Anchored = false
-		make("WeldConstraint", { Part0 = orbitHub, Part1 = rock, Parent = rock })
-		if i % 2 == 0 then
-			make("Fire", { Heat = 8, Size = size * 1.6, Color = FIRE, SecondaryColor = Color3.fromRGB(255, 220, 120), Parent = rock })
-		else
-			make("Fire", { Heat = 6, Size = size * 1.4, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 150, 220), Parent = rock })
-		end
+		make("Fire", { Heat = 7, Size = size * 1.5, Color = if i % 2 == 0 then FIRE else VIOLET, SecondaryColor = Color3.fromRGB(255, 220, 140), Parent = rock })
 		local t0 = make("Attachment", { Position = Vector3.new(0, size * 0.3, 0), Parent = rock })
 		local t1 = make("Attachment", { Position = Vector3.new(0, -size * 0.3, 0), Parent = rock })
 		make("Trail", {
@@ -466,15 +463,12 @@ local function buildBlackHole(folder: Folder, slot: number)
 			Color = ColorSequence.new(if i % 2 == 0 then FIRE else VIOLET, Color3.fromRGB(80, 30, 60)),
 			Transparency = NumberSequence.new(0.1, 1), Parent = rock,
 		})
-		make("PointLight", { Color = if i % 2 == 0 then FIRE else VIOLET, Range = 10, Brightness = 1.2, Parent = rock })
 	end
-	task.spawn(function()
-		local angle = 0
-		while orbitHub.Parent do
-			angle += task.wait(0.05) * 0.35
-			orbitHub.CFrame = CFrame.new(holePos) * CFrame.Angles(math.rad(12), angle, 0)
-		end
-	end)
+	orbit.WorldPivot = CFrame.new(holePos)
+	orbit:SetAttribute("Center", holePos)
+	CollectionService:AddTag(orbit, "Orbit")
+	hole:SetAttribute("MeteorTarget", true) -- clients drop decorative meteors into it
+	CollectionService:AddTag(hole, "MeteorTarget")
 
 	-- lava cracks in the obsidian floor
 	for i = 1, 14 do
@@ -521,52 +515,6 @@ local function buildBlackHole(folder: Folder, slot: number)
 		})
 	end
 
-	-- every few seconds a fresh meteor falls into the hole and bursts
-	task.spawn(function()
-		while hole.Parent do
-			task.wait(rng:NextNumber(2.5, 5))
-			local a = rng:NextNumber(0, math.pi * 2)
-			local startPos = holePos + Vector3.new(math.cos(a) * 110, rng:NextNumber(50, 90), math.sin(a) * 110)
-			local meteor = ball(startPos, rng:NextNumber(2, 3.5), { Name = "FallingMeteor", Material = Enum.Material.Basalt, Color = Color3.fromRGB(60, 40, 40), CanCollide = false, CanQuery = false, Parent = folder })
-			make("Fire", { Heat = 15, Size = 8, Color = FIRE, SecondaryColor = Color3.fromRGB(255, 230, 140), Parent = meteor })
-			local m0 = make("Attachment", { Position = Vector3.new(0, 1, 0), Parent = meteor })
-			local m1 = make("Attachment", { Position = Vector3.new(0, -1, 0), Parent = meteor })
-			make("Trail", { Attachment0 = m0, Attachment1 = m1, Lifetime = 1.2, LightEmission = 1, FaceCamera = true, WidthScale = NumberSequence.new(1, 0),
-				Color = ColorSequence.new(Color3.fromRGB(255, 230, 150), FIRE), Transparency = NumberSequence.new(0, 1), Parent = meteor })
-			local flight = TweenService:Create(meteor, TweenInfo.new(2.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = CFrame.new(holePos) })
-			flight:Play()
-			flight.Completed:Wait()
-			local burst = make("ParticleEmitter", {
-				Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 220, 140), VIOLET), LightEmission = 1,
-				Lifetime = NumberRange.new(0.6, 1.4), Speed = NumberRange.new(15, 30), SpreadAngle = Vector2.new(180, 180), Rate = 0,
-				Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }), Parent = meteor,
-			})
-			meteor.Transparency = 1
-			for _, child in meteor:GetChildren() do
-				if child:IsA("Fire") then
-					child.Enabled = false
-				end
-			end
-			burst:Emit(60)
-			task.delay(2, function()
-				meteor:Destroy()
-			end)
-		end
-	end)
-
-	-- altar with a beam to the hole
-	local altar = cylinder(CFrame.new(center + Vector3.new(0, 1.5, 0)), 3, 10, { Name = "Altar", Material = Enum.Material.Basalt, Color = Color3.fromRGB(40, 32, 60), Parent = folder })
-	local top = cylinder(CFrame.new(center + Vector3.new(0, 3.15, 0)), 0.3, 8, { Name = "AltarTop", Material = Enum.Material.Neon, Color = Color3.fromRGB(176, 110, 255), Parent = folder })
-	local a0 = make("Attachment", { Parent = top })
-	local a1 = make("Attachment", { Parent = hole })
-	make("Beam", {
-		Attachment0 = a0, Attachment1 = a1, Color = ColorSequence.new(Color3.fromRGB(200, 150, 255)),
-		LightEmission = 1, Width0 = 1.2, Width1 = 4, FaceCamera = true, Transparency = NumberSequence.new(0.2, 0.7), Parent = top,
-	})
-	for i = 0, 5 do
-		local a = i / 6 * math.pi * 2
-		crystal(center + Vector3.new(math.cos(a) * 14, 3, math.sin(a) * 14), 2, Color3.fromRGB(190, 140, 255), folder)
-	end
 	prompt(altar, "BlackHolePrompt", "promptHole", nil, 14).Triggered:Connect(function(who)
 		if World.onHole then
 			World.onHole(who)
@@ -629,7 +577,8 @@ local function buildMuseum(plot, floors: number, themeId: string)
 	local theme = Config.ThemesById[themeId] or Config.Themes[1]
 	local m = plot.museum
 	local function wall(name: string, size: Vector3, offset: Vector3)
-		return make("Part", { Name = name, Size = size, CFrame = plot.cf * CFrame.new(offset), Material = theme.wallMat, Color = theme.wall, Parent = m })
+		-- glass panes tinted by the theme, so the collection is visible from outside
+		return make("Part", { Name = name, Size = size, CFrame = plot.cf * CFrame.new(offset), Material = Enum.Material.Glass, Color = theme.wall, Transparency = 0.45, Parent = m })
 	end
 	local function trim(name: string, size: Vector3, offset: Vector3)
 		return make("Part", { Name = name, Size = size, CFrame = plot.cf * CFrame.new(offset), Material = theme.trimMat, Color = theme.trim, Parent = m })
@@ -662,6 +611,13 @@ local function buildMuseum(plot, floors: number, themeId: string)
 			make("Part", { Name = "Window", Size = Vector3.new(HALF * 2, 8, 0.6), CFrame = plot.cf * CFrame.new(0, y0 + 7.4, -HALF), Material = Enum.Material.Glass, Color = theme.light, Transparency = 0.6, Parent = m })
 			wall("WallFront", Vector3.new(HALF * 2 + 1.5, wh - 11, 1.5), Vector3.new(0, y0 + 11.4 + (wh - 11) / 2, -HALF))
 		end
+		-- trim posts holding the glass
+		for k = -3, 3 do
+			local along = k * 8
+			trim("Post", Vector3.new(1, wh, 1), Vector3.new(-HALF, yc, along))
+			trim("Post", Vector3.new(1, wh, 1), Vector3.new(HALF, yc, along))
+			trim("Post", Vector3.new(1, wh, 1), Vector3.new(along, yc, HALF))
+		end
 		-- ceiling lights
 		for _, x in { -12, 12 } do
 			local lamp = make("Part", { Name = "Lamp", Size = Vector3.new(4, 0.4, 4), CFrame = plot.cf * CFrame.new(x, y0 + FLOOR_H - 0.6, 4), Material = Enum.Material.Neon, Color = theme.light, CanCollide = false, Parent = m })
@@ -672,17 +628,15 @@ local function buildMuseum(plot, floors: number, themeId: string)
 			local pad = make("Part", { Name = "Elevator", Size = Vector3.new(5, 0.3, 5), CFrame = plot.cf * CFrame.new(16, y0 + 0.55, -22), Material = Enum.Material.Neon, Color = theme.trim, CanCollide = false, Parent = m })
 			local floorNumber = f
 			prompt(pad, "ElevatorPrompt", "promptElevator", nil, 8).Triggered:Connect(function(who)
-				local target = floorNumber % plot.builtFloors + 1
-				local character = who.Character
-				if character then
-					character:PivotTo(plot.cf * CFrame.new(16, (target - 1) * FLOOR_H + 3.5, -17))
+				if World.onElevator then
+					World.onElevator(who, plot.index, floorNumber, plot.builtFloors)
 				end
 			end)
 		end
 	end
 	-- roof + corner columns
 	local top = floors * FLOOR_H
-	wall("Roof", Vector3.new(HALF * 2 + 3, 1.2, HALF * 2 + 3), Vector3.new(0, top + 0.6, 0))
+	make("Part", { Name = "Roof", Size = Vector3.new(HALF * 2 + 3, 1.2, HALF * 2 + 3), CFrame = plot.cf * CFrame.new(0, top + 0.6, 0), Material = theme.wallMat, Color = theme.wall, Parent = m })
 	trim("RoofTrim", Vector3.new(HALF * 2 + 4, 0.8, HALF * 2 + 4), Vector3.new(0, top + 1.6, 0))
 	for _, c in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
 		cylinder(plot.cf * CFrame.new(c[1] * (HALF + 0.6), top / 2 + 1, c[2] * (HALF + 0.6)), top + 2, 3.2, {
@@ -786,8 +740,7 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 		end
 	end
 	floor.Touched:Connect(plot.onTouch)
-	buildMuseum(plot, 1, "sky")
-	buildSpots(plot, 1, {}, {})
+	-- the museum only appears once somebody claims the plot (it is loaded from their save)
 end
 
 ---------------------------------------------------------------- scenery
@@ -918,8 +871,12 @@ function World.releasePlot(player: Player)
 	plot.label:SetAttribute("Owner", "")
 	plot.label:SetAttribute("Income", 0)
 	plot.stars:ClearAllChildren()
-	buildMuseum(plot, 1, "sky")
-	buildSpots(plot, 1, {}, {})
+	plot.museum:ClearAllChildren()
+	plot.pedestals:ClearAllChildren()
+	plot.markers:ClearAllChildren()
+	plot.cells = {}
+	plot.builtFloors = 0
+	plot.builtTheme = ""
 	playerPlot[player] = nil
 end
 
@@ -931,6 +888,15 @@ function World.spawnCFrame(player: Player): CFrame
 	local cf = plots[index].cf
 	local position = (cf * CFrame.new(0, 4, -(PLOT_SIZE / 2 - 1.5))).Position -- just outside the museum door
 	return CFrame.lookAt(position, cf.Position + Vector3.new(0, 4, 0))
+end
+
+function World.teleportToFloor(player: Player, index: number, floor: number)
+	local plot = plots[index]
+	local character = player.Character
+	if not plot or not character or floor < 1 or floor > plot.builtFloors then
+		return
+	end
+	character:PivotTo(plot.cf * CFrame.new(16, (floor - 1) * FLOOR_H + 3.5, -17))
 end
 
 function World.isNearPlot(player: Player, index: number): boolean
