@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -30,6 +31,7 @@ local StateEv = remote("RemoteEvent", "State")
 local AnnounceEv = remote("RemoteEvent", "Announce") -- (langKey, args, color)
 local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
+local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -119,6 +121,17 @@ local function setCash(player: Player, data, value: number)
 	setStat(player, "Cash", value)
 end
 
+-- Admin = owner of the game (user-owned games), listed user IDs, or anyone in a Studio test
+local function isAdmin(player: Player): boolean
+	if RunService:IsStudio() then
+		return true
+	end
+	if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
+		return true
+	end
+	return table.find(Config.AdminUserIds, player.UserId) ~= nil
+end
+
 local function pushState(player: Player)
 	local session = sessions[player]
 	local data = DataService.get(player)
@@ -147,6 +160,7 @@ local function pushState(player: Player)
 		settings = data.settings,
 		hasPlot = World.plotOf(player) ~= nil,
 		passes = session.passes,
+		isAdmin = isAdmin(player),
 	})
 end
 
@@ -193,10 +207,16 @@ end
 
 local function announceIfRare(player: Player, key: string)
 	local chance = Items.chance(key)
-	if chance >= Config.AnnounceChance then
+	if chance >= Config.GlobalRareChance then
+		-- whole server sees a cinematic + a pillar of light over the lucky player
+		GlobalRareEv:FireAllClients(player.DisplayName, key, chance)
+		World.lightPillar(player, Items.parse(key).color)
+	elseif chance >= Config.AnnounceChance then
 		announceAll("annRolled", { player.DisplayName, { item = key }, Format.number(chance) }, Items.parse(key).color)
 	end
 end
+
+
 
 local function spend(player: Player, data, cost: number): boolean
 	if data.cash < cost then
@@ -495,6 +515,56 @@ function actions.SetSetting(player, data, name, value)
 	end
 end
 
+---------------------------------------------------------------- admin (checked on the server, see the handler below)
+local function adminNumber(value: any): number?
+	if type(value) ~= "number" or value ~= value or value == math.huge or value < 0 then
+		return nil
+	end
+	return math.min(value, 1e300)
+end
+
+function actions.AdminCash(player, data, amount)
+	amount = adminNumber(amount)
+	if amount then
+		setCash(player, data, data.cash + amount)
+	end
+end
+
+function actions.AdminStar(player, data, itemKey, count)
+	count = adminNumber(count)
+	if Items.parse(itemKey) and count and count >= 1 then
+		addToInventory(player, data, itemKey, math.floor(math.min(count, 1e6)))
+	end
+end
+
+function actions.AdminRolls(player, data, amount)
+	amount = adminNumber(amount)
+	if amount then
+		data.totalRolls += math.floor(math.min(amount, 1e9))
+		setStat(player, "Rolls", data.totalRolls)
+	end
+end
+
+function actions.AdminMass(player, data, amount)
+	amount = adminNumber(amount)
+	if amount then
+		data.mass += amount
+	end
+end
+
+local startShower -- defined at the bottom
+function actions.AdminShower(player, data)
+	if startShower then
+		task.spawn(startShower)
+	end
+end
+
+function actions.AdminGlobalTest(player, data, itemKey)
+	local key = if Items.parse(itemKey) then itemKey else "infinity|celestial"
+	GlobalRareEv:FireAllClients(player.DisplayName, key, Items.chance(key))
+	World.lightPillar(player, Items.parse(key).color)
+end
+
 function actions.SetLang(player, data, lang)
 	if lang == "en" or lang == "ru" then
 		data.lang = lang
@@ -505,6 +575,10 @@ ActionEv.OnServerEvent:Connect(function(player, action, a, b)
 	local handler = type(action) == "string" and actions[action]
 	local data = DataService.get(player)
 	if not handler or not data or not sessions[player] then
+		return
+	end
+	if string.sub(action, 1, 5) == "Admin" and not isAdmin(player) then
+		warn("[Admin] blocked " .. action .. " from " .. player.Name)
 		return
 	end
 	handler(player, data, a, b)
@@ -571,17 +645,21 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------- Star Shower
+startShower = function()
+	ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
+	announceAll("annShower", { Config.ShowerLuck, Format.time(Config.ShowerDuration) }, Color3.fromRGB(90, 170, 255))
+	for player in sessions do
+		pushState(player)
+	end
+	task.wait(Config.ShowerDuration)
+	for player in sessions do
+		pushState(player)
+	end
+end
+
 task.spawn(function()
 	while true do
 		task.wait(Config.ShowerInterval)
-		ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
-		announceAll("annShower", { Config.ShowerLuck, Format.time(Config.ShowerDuration) }, Color3.fromRGB(90, 170, 255))
-		for player in sessions do
-			pushState(player)
-		end
-		task.wait(Config.ShowerDuration)
-		for player in sessions do
-			pushState(player)
-		end
+		startShower()
 	end
 end)

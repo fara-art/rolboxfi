@@ -72,6 +72,10 @@ Config.ShowerDuration = 180
 Config.ShowerLuck = 2
 
 Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
+Config.GlobalRareChance = 1000000000 -- 1 in a billion and rarer: cinematic for the whole server
+
+-- Admin panel: the game owner (if the game belongs to a user), these user IDs, and anyone in Studio tests
+Config.AdminUserIds = {}
 
 Config.AutosaveInterval = 120
 Config.DataStoreName = "ConstellationsRNG_v1"
@@ -94,6 +98,13 @@ Config.StarIcons = {
 	neutron = "101194309009316",
 	quasar = "74183692232117",
 	supernova = "113026952245040",
+	magnetar = "",
+	nebula = "",
+	whitehole = "",
+	galaxy = "",
+	cosmic = "",
+	bigbang = "",
+	infinity = "",
 }
 
 -- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
@@ -120,6 +131,7 @@ Config.Sounds = {
 	Music = { "70905224258341" },
 	MusicVolume = 0.12,
 	Rebirth = "73693601629586",
+	GlobalRare = "", -- empty = uses the rebirth sound
 	RebirthVolume = 0.8,
 }
 
@@ -187,25 +199,70 @@ return Evolution
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX4"><Properties><string name="Name">Format</string><ProtectedString name="Source"><![CDATA[local Format = {}
 
-local suffixes = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc" }
+-- K, M, B, T, Qd (quadrillion), Qn (quintillion), Sx, Sp, Oc, No, Dc, ...
+local suffixes = {
+	"", "K", "M", "B", "T", "Qd", "Qn", "Sx", "Sp", "Oc", "No",
+	"Dc", "Ud", "Dd", "Td", "Qdd", "Qnd", "Sxd", "Spd", "Ocd", "Nvd", "Vg",
+}
 
 function Format.number(n: number): string
+	if n ~= n then
+		return "0"
+	end
+	if n == math.huge then
+		return "inf"
+	end
+	local negative = n < 0
+	n = math.abs(n)
+	local out
 	if n < 1000 then
-		return tostring(math.floor(n * 10 + 0.5) / 10)
+		out = tostring(math.floor(n * 10 + 0.5) / 10)
+	else
+		local i = 1
+		while n >= 1000 and i < #suffixes do
+			n /= 1000
+			i += 1
+		end
+		if n >= 1000 then
+			out = string.format("%.2e", n * 1000 ^ (i - 1))
+		else
+			out = string.format("%.2f", n):gsub("%.?0+$", "") .. suffixes[i]
+		end
 	end
-	local i = 1
-	while n >= 1000 and i < #suffixes do
-		n /= 1000
-		i += 1
+	return (if negative then "-" else "") .. out
+end
+
+-- "5Qd", "1.5e12", "250K" -> number (admin input)
+function Format.parse(text: string): number?
+	if type(text) ~= "string" then
+		return nil
 	end
-	return string.format("%.2f", n):gsub("%.?0+$", "") .. suffixes[i]
+	text = text:gsub("%s", ""):gsub(",", "")
+	local plain = tonumber(text)
+	if plain then
+		return plain
+	end
+	local num, suffix = string.match(text, "^([%d%.]+)(%a+)$")
+	num = tonumber(num)
+	if not num then
+		return nil
+	end
+	for i, s in suffixes do
+		if s ~= "" and string.lower(s) == string.lower(suffix) then
+			return num * 1000 ^ (i - 1)
+		end
+	end
+	return nil
 end
 
 function Format.percent(p: number): string
 	if p >= 0.01 then
 		return string.format("%.2f%%", p * 100)
 	end
-	return (string.format("%.6f%%", p * 100):gsub("0+%%$", "%%"))
+	if p >= 0.000001 then
+		return (string.format("%.6f%%", p * 100):gsub("0+%%$", "%%"))
+	end
+	return string.format("%.1e%%", p * 100)
 end
 
 function Format.time(seconds: number): string
@@ -316,6 +373,9 @@ Lang.Strings = {
 		rewardsTitle = "ROLL REWARDS", rewards = "REWARDS", rewardsDone = "ROLLS DONE", nextReward = "Next reward",
 		moreRolls = "%s more rolls", allDone = "All rewards reached!", locked = "LOCKED", cashWord = "Cash", luckWord = "Luck", rollsWord = "ROLLS", toastReward = "Reward: %s",
 		settings = "SETTINGS", music = "Music", sfx = "Sounds", on = "ON", off = "OFF", rebirthBig = "REBIRTH!", rareBig = "RARE!", legendBig = "LEGENDARY!",
+		admin = "ADMIN", adminCash = "Give cash", adminStar = "Give star", adminRolls = "Add rolls", adminMass = "Add Black Hole mass",
+		adminEvents = "Events", adminShower = "START STAR SHOWER", adminGlobal = "TEST SERVER ANIMATION", give = "GIVE",
+		amountHint = "e.g. 5Qd or 1e15", countHint = "count", globalFound = "%s found",
 		langButton = "EN",
 	},
 	ru = {
@@ -359,6 +419,9 @@ Lang.Strings = {
 		rewardsTitle = "НАГРАДЫ ЗА КРУТКИ", rewards = "НАГРАДЫ", rewardsDone = "КРУТОК СДЕЛАНО", nextReward = "Следующая награда",
 		moreRolls = "ещё %s круток", allDone = "Все награды открыты!", locked = "ЗАКРЫТО", cashWord = "Деньги", luckWord = "Удача", rollsWord = "КРУТОК", toastReward = "Награда: %s",
 		settings = "НАСТРОЙКИ", music = "Музыка", sfx = "Звуки", on = "ВКЛ", off = "ВЫКЛ", rebirthBig = "ПЕРЕРОЖДЕНИЕ!", rareBig = "РЕДКАЯ!", legendBig = "ЛЕГЕНДАРНАЯ!",
+		admin = "АДМИНКА", adminCash = "Выдать деньги", adminStar = "Выдать звезду", adminRolls = "Добавить крутки", adminMass = "Добавить массу дыры",
+		adminEvents = "События", adminShower = "ЗАПУСТИТЬ ЗВЕЗДОПАД", adminGlobal = "ТЕСТ АНИМАЦИИ СЕРВЕРА", give = "ВЫДАТЬ",
+		amountHint = "напр. 5Qd или 1e15", countHint = "кол-во", globalFound = "%s нашёл",
 		langButton = "RU",
 	},
 }
@@ -367,6 +430,8 @@ Lang.StarNames = {
 	ru = {
 		dust = "Звёздная пыль", spark = "Искра", dwarf = "Красный карлик", sun = "Жёлтое солнце", giant = "Голубой гигант",
 		pulsar = "Пульсар", neutron = "Нейтронная звезда", quasar = "Квазар", supernova = "Сверхновая",
+		magnetar = "Магнетар", nebula = "Сердце туманности", whitehole = "Белая дыра", galaxy = "Ядро галактики",
+		cosmic = "Космическая струна", bigbang = "Большой взрыв", infinity = "Звезда бесконечности",
 	},
 }
 
@@ -650,6 +715,13 @@ Stars.List = {
 	{ id = "neutron", name = "Neutron Star", chance = 10000, income = 9000, color = Color3.fromRGB(90, 255, 220) },
 	{ id = "quasar", name = "Quasar", chance = 100000, income = 100000, color = Color3.fromRGB(255, 80, 200), evolvesTo = "supernova" },
 	{ id = "supernova", name = "Supernova", chance = 1000000, income = 1500000, color = Color3.fromRGB(255, 255, 255) },
+	{ id = "magnetar", name = "Magnetar", chance = 5000000, income = 8000000, color = Color3.fromRGB(110, 200, 255) },
+	{ id = "nebula", name = "Nebula Heart", chance = 25000000, income = 45000000, color = Color3.fromRGB(255, 140, 230) },
+	{ id = "whitehole", name = "White Hole", chance = 100000000, income = 200000000, color = Color3.fromRGB(235, 248, 255) },
+	{ id = "galaxy", name = "Galaxy Core", chance = 1000000000, income = 2500000000, color = Color3.fromRGB(255, 205, 110) },
+	{ id = "cosmic", name = "Cosmic String", chance = 10000000000, income = 30000000000, color = Color3.fromRGB(130, 255, 200) },
+	{ id = "bigbang", name = "Big Bang", chance = 100000000000, income = 400000000000, color = Color3.fromRGB(255, 120, 80) },
+	{ id = "infinity", name = "Infinity Star", chance = 1000000000000, income = 5000000000000, color = Color3.fromRGB(200, 160, 255) },
 }
 
 Stars.ById = {}
@@ -665,6 +737,7 @@ return Stars
 <Item class="ServerScriptService" referent="RBX22"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX21"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX11"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -694,6 +767,7 @@ local StateEv = remote("RemoteEvent", "State")
 local AnnounceEv = remote("RemoteEvent", "Announce") -- (langKey, args, color)
 local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
+local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -783,6 +857,17 @@ local function setCash(player: Player, data, value: number)
 	setStat(player, "Cash", value)
 end
 
+-- Admin = owner of the game (user-owned games), listed user IDs, or anyone in a Studio test
+local function isAdmin(player: Player): boolean
+	if RunService:IsStudio() then
+		return true
+	end
+	if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
+		return true
+	end
+	return table.find(Config.AdminUserIds, player.UserId) ~= nil
+end
+
 local function pushState(player: Player)
 	local session = sessions[player]
 	local data = DataService.get(player)
@@ -811,6 +896,7 @@ local function pushState(player: Player)
 		settings = data.settings,
 		hasPlot = World.plotOf(player) ~= nil,
 		passes = session.passes,
+		isAdmin = isAdmin(player),
 	})
 end
 
@@ -857,10 +943,16 @@ end
 
 local function announceIfRare(player: Player, key: string)
 	local chance = Items.chance(key)
-	if chance >= Config.AnnounceChance then
+	if chance >= Config.GlobalRareChance then
+		-- whole server sees a cinematic + a pillar of light over the lucky player
+		GlobalRareEv:FireAllClients(player.DisplayName, key, chance)
+		World.lightPillar(player, Items.parse(key).color)
+	elseif chance >= Config.AnnounceChance then
 		announceAll("annRolled", { player.DisplayName, { item = key }, Format.number(chance) }, Items.parse(key).color)
 	end
 end
+
+
 
 local function spend(player: Player, data, cost: number): boolean
 	if data.cash < cost then
@@ -1159,6 +1251,56 @@ function actions.SetSetting(player, data, name, value)
 	end
 end
 
+---------------------------------------------------------------- admin (checked on the server, see the handler below)
+local function adminNumber(value: any): number?
+	if type(value) ~= "number" or value ~= value or value == math.huge or value < 0 then
+		return nil
+	end
+	return math.min(value, 1e300)
+end
+
+function actions.AdminCash(player, data, amount)
+	amount = adminNumber(amount)
+	if amount then
+		setCash(player, data, data.cash + amount)
+	end
+end
+
+function actions.AdminStar(player, data, itemKey, count)
+	count = adminNumber(count)
+	if Items.parse(itemKey) and count and count >= 1 then
+		addToInventory(player, data, itemKey, math.floor(math.min(count, 1e6)))
+	end
+end
+
+function actions.AdminRolls(player, data, amount)
+	amount = adminNumber(amount)
+	if amount then
+		data.totalRolls += math.floor(math.min(amount, 1e9))
+		setStat(player, "Rolls", data.totalRolls)
+	end
+end
+
+function actions.AdminMass(player, data, amount)
+	amount = adminNumber(amount)
+	if amount then
+		data.mass += amount
+	end
+end
+
+local startShower -- defined at the bottom
+function actions.AdminShower(player, data)
+	if startShower then
+		task.spawn(startShower)
+	end
+end
+
+function actions.AdminGlobalTest(player, data, itemKey)
+	local key = if Items.parse(itemKey) then itemKey else "infinity|celestial"
+	GlobalRareEv:FireAllClients(player.DisplayName, key, Items.chance(key))
+	World.lightPillar(player, Items.parse(key).color)
+end
+
 function actions.SetLang(player, data, lang)
 	if lang == "en" or lang == "ru" then
 		data.lang = lang
@@ -1169,6 +1311,10 @@ ActionEv.OnServerEvent:Connect(function(player, action, a, b)
 	local handler = type(action) == "string" and actions[action]
 	local data = DataService.get(player)
 	if not handler or not data or not sessions[player] then
+		return
+	end
+	if string.sub(action, 1, 5) == "Admin" and not isAdmin(player) then
+		warn("[Admin] blocked " .. action .. " from " .. player.Name)
 		return
 	end
 	handler(player, data, a, b)
@@ -1235,18 +1381,22 @@ task.spawn(function()
 end)
 
 ---------------------------------------------------------------- Star Shower
+startShower = function()
+	ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
+	announceAll("annShower", { Config.ShowerLuck, Format.time(Config.ShowerDuration) }, Color3.fromRGB(90, 170, 255))
+	for player in sessions do
+		pushState(player)
+	end
+	task.wait(Config.ShowerDuration)
+	for player in sessions do
+		pushState(player)
+	end
+end
+
 task.spawn(function()
 	while true do
 		task.wait(Config.ShowerInterval)
-		ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
-		announceAll("annShower", { Config.ShowerLuck, Format.time(Config.ShowerDuration) }, Color3.fromRGB(90, 170, 255))
-		for player in sessions do
-			pushState(player)
-		end
-		task.wait(Config.ShowerDuration)
-		for player in sessions do
-			pushState(player)
-		end
+		startShower()
 	end
 end)
 ]]></ProtectedString></Properties></Item>
@@ -1570,6 +1720,115 @@ builders.supernova = function(m, cf, color)
 	particles(core, { Color = WHITE, Rate = 8, Lifetime = NumberRange.new(0.3, 0.6), Speed = NumberRange.new(0, 0),
 		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 4) }) })
 	light(core, Color3.fromRGB(255, 230, 180), 22, 4)
+	return core
+end
+
+builders.magnetar = function(m, cf, color)
+	local core = orb(m, cf, 1.3, Color3.fromRGB(210, 240, 255))
+	orb(m, cf, 2, color, 0.55)
+	for i = 1, 6 do
+		-- jagged "field lines"
+		local rot = CFrame.Angles(0, i * math.pi / 3, math.rad(35))
+		bar(m, cf * rot * CFrame.new(0, 1.6, 0), Vector3.new(0.14, 1.3, 0.14), Color3.fromRGB(255, 240, 150), 0.1)
+		bar(m, cf * rot * CFrame.new(0.25, 2.4, 0) * CFrame.Angles(0, 0, math.rad(-40)), Vector3.new(0.14, 0.9, 0.14), Color3.fromRGB(255, 240, 150), 0.1)
+	end
+	orb(m, cf, 4.2, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 245, 170), Color2 = color, Rate = 30, Speed = NumberRange.new(3, 6), Lifetime = NumberRange.new(0.3, 0.7), Texture = SPARKLE })
+	light(core, color, 18, 3)
+	return core
+end
+
+builders.nebula = function(m, cf, color)
+	local core = orb(m, cf, 1, Color3.fromRGB(255, 250, 220))
+	local tints = { color, Color3.fromRGB(180, 120, 255), Color3.fromRGB(120, 200, 255) }
+	for i = 1, 9 do
+		local a = i * 2.4
+		orb(m, cf * CFrame.new(math.cos(a) * 1.3, math.sin(i * 1.7) * 0.8, math.sin(a) * 1.3), 1.4 + (i % 3) * 0.4, tints[i % 3 + 1], 0.55)
+	end
+	particles(core, { Color = color, Color2 = Color3.fromRGB(150, 200, 255), Rate = 35, Speed = NumberRange.new(0.3, 1), Lifetime = NumberRange.new(2, 4), Texture = SPARKLE })
+	light(core, color, 18, 2.5)
+	return core
+end
+
+builders.whitehole = function(m, cf, color)
+	local core = orb(m, cf, 1.8, WHITE)
+	orb(m, cf, 2.6, Color3.fromRGB(220, 240, 255), 0.4)
+	disk(m, cf * CFrame.Angles(math.rad(15), 0, 0), 5, Color3.fromRGB(200, 230, 255), 0.5)
+	for i = 1, 12 do
+		bar(m, cf * CFrame.Angles(0, 0, i * math.pi / 6) * CFrame.new(0, 2, 0), Vector3.new(0.2, 1.2, 0.2), WHITE, 0.2)
+	end
+	orb(m, cf, 5, color, 0.88)
+	particles(core, { Color = WHITE, Color2 = Color3.fromRGB(180, 220, 255), Rate = 40, Speed = NumberRange.new(2, 5), Texture = SPARKLE })
+	light(core, WHITE, 22, 4)
+	return core
+end
+
+builders.galaxy = function(m, cf, color)
+	local core = orb(m, cf, 1.2, Color3.fromRGB(255, 240, 190))
+	local tilt = cf * CFrame.Angles(math.rad(25), 0, 0)
+	for arm = 0, 1 do
+		for i = 1, 10 do
+			local a = arm * math.pi + i * 0.45
+			local r = 0.5 + i * 0.26
+			orb(m, tilt * CFrame.new(math.cos(a) * r, 0, math.sin(a) * r), 0.55 - i * 0.02, if i % 2 == 0 then Color3.fromRGB(200, 150, 255) else color, 0.15)
+		end
+	end
+	disk(m, tilt, 6, Color3.fromRGB(170, 120, 255), 0.85)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(190, 140, 255), Rate = 40, Speed = NumberRange.new(0.5, 1.5), Lifetime = NumberRange.new(2, 3.5), Texture = SPARKLE })
+	light(core, color, 22, 3.5)
+	return core
+end
+
+builders.cosmic = function(m, cf, color)
+	local core = orb(m, cf, 0.9, WHITE)
+	for i = 0, 23 do
+		local tt = i / 23
+		local a = tt * math.pi * 4
+		orb(m, cf * CFrame.new(math.cos(a) * 1.2, -2.6 + tt * 5.2, math.sin(a) * 1.2), 0.45, if i % 2 == 0 then color else WHITE, 0.05)
+		orb(m, cf * CFrame.new(-math.cos(a) * 1.2, -2.6 + tt * 5.2, -math.sin(a) * 1.2), 0.35, Color3.fromRGB(180, 255, 240), 0.2)
+	end
+	orb(m, cf, 4, color, 0.9)
+	particles(core, { Color = color, Color2 = WHITE, Rate = 45, Speed = NumberRange.new(1, 3), Texture = SPARKLE })
+	light(core, color, 22, 4)
+	return core
+end
+
+builders.bigbang = function(m, cf, color)
+	local core = orb(m, cf, 2, WHITE)
+	orb(m, cf, 2.8, Color3.fromRGB(255, 220, 140), 0.35)
+	local rainbow = {
+		Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 170, 70), Color3.fromRGB(255, 235, 110),
+		Color3.fromRGB(120, 230, 140), Color3.fromRGB(110, 190, 255), Color3.fromRGB(190, 130, 255),
+	}
+	for i = 1, 22 do
+		local rot = CFrame.Angles(i * 1.7, i * 2.3, i * 0.9)
+		local length = 2.6 + (i % 4) * 0.5
+		bar(m, cf * rot * CFrame.new(0, length / 2, 0), Vector3.new(0.25, length, 0.25), rainbow[i % #rainbow + 1], 0.05)
+	end
+	orb(m, cf, 6, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 240, 200), Color2 = color, Rate = 70, Speed = NumberRange.new(3, 7), Texture = SPARKLE })
+	particles(core, { Color = WHITE, Rate = 10, Lifetime = NumberRange.new(0.3, 0.6), Speed = NumberRange.new(0, 0),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2.5), NumberSequenceKeypoint.new(1, 5) }) })
+	light(core, Color3.fromRGB(255, 220, 170), 26, 5)
+	return core
+end
+
+builders.infinity = function(m, cf, color)
+	local core = orb(m, cf, 1.2, Color3.fromRGB(255, 245, 190))
+	for i = 0, 39 do
+		local tt = i / 40 * math.pi * 2
+		local den = 1 + math.sin(tt) ^ 2
+		local x, y = 2.6 * math.cos(tt) / den, 2.6 * math.sin(tt) * math.cos(tt) / den
+		orb(m, cf * CFrame.new(x, y, 0), 0.5, if i % 4 == 0 then Color3.fromRGB(255, 220, 120) else color, 0.05)
+	end
+	for i = 1, 5 do
+		-- little crown over the core
+		bar(m, cf * CFrame.Angles(0, i * math.pi * 2 / 5, 0) * CFrame.new(0, 1.3, 0.5), Vector3.new(0.18, 0.7, 0.18), Color3.fromRGB(255, 210, 90), 0)
+	end
+	orb(m, cf, 6, color, 0.9)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(255, 220, 140), Rate = 60, Speed = NumberRange.new(1, 3), Texture = SPARKLE })
+	particles(core, { Color = WHITE, Rate = 12, Speed = NumberRange.new(4, 8), Lifetime = NumberRange.new(0.5, 1), Texture = SPARKLE })
+	light(core, color, 26, 5)
 	return core
 end
 
@@ -2286,6 +2545,37 @@ function World.distanceTo(player: Player, position: Vector3): number
 	return if root then (root.Position - position).Magnitude else math.huge
 end
 
+-- A huge column of light over a player (server-wide rare find)
+function World.lightPillar(player: Player, color: Color3)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local base = root.Position
+	local pillar = cylinder(CFrame.new(base + Vector3.new(0, 150, 0)), 300, 7, {
+		Name = "LightPillar", Material = Enum.Material.Neon, Color = color, Transparency = 0.15, CanCollide = false, CanQuery = false, CastShadow = false, Parent = workspace,
+	})
+	local glow = cylinder(CFrame.new(base + Vector3.new(0, 150, 0)), 300, 16, {
+		Name = "LightGlow", Material = Enum.Material.Neon, Color = color, Transparency = 0.7, CanCollide = false, CanQuery = false, CastShadow = false, Parent = workspace,
+	})
+	local burst = make("Part", { Name = "Burst", Size = Vector3.one, CFrame = CFrame.new(base), Transparency = 1, CanCollide = false, CanQuery = false, Parent = workspace })
+	local emitter = make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(color, Color3.new(1, 1, 1)), LightEmission = 1,
+		Lifetime = NumberRange.new(1.5, 3), Speed = NumberRange.new(20, 45), SpreadAngle = Vector2.new(180, 180), Rate = 0,
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 0) }), Parent = burst,
+	})
+	emitter:Emit(160)
+	local info = TweenInfo.new(6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	TweenService:Create(pillar, info, { Transparency = 1 }):Play()
+	TweenService:Create(glow, info, { Transparency = 1 }):Play()
+	task.delay(7, function()
+		pillar:Destroy()
+		glow:Destroy()
+		burst:Destroy()
+	end)
+end
+
 local NEIGHBORS = { { 1, 0 }, { 0, 1 }, { 1, 1 }, { 1, -1 } }
 
 function World.renderPlot(player: Player, data, evaluation, income: number)
@@ -2376,6 +2666,7 @@ local StateEv = Remotes:WaitForChild("State")
 local AnnounceEv = Remotes:WaitForChild("Announce")
 local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
+local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
 
 local state = nil
 local selected: string? = nil
@@ -2934,7 +3225,7 @@ renderers[indexW] = function()
 		end
 		local complete = found == #Stars.List
 		local claimed = state.indexClaims[mutation.id] == true
-		local r = row(body, order, 120, WHITE)
+		local r = row(body, order, 64 + 2 * 50, WHITE)
 		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
 		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
 		btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
@@ -2942,14 +3233,14 @@ renderers[indexW] = function()
 				ActionEv:FireServer("ClaimIndexRow", mutation.id)
 			end
 		end)
-		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 56), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
-		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), Parent = strip })
+		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 100), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
+		make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -4, 0.5, -4), CellPadding = UDim2.new(0, 4, 0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip })
 		for _, star in Stars.List do
 			local key = Items.key(star.id, mutation.id)
 			if state.index[key] then
-				starIcon(star, mutation, { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), ZIndex = 23, Parent = strip })
+				starIcon(star, mutation, { LayoutOrder = star.index, ZIndex = 23, Parent = strip })
 			else
-				local unknown = make("Frame", { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+				local unknown = make("Frame", { LayoutOrder = star.index, BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
 				make("TextLabel", {
 					Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = PANEL_2, Text = "?", TextScaled = true,
 					FontFace = TITLE, TextColor3 = GREY, ZIndex = 24, Parent = unknown,
@@ -3305,6 +3596,144 @@ local function celebrateRebirth()
 	end
 end
 
+---------------------------------------------------------------- Admin panel (only shown when the server says you are admin)
+local adminW = window("admin", "center", { Size = UDim2.new(0.46, 0, 0.72, 0), Position = UDim2.new(0.27, 0, 0.14, 0) })
+local adminStar = Stars.List[#Stars.List].id
+local adminMutation = "normal"
+
+local function inputBox(parent: Instance, hintKey: string, defaultText: string, props)
+	props.BackgroundColor3 = WHITE
+	props.PlaceholderText = t(hintKey)
+	props.Text = defaultText
+	props.TextColor3 = TEXT
+	props.FontFace = TITLE
+	props.TextScaled = true
+	props.ClearTextOnFocus = false
+	props.ZIndex = 22
+	props.Parent = parent
+	return make("TextBox", props, { corner(10), stroke(INK, 2.5), pad(6), make("UITextSizeConstraint", { MaxTextSize = 18 }) })
+end
+
+renderers[adminW] = function()
+	local body = adminW.body
+	clear(body)
+	local function section(order: number, titleKey: string, height: number)
+		local r = row(body, order, height, WHITE)
+		text({ Size = UDim2.new(1, -20, 0, 26), Position = UDim2.new(0, 10, 0, 6), Text = t(titleKey), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
+		return r
+	end
+	local function amountRow(order: number, titleKey: string, action: string, default: string)
+		local r = section(order, titleKey, 84)
+		local box = inputBox(r, "amountHint", default, { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 10, 0, 36) })
+		btn(MINT, { Size = UDim2.new(0.32, 0, 0, 40), Position = UDim2.new(0.66, 0, 0, 36), Text = t("give"), ZIndex = 22, Parent = r }, function()
+			local value = Format.parse(box.Text)
+			if value then
+				ActionEv:FireServer(action, value)
+			else
+				box.Text = ""
+			end
+		end)
+	end
+	amountRow(1, "adminCash", "AdminCash", "1Qd")
+
+	-- star picker: all stars as icons, mutations as buttons
+	local starRow = section(2, "adminStar", 300)
+	local grid = make("Frame", { Size = UDim2.new(1, -20, 0, 130), Position = UDim2.new(0, 10, 0, 36), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
+	make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -6, 0.5, -6), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+	for _, star in Stars.List do
+		local cell = make("TextButton", {
+			LayoutOrder = star.index, Text = "", AutoButtonColor = true, ZIndex = 23, Parent = grid,
+			BackgroundColor3 = if adminStar == star.id then Color3.fromRGB(220, 236, 255) else PANEL_2,
+		}, { corner(10), stroke(if adminStar == star.id then BLUE else LINE, if adminStar == star.id then 3 else 1.5) })
+		starIcon(star, Mutations.ById[adminMutation], { Size = UDim2.new(0.9, 0, 0.9, 0), Position = UDim2.new(0.05, 0, 0.05, 0), ZIndex = 24, Parent = cell })
+		cell.Activated:Connect(function()
+			adminStar = star.id
+			renderers[adminW]()
+		end)
+	end
+	local mutations = make("Frame", { Size = UDim2.new(1, -20, 0, 36), Position = UDim2.new(0, 10, 0, 172), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = mutations })
+	for _, mutation in Mutations.List do
+		btn(if adminMutation == mutation.id then BLUE else GREY, { Size = UDim2.new(0.19, -5, 1, 0), Text = Lang.mutation(lang, mutation), Max = 14, ZIndex = 23, Parent = mutations }, function()
+			adminMutation = mutation.id
+			renderers[adminW]()
+		end)
+	end
+	local key = Items.key(adminStar, adminMutation)
+	text({ Size = UDim2.new(1, -20, 0, 24), Position = UDim2.new(0, 10, 0, 214), Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextColor3 = BLUE, Max = 17, ZIndex = 22, Parent = starRow })
+	local countBox = inputBox(starRow, "countHint", "1", { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 10, 0, 248) })
+	btn(MINT, { Size = UDim2.new(0.32, 0, 0, 40), Position = UDim2.new(0.66, 0, 0, 248), Text = t("give"), ZIndex = 22, Parent = starRow }, function()
+		local count = Format.parse(countBox.Text)
+		if count and count >= 1 then
+			ActionEv:FireServer("AdminStar", key, count)
+		end
+	end)
+
+	amountRow(3, "adminRolls", "AdminRolls", "1000")
+	amountRow(4, "adminMass", "AdminMass", "1M")
+
+	local events = section(5, "adminEvents", 140)
+	btn(BLUE, { Size = UDim2.new(1, -20, 0, 42), Position = UDim2.new(0, 10, 0, 38), Text = t("adminShower"), ZIndex = 22, Max = 17, Parent = events }, function()
+		ActionEv:FireServer("AdminShower")
+	end)
+	btn(LILAC, { Size = UDim2.new(1, -20, 0, 42), Position = UDim2.new(0, 10, 0, 88), Text = t("adminGlobal"), ZIndex = 22, Max = 17, Parent = events }, function()
+		ActionEv:FireServer("AdminGlobalTest", key)
+	end)
+end
+
+local adminButton = iconButton("admin", "admin", Color3.fromRGB(230, 90, 90), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 188, 0, 64), Max = 9, Visible = false, Parent = gui }, function()
+	open(adminW)
+end)
+
+---------------------------------------------------------------- Server-wide cinematic for 1-in-a-billion finds
+local function globalCinematic(finder: string, key: string, chance: number)
+	local star, mutation = Items.parse(key)
+	if not star then
+		return
+	end
+	playSfx(if Config.Sounds.GlobalRare ~= "" then Config.Sounds.GlobalRare else Config.Sounds.Rebirth, 1)
+	local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 8, 30), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
+	TweenService:Create(root, TweenInfo.new(0.5), { BackgroundTransparency = 0.35 }):Play()
+
+	-- rotating light rays: 8 bars through the center = 16 rays (GUI rotates around each element's center)
+	local rays = make("Frame", { Size = UDim2.new(0, 1600, 0, 1600), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 201, Parent = root })
+	for i = 1, 8 do
+		make("Frame", {
+			Size = UDim2.new(0, 60, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = i * (180 / 8),
+			BackgroundColor3 = if i % 2 == 0 then star.color else WHITE, BorderSizePixel = 0, ZIndex = 201, Parent = rays,
+		}, { make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(1, 1) }) }) })
+	end
+	TweenService:Create(rays, TweenInfo.new(6, Enum.EasingStyle.Linear), { Rotation = 120 }):Play()
+
+	local holder = make("Frame", { Size = UDim2.new(0, 640, 0, 420), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 202, Parent = root })
+	local scale = make("UIScale", { Scale = 0, Parent = holder })
+	starIcon(star, mutation, { Size = UDim2.new(0, 220, 0, 220), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 203, Parent = holder })
+	local function line(y: number, h: number, value: string, color: Color3, max: number)
+		text({ Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0, y), Text = value, FontFace = TITLE, TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = max, ZIndex = 203, Parent = holder })
+	end
+	line(222, 40, t("globalFound", finder), WHITE, 34)
+	line(262, 80, Lang.item(lang, key), star.color, 72)
+	line(344, 50, t("oneIn", Format.number(chance)), GOLD, 42)
+	TweenService:Create(scale, TweenInfo.new(0.7, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+
+	local camera = workspace.CurrentCamera
+	if camera then
+		TweenService:Create(camera, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = camera.FieldOfView + 20 }):Play()
+	end
+	task.delay(5.2, function()
+		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 }):Play()
+		TweenService:Create(root, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
+		for _, ray in rays:GetChildren() do
+			if ray:IsA("Frame") then
+				TweenService:Create(ray, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+			end
+		end
+		task.wait(0.9)
+		root:Destroy()
+	end)
+end
+GlobalRareEv.OnClientEvent:Connect(globalCinematic)
+
 ---------------------------------------------------------------- Icon buttons: bottom row + right column
 local BUTTON = 72
 local GAP = 12
@@ -3386,6 +3815,7 @@ render = function()
 	luckValue.Text = "x" .. (math.floor(state.luck * 100 + 0.5) / 100)
 	rollsValue.Text = Format.number(state.totalRolls)
 	rebirthValue.Text = tostring(state.rebirths)
+	adminButton.Visible = state.isAdmin == true
 	renderTelescope()
 
 	local rewardReady = false
@@ -3484,7 +3914,7 @@ local function doRoll()
 				best = key
 			end
 		end
-		if Items.chance(best) >= 1000 then
+		if Items.chance(best) >= 1000 and Items.chance(best) < Config.GlobalRareChance then
 			showRare(best)
 		end
 	end

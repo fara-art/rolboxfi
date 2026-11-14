@@ -674,6 +674,37 @@ function World.distanceTo(player: Player, position: Vector3): number
 	return if root then (root.Position - position).Magnitude else math.huge
 end
 
+-- A huge column of light over a player (server-wide rare find)
+function World.lightPillar(player: Player, color: Color3)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local base = root.Position
+	local pillar = cylinder(CFrame.new(base + Vector3.new(0, 150, 0)), 300, 7, {
+		Name = "LightPillar", Material = Enum.Material.Neon, Color = color, Transparency = 0.15, CanCollide = false, CanQuery = false, CastShadow = false, Parent = workspace,
+	})
+	local glow = cylinder(CFrame.new(base + Vector3.new(0, 150, 0)), 300, 16, {
+		Name = "LightGlow", Material = Enum.Material.Neon, Color = color, Transparency = 0.7, CanCollide = false, CanQuery = false, CastShadow = false, Parent = workspace,
+	})
+	local burst = make("Part", { Name = "Burst", Size = Vector3.one, CFrame = CFrame.new(base), Transparency = 1, CanCollide = false, CanQuery = false, Parent = workspace })
+	local emitter = make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(color, Color3.new(1, 1, 1)), LightEmission = 1,
+		Lifetime = NumberRange.new(1.5, 3), Speed = NumberRange.new(20, 45), SpreadAngle = Vector2.new(180, 180), Rate = 0,
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 0) }), Parent = burst,
+	})
+	emitter:Emit(160)
+	local info = TweenInfo.new(6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	TweenService:Create(pillar, info, { Transparency = 1 }):Play()
+	TweenService:Create(glow, info, { Transparency = 1 }):Play()
+	task.delay(7, function()
+		pillar:Destroy()
+		glow:Destroy()
+		burst:Destroy()
+	end)
+end
+
 local NEIGHBORS = { { 1, 0 }, { 0, 1 }, { 1, 1 }, { 1, -1 } }
 
 function World.renderPlot(player: Player, data, evaluation, income: number)

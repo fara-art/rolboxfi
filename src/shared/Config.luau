@@ -68,6 +68,10 @@ Config.ShowerDuration = 180
 Config.ShowerLuck = 2
 
 Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
+Config.GlobalRareChance = 1000000000 -- 1 in a billion and rarer: cinematic for the whole server
+
+-- Admin panel: the game owner (if the game belongs to a user), these user IDs, and anyone in Studio tests
+Config.AdminUserIds = {}
 
 Config.AutosaveInterval = 120
 Config.DataStoreName = "ConstellationsRNG_v1"
@@ -90,6 +94,13 @@ Config.StarIcons = {
 	neutron = "101194309009316",
 	quasar = "74183692232117",
 	supernova = "113026952245040",
+	magnetar = "",
+	nebula = "",
+	whitehole = "",
+	galaxy = "",
+	cosmic = "",
+	bigbang = "",
+	infinity = "",
 }
 
 -- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
@@ -116,6 +127,7 @@ Config.Sounds = {
 	Music = { "70905224258341" },
 	MusicVolume = 0.12,
 	Rebirth = "73693601629586",
+	GlobalRare = "", -- empty = uses the rebirth sound
 	RebirthVolume = 0.8,
 }
 

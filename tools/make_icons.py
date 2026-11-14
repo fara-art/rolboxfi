@@ -129,6 +129,71 @@ img = shape(img, lambda d: d.polygon(star_points(C, C, 360, 190, 8, 0.6), fill=2
 img = shape(img, lambda d: d.ellipse((380, 380, 644, 644), fill=255), (255, 255, 255), (255, 240, 200), outline=20)
 icons["supernova"] = save(img, "supernova")
 
+# ---------------- deep-space stars (1 in 5M .. 1 in 1T)
+# magnetar: blue core with two lightning bolts
+def bolt(cx, cy, k, rot):
+    base = [(-0.15, -1), (0.45, -1), (0.12, -0.15), (0.5, -0.15), (-0.35, 1), (-0.05, 0.12), (-0.45, 0.12)]
+    ca, sa = math.cos(rot), math.sin(rot)
+    return [(cx + (x * ca - y * sa) * k, cy + (x * sa + y * ca) * k) for (x, y) in base]
+img = blank()
+img = shape(img, lambda d: d.polygon(bolt(760, 270, 230, 0.5), fill=255), (255, 250, 170), (255, 200, 60), outline=24)
+img = shape(img, lambda d: d.polygon(bolt(270, 760, 230, 0.5), fill=255), (255, 250, 170), (255, 200, 60), outline=24)
+img = shape(img, lambda d: d.ellipse((250, 250, 774, 774), fill=255), (180, 235, 255), (40, 120, 230), outline=30)
+icons["magnetar"] = save(img, "magnetar")
+
+# nebula heart: pink cloud with a star
+img = shape(blank(), lambda d: [d.ellipse(b, fill=255) for b in [(120, 380, 500, 760), (330, 230, 760, 660), (520, 400, 900, 780), (300, 500, 700, 860)]], (255, 190, 240), (190, 90, 220), outline=30)
+img = shape(img, lambda d: d.polygon(star_points(C, 540, 180, 80), fill=255), (255, 255, 230), (255, 200, 120), outline=22, shadow=False)
+icons["nebula"] = save(sparkle(img, 800, 200, 70), "nebula")
+
+# white hole: bright sphere with an icy ring
+ring = blank("L")
+ImageDraw.Draw(ring).ellipse((60, 400, 964, 624), outline=255, width=60)
+ring = ring.rotate(-15, resample=Image.BICUBIC, center=(C, C))
+img = shape(blank(), lambda d: d.polygon(star_points(C, C, 470, 300, 16, 0), fill=255), (240, 250, 255), (180, 220, 255), outline=24, gloss=False)
+img = shape(img, lambda d: d.ellipse((250, 250, 774, 774), fill=255), (255, 255, 255), (200, 225, 255), outline=28)
+img = shape(img, lambda d: d.bitmap((0, 0), ring, fill=255), (220, 245, 255), (140, 200, 255), outline=20, gloss=False, shadow=False)
+icons["whitehole"] = save(img, "whitehole")
+
+# galaxy core: two spiral arms around a golden core
+def spiral(d, phase):
+    pts = []
+    for i in range(60):
+        t = i / 59
+        a = phase + t * 3.6
+        r = 70 + t * 360
+        pts.append((C + math.cos(a) * r, C + math.sin(a) * r * 0.75))
+    d.line(pts, fill=255, width=int(70), joint="curve")
+img = blank()
+for ph in (0, math.pi):
+    img = shape(img, lambda d, ph=ph: spiral(d, ph), (255, 200, 240), (170, 110, 240), outline=22, gloss=False)
+img = shape(img, lambda d: d.ellipse((380, 410, 644, 614), fill=255), (255, 245, 190), (255, 180, 60), outline=24)
+icons["galaxy"] = save(sparkle(img, 820, 220, 60), "galaxy")
+
+# cosmic string: glowing wave
+pts = [(120 + i * 13, C + math.sin(i / 8) * 220) for i in range(61)]
+img = shape(blank(), lambda d: d.line(pts, fill=255, width=90, joint="curve"), (200, 255, 230), (60, 210, 160), outline=30)
+for (x, y) in [(pts[10][0], pts[10][1]), (pts[35][0], pts[35][1]), (pts[55][0], pts[55][1])]:
+    img = sparkle(img, x, y, 70)
+icons["cosmic"] = save(img, "cosmic")
+
+# big bang: huge multi-layer burst
+img = shape(blank(), lambda d: d.polygon(star_points(C, C, 500, 250, 14, 0.1), fill=255), (255, 110, 80), (200, 40, 60), outline=28)
+img = shape(img, lambda d: d.polygon(star_points(C, C, 400, 220, 12, 0.4), fill=255), (255, 190, 80), (255, 120, 40), outline=24, shadow=False)
+img = shape(img, lambda d: d.polygon(star_points(C, C, 300, 170, 10, 0.2), fill=255), (255, 250, 170), (255, 200, 80), outline=20, shadow=False)
+img = shape(img, lambda d: d.ellipse((400, 400, 624, 624), fill=255), (255, 255, 255), (255, 240, 210), outline=18, shadow=False)
+icons["bigbang"] = save(img, "bigbang")
+
+# infinity star: lemniscate with a star at the center
+lem = []
+for i in range(121):
+    t = i / 120 * 2 * math.pi
+    den = 1 + math.sin(t) ** 2
+    lem.append((C + 400 * math.cos(t) / den, C + 400 * math.sin(t) * math.cos(t) / den))
+img = shape(blank(), lambda d: d.line(lem, fill=255, width=95, joint="curve"), (225, 200, 255), (130, 80, 230), outline=30)
+img = shape(img, lambda d: d.polygon(star_points(C, C, 170, 75), fill=255), (255, 245, 180), (255, 190, 50), outline=22, shadow=False)
+icons["infinity"] = save(sparkle(img, 830, 230, 70), "infinity")
+
 # ---------------- UI icons
 # catalogue: treasure chest
 img = shape(blank(), lambda d: d.rounded_rectangle((150, 420, 874, 860), 50, fill=255), (215, 140, 70), (150, 80, 40), outline=30)

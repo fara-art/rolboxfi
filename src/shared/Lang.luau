@@ -45,6 +45,9 @@ Lang.Strings = {
 		rewardsTitle = "ROLL REWARDS", rewards = "REWARDS", rewardsDone = "ROLLS DONE", nextReward = "Next reward",
 		moreRolls = "%s more rolls", allDone = "All rewards reached!", locked = "LOCKED", cashWord = "Cash", luckWord = "Luck", rollsWord = "ROLLS", toastReward = "Reward: %s",
 		settings = "SETTINGS", music = "Music", sfx = "Sounds", on = "ON", off = "OFF", rebirthBig = "REBIRTH!", rareBig = "RARE!", legendBig = "LEGENDARY!",
+		admin = "ADMIN", adminCash = "Give cash", adminStar = "Give star", adminRolls = "Add rolls", adminMass = "Add Black Hole mass",
+		adminEvents = "Events", adminShower = "START STAR SHOWER", adminGlobal = "TEST SERVER ANIMATION", give = "GIVE",
+		amountHint = "e.g. 5Qd or 1e15", countHint = "count", globalFound = "%s found",
 		langButton = "EN",
 	},
 	ru = {
@@ -88,6 +91,9 @@ Lang.Strings = {
 		rewardsTitle = "НАГРАДЫ ЗА КРУТКИ", rewards = "НАГРАДЫ", rewardsDone = "КРУТОК СДЕЛАНО", nextReward = "Следующая награда",
 		moreRolls = "ещё %s круток", allDone = "Все награды открыты!", locked = "ЗАКРЫТО", cashWord = "Деньги", luckWord = "Удача", rollsWord = "КРУТОК", toastReward = "Награда: %s",
 		settings = "НАСТРОЙКИ", music = "Музыка", sfx = "Звуки", on = "ВКЛ", off = "ВЫКЛ", rebirthBig = "ПЕРЕРОЖДЕНИЕ!", rareBig = "РЕДКАЯ!", legendBig = "ЛЕГЕНДАРНАЯ!",
+		admin = "АДМИНКА", adminCash = "Выдать деньги", adminStar = "Выдать звезду", adminRolls = "Добавить крутки", adminMass = "Добавить массу дыры",
+		adminEvents = "События", adminShower = "ЗАПУСТИТЬ ЗВЕЗДОПАД", adminGlobal = "ТЕСТ АНИМАЦИИ СЕРВЕРА", give = "ВЫДАТЬ",
+		amountHint = "напр. 5Qd или 1e15", countHint = "кол-во", globalFound = "%s нашёл",
 		langButton = "RU",
 	},
 }
@@ -96,6 +102,8 @@ Lang.StarNames = {
 	ru = {
 		dust = "Звёздная пыль", spark = "Искра", dwarf = "Красный карлик", sun = "Жёлтое солнце", giant = "Голубой гигант",
 		pulsar = "Пульсар", neutron = "Нейтронная звезда", quasar = "Квазар", supernova = "Сверхновая",
+		magnetar = "Магнетар", nebula = "Сердце туманности", whitehole = "Белая дыра", galaxy = "Ядро галактики",
+		cosmic = "Космическая струна", bigbang = "Большой взрыв", infinity = "Звезда бесконечности",
 	},
 }
 

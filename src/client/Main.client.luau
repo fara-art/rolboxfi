@@ -26,6 +26,7 @@ local StateEv = Remotes:WaitForChild("State")
 local AnnounceEv = Remotes:WaitForChild("Announce")
 local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
+local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
 
 local state = nil
 local selected: string? = nil
@@ -584,7 +585,7 @@ renderers[indexW] = function()
 		end
 		local complete = found == #Stars.List
 		local claimed = state.indexClaims[mutation.id] == true
-		local r = row(body, order, 120, WHITE)
+		local r = row(body, order, 64 + 2 * 50, WHITE)
 		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
 		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
 		btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
@@ -592,14 +593,14 @@ renderers[indexW] = function()
 				ActionEv:FireServer("ClaimIndexRow", mutation.id)
 			end
 		end)
-		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 56), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
-		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), Parent = strip })
+		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 100), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
+		make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -4, 0.5, -4), CellPadding = UDim2.new(0, 4, 0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip })
 		for _, star in Stars.List do
 			local key = Items.key(star.id, mutation.id)
 			if state.index[key] then
-				starIcon(star, mutation, { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), ZIndex = 23, Parent = strip })
+				starIcon(star, mutation, { LayoutOrder = star.index, ZIndex = 23, Parent = strip })
 			else
-				local unknown = make("Frame", { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+				local unknown = make("Frame", { LayoutOrder = star.index, BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
 				make("TextLabel", {
 					Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = PANEL_2, Text = "?", TextScaled = true,
 					FontFace = TITLE, TextColor3 = GREY, ZIndex = 24, Parent = unknown,
@@ -955,6 +956,144 @@ local function celebrateRebirth()
 	end
 end
 
+---------------------------------------------------------------- Admin panel (only shown when the server says you are admin)
+local adminW = window("admin", "center", { Size = UDim2.new(0.46, 0, 0.72, 0), Position = UDim2.new(0.27, 0, 0.14, 0) })
+local adminStar = Stars.List[#Stars.List].id
+local adminMutation = "normal"
+
+local function inputBox(parent: Instance, hintKey: string, defaultText: string, props)
+	props.BackgroundColor3 = WHITE
+	props.PlaceholderText = t(hintKey)
+	props.Text = defaultText
+	props.TextColor3 = TEXT
+	props.FontFace = TITLE
+	props.TextScaled = true
+	props.ClearTextOnFocus = false
+	props.ZIndex = 22
+	props.Parent = parent
+	return make("TextBox", props, { corner(10), stroke(INK, 2.5), pad(6), make("UITextSizeConstraint", { MaxTextSize = 18 }) })
+end
+
+renderers[adminW] = function()
+	local body = adminW.body
+	clear(body)
+	local function section(order: number, titleKey: string, height: number)
+		local r = row(body, order, height, WHITE)
+		text({ Size = UDim2.new(1, -20, 0, 26), Position = UDim2.new(0, 10, 0, 6), Text = t(titleKey), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
+		return r
+	end
+	local function amountRow(order: number, titleKey: string, action: string, default: string)
+		local r = section(order, titleKey, 84)
+		local box = inputBox(r, "amountHint", default, { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 10, 0, 36) })
+		btn(MINT, { Size = UDim2.new(0.32, 0, 0, 40), Position = UDim2.new(0.66, 0, 0, 36), Text = t("give"), ZIndex = 22, Parent = r }, function()
+			local value = Format.parse(box.Text)
+			if value then
+				ActionEv:FireServer(action, value)
+			else
+				box.Text = ""
+			end
+		end)
+	end
+	amountRow(1, "adminCash", "AdminCash", "1Qd")
+
+	-- star picker: all stars as icons, mutations as buttons
+	local starRow = section(2, "adminStar", 300)
+	local grid = make("Frame", { Size = UDim2.new(1, -20, 0, 130), Position = UDim2.new(0, 10, 0, 36), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
+	make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -6, 0.5, -6), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+	for _, star in Stars.List do
+		local cell = make("TextButton", {
+			LayoutOrder = star.index, Text = "", AutoButtonColor = true, ZIndex = 23, Parent = grid,
+			BackgroundColor3 = if adminStar == star.id then Color3.fromRGB(220, 236, 255) else PANEL_2,
+		}, { corner(10), stroke(if adminStar == star.id then BLUE else LINE, if adminStar == star.id then 3 else 1.5) })
+		starIcon(star, Mutations.ById[adminMutation], { Size = UDim2.new(0.9, 0, 0.9, 0), Position = UDim2.new(0.05, 0, 0.05, 0), ZIndex = 24, Parent = cell })
+		cell.Activated:Connect(function()
+			adminStar = star.id
+			renderers[adminW]()
+		end)
+	end
+	local mutations = make("Frame", { Size = UDim2.new(1, -20, 0, 36), Position = UDim2.new(0, 10, 0, 172), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = mutations })
+	for _, mutation in Mutations.List do
+		btn(if adminMutation == mutation.id then BLUE else GREY, { Size = UDim2.new(0.19, -5, 1, 0), Text = Lang.mutation(lang, mutation), Max = 14, ZIndex = 23, Parent = mutations }, function()
+			adminMutation = mutation.id
+			renderers[adminW]()
+		end)
+	end
+	local key = Items.key(adminStar, adminMutation)
+	text({ Size = UDim2.new(1, -20, 0, 24), Position = UDim2.new(0, 10, 0, 214), Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextColor3 = BLUE, Max = 17, ZIndex = 22, Parent = starRow })
+	local countBox = inputBox(starRow, "countHint", "1", { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 10, 0, 248) })
+	btn(MINT, { Size = UDim2.new(0.32, 0, 0, 40), Position = UDim2.new(0.66, 0, 0, 248), Text = t("give"), ZIndex = 22, Parent = starRow }, function()
+		local count = Format.parse(countBox.Text)
+		if count and count >= 1 then
+			ActionEv:FireServer("AdminStar", key, count)
+		end
+	end)
+
+	amountRow(3, "adminRolls", "AdminRolls", "1000")
+	amountRow(4, "adminMass", "AdminMass", "1M")
+
+	local events = section(5, "adminEvents", 140)
+	btn(BLUE, { Size = UDim2.new(1, -20, 0, 42), Position = UDim2.new(0, 10, 0, 38), Text = t("adminShower"), ZIndex = 22, Max = 17, Parent = events }, function()
+		ActionEv:FireServer("AdminShower")
+	end)
+	btn(LILAC, { Size = UDim2.new(1, -20, 0, 42), Position = UDim2.new(0, 10, 0, 88), Text = t("adminGlobal"), ZIndex = 22, Max = 17, Parent = events }, function()
+		ActionEv:FireServer("AdminGlobalTest", key)
+	end)
+end
+
+local adminButton = iconButton("admin", "admin", Color3.fromRGB(230, 90, 90), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 188, 0, 64), Max = 9, Visible = false, Parent = gui }, function()
+	open(adminW)
+end)
+
+---------------------------------------------------------------- Server-wide cinematic for 1-in-a-billion finds
+local function globalCinematic(finder: string, key: string, chance: number)
+	local star, mutation = Items.parse(key)
+	if not star then
+		return
+	end
+	playSfx(if Config.Sounds.GlobalRare ~= "" then Config.Sounds.GlobalRare else Config.Sounds.Rebirth, 1)
+	local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 8, 30), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
+	TweenService:Create(root, TweenInfo.new(0.5), { BackgroundTransparency = 0.35 }):Play()
+
+	-- rotating light rays: 8 bars through the center = 16 rays (GUI rotates around each element's center)
+	local rays = make("Frame", { Size = UDim2.new(0, 1600, 0, 1600), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 201, Parent = root })
+	for i = 1, 8 do
+		make("Frame", {
+			Size = UDim2.new(0, 60, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = i * (180 / 8),
+			BackgroundColor3 = if i % 2 == 0 then star.color else WHITE, BorderSizePixel = 0, ZIndex = 201, Parent = rays,
+		}, { make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(1, 1) }) }) })
+	end
+	TweenService:Create(rays, TweenInfo.new(6, Enum.EasingStyle.Linear), { Rotation = 120 }):Play()
+
+	local holder = make("Frame", { Size = UDim2.new(0, 640, 0, 420), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 202, Parent = root })
+	local scale = make("UIScale", { Scale = 0, Parent = holder })
+	starIcon(star, mutation, { Size = UDim2.new(0, 220, 0, 220), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 203, Parent = holder })
+	local function line(y: number, h: number, value: string, color: Color3, max: number)
+		text({ Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0, y), Text = value, FontFace = TITLE, TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = max, ZIndex = 203, Parent = holder })
+	end
+	line(222, 40, t("globalFound", finder), WHITE, 34)
+	line(262, 80, Lang.item(lang, key), star.color, 72)
+	line(344, 50, t("oneIn", Format.number(chance)), GOLD, 42)
+	TweenService:Create(scale, TweenInfo.new(0.7, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+
+	local camera = workspace.CurrentCamera
+	if camera then
+		TweenService:Create(camera, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = camera.FieldOfView + 20 }):Play()
+	end
+	task.delay(5.2, function()
+		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 }):Play()
+		TweenService:Create(root, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
+		for _, ray in rays:GetChildren() do
+			if ray:IsA("Frame") then
+				TweenService:Create(ray, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+			end
+		end
+		task.wait(0.9)
+		root:Destroy()
+	end)
+end
+GlobalRareEv.OnClientEvent:Connect(globalCinematic)
+
 ---------------------------------------------------------------- Icon buttons: bottom row + right column
 local BUTTON = 72
 local GAP = 12
@@ -1036,6 +1175,7 @@ render = function()
 	luckValue.Text = "x" .. (math.floor(state.luck * 100 + 0.5) / 100)
 	rollsValue.Text = Format.number(state.totalRolls)
 	rebirthValue.Text = tostring(state.rebirths)
+	adminButton.Visible = state.isAdmin == true
 	renderTelescope()
 
 	local rewardReady = false
@@ -1134,7 +1274,7 @@ local function doRoll()
 				best = key
 			end
 		end
-		if Items.chance(best) >= 1000 then
+		if Items.chance(best) >= 1000 and Items.chance(best) < Config.GlobalRareChance then
 			showRare(best)
 		end
 	end

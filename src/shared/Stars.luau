@@ -12,6 +12,13 @@ Stars.List = {
 	{ id = "neutron", name = "Neutron Star", chance = 10000, income = 9000, color = Color3.fromRGB(90, 255, 220) },
 	{ id = "quasar", name = "Quasar", chance = 100000, income = 100000, color = Color3.fromRGB(255, 80, 200), evolvesTo = "supernova" },
 	{ id = "supernova", name = "Supernova", chance = 1000000, income = 1500000, color = Color3.fromRGB(255, 255, 255) },
+	{ id = "magnetar", name = "Magnetar", chance = 5000000, income = 8000000, color = Color3.fromRGB(110, 200, 255) },
+	{ id = "nebula", name = "Nebula Heart", chance = 25000000, income = 45000000, color = Color3.fromRGB(255, 140, 230) },
+	{ id = "whitehole", name = "White Hole", chance = 100000000, income = 200000000, color = Color3.fromRGB(235, 248, 255) },
+	{ id = "galaxy", name = "Galaxy Core", chance = 1000000000, income = 2500000000, color = Color3.fromRGB(255, 205, 110) },
+	{ id = "cosmic", name = "Cosmic String", chance = 10000000000, income = 30000000000, color = Color3.fromRGB(130, 255, 200) },
+	{ id = "bigbang", name = "Big Bang", chance = 100000000000, income = 400000000000, color = Color3.fromRGB(255, 120, 80) },
+	{ id = "infinity", name = "Infinity Star", chance = 1000000000000, income = 5000000000000, color = Color3.fromRGB(200, 160, 255) },
 }
 
 Stars.ById = {}

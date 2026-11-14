@@ -187,6 +187,115 @@ builders.supernova = function(m, cf, color)
 	return core
 end
 
+builders.magnetar = function(m, cf, color)
+	local core = orb(m, cf, 1.3, Color3.fromRGB(210, 240, 255))
+	orb(m, cf, 2, color, 0.55)
+	for i = 1, 6 do
+		-- jagged "field lines"
+		local rot = CFrame.Angles(0, i * math.pi / 3, math.rad(35))
+		bar(m, cf * rot * CFrame.new(0, 1.6, 0), Vector3.new(0.14, 1.3, 0.14), Color3.fromRGB(255, 240, 150), 0.1)
+		bar(m, cf * rot * CFrame.new(0.25, 2.4, 0) * CFrame.Angles(0, 0, math.rad(-40)), Vector3.new(0.14, 0.9, 0.14), Color3.fromRGB(255, 240, 150), 0.1)
+	end
+	orb(m, cf, 4.2, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 245, 170), Color2 = color, Rate = 30, Speed = NumberRange.new(3, 6), Lifetime = NumberRange.new(0.3, 0.7), Texture = SPARKLE })
+	light(core, color, 18, 3)
+	return core
+end
+
+builders.nebula = function(m, cf, color)
+	local core = orb(m, cf, 1, Color3.fromRGB(255, 250, 220))
+	local tints = { color, Color3.fromRGB(180, 120, 255), Color3.fromRGB(120, 200, 255) }
+	for i = 1, 9 do
+		local a = i * 2.4
+		orb(m, cf * CFrame.new(math.cos(a) * 1.3, math.sin(i * 1.7) * 0.8, math.sin(a) * 1.3), 1.4 + (i % 3) * 0.4, tints[i % 3 + 1], 0.55)
+	end
+	particles(core, { Color = color, Color2 = Color3.fromRGB(150, 200, 255), Rate = 35, Speed = NumberRange.new(0.3, 1), Lifetime = NumberRange.new(2, 4), Texture = SPARKLE })
+	light(core, color, 18, 2.5)
+	return core
+end
+
+builders.whitehole = function(m, cf, color)
+	local core = orb(m, cf, 1.8, WHITE)
+	orb(m, cf, 2.6, Color3.fromRGB(220, 240, 255), 0.4)
+	disk(m, cf * CFrame.Angles(math.rad(15), 0, 0), 5, Color3.fromRGB(200, 230, 255), 0.5)
+	for i = 1, 12 do
+		bar(m, cf * CFrame.Angles(0, 0, i * math.pi / 6) * CFrame.new(0, 2, 0), Vector3.new(0.2, 1.2, 0.2), WHITE, 0.2)
+	end
+	orb(m, cf, 5, color, 0.88)
+	particles(core, { Color = WHITE, Color2 = Color3.fromRGB(180, 220, 255), Rate = 40, Speed = NumberRange.new(2, 5), Texture = SPARKLE })
+	light(core, WHITE, 22, 4)
+	return core
+end
+
+builders.galaxy = function(m, cf, color)
+	local core = orb(m, cf, 1.2, Color3.fromRGB(255, 240, 190))
+	local tilt = cf * CFrame.Angles(math.rad(25), 0, 0)
+	for arm = 0, 1 do
+		for i = 1, 10 do
+			local a = arm * math.pi + i * 0.45
+			local r = 0.5 + i * 0.26
+			orb(m, tilt * CFrame.new(math.cos(a) * r, 0, math.sin(a) * r), 0.55 - i * 0.02, if i % 2 == 0 then Color3.fromRGB(200, 150, 255) else color, 0.15)
+		end
+	end
+	disk(m, tilt, 6, Color3.fromRGB(170, 120, 255), 0.85)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(190, 140, 255), Rate = 40, Speed = NumberRange.new(0.5, 1.5), Lifetime = NumberRange.new(2, 3.5), Texture = SPARKLE })
+	light(core, color, 22, 3.5)
+	return core
+end
+
+builders.cosmic = function(m, cf, color)
+	local core = orb(m, cf, 0.9, WHITE)
+	for i = 0, 23 do
+		local tt = i / 23
+		local a = tt * math.pi * 4
+		orb(m, cf * CFrame.new(math.cos(a) * 1.2, -2.6 + tt * 5.2, math.sin(a) * 1.2), 0.45, if i % 2 == 0 then color else WHITE, 0.05)
+		orb(m, cf * CFrame.new(-math.cos(a) * 1.2, -2.6 + tt * 5.2, -math.sin(a) * 1.2), 0.35, Color3.fromRGB(180, 255, 240), 0.2)
+	end
+	orb(m, cf, 4, color, 0.9)
+	particles(core, { Color = color, Color2 = WHITE, Rate = 45, Speed = NumberRange.new(1, 3), Texture = SPARKLE })
+	light(core, color, 22, 4)
+	return core
+end
+
+builders.bigbang = function(m, cf, color)
+	local core = orb(m, cf, 2, WHITE)
+	orb(m, cf, 2.8, Color3.fromRGB(255, 220, 140), 0.35)
+	local rainbow = {
+		Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 170, 70), Color3.fromRGB(255, 235, 110),
+		Color3.fromRGB(120, 230, 140), Color3.fromRGB(110, 190, 255), Color3.fromRGB(190, 130, 255),
+	}
+	for i = 1, 22 do
+		local rot = CFrame.Angles(i * 1.7, i * 2.3, i * 0.9)
+		local length = 2.6 + (i % 4) * 0.5
+		bar(m, cf * rot * CFrame.new(0, length / 2, 0), Vector3.new(0.25, length, 0.25), rainbow[i % #rainbow + 1], 0.05)
+	end
+	orb(m, cf, 6, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 240, 200), Color2 = color, Rate = 70, Speed = NumberRange.new(3, 7), Texture = SPARKLE })
+	particles(core, { Color = WHITE, Rate = 10, Lifetime = NumberRange.new(0.3, 0.6), Speed = NumberRange.new(0, 0),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2.5), NumberSequenceKeypoint.new(1, 5) }) })
+	light(core, Color3.fromRGB(255, 220, 170), 26, 5)
+	return core
+end
+
+builders.infinity = function(m, cf, color)
+	local core = orb(m, cf, 1.2, Color3.fromRGB(255, 245, 190))
+	for i = 0, 39 do
+		local tt = i / 40 * math.pi * 2
+		local den = 1 + math.sin(tt) ^ 2
+		local x, y = 2.6 * math.cos(tt) / den, 2.6 * math.sin(tt) * math.cos(tt) / den
+		orb(m, cf * CFrame.new(x, y, 0), 0.5, if i % 4 == 0 then Color3.fromRGB(255, 220, 120) else color, 0.05)
+	end
+	for i = 1, 5 do
+		-- little crown over the core
+		bar(m, cf * CFrame.Angles(0, i * math.pi * 2 / 5, 0) * CFrame.new(0, 1.3, 0.5), Vector3.new(0.18, 0.7, 0.18), Color3.fromRGB(255, 210, 90), 0)
+	end
+	orb(m, cf, 6, color, 0.9)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(255, 220, 140), Rate = 60, Speed = NumberRange.new(1, 3), Texture = SPARKLE })
+	particles(core, { Color = WHITE, Rate = 12, Speed = NumberRange.new(4, 8), Lifetime = NumberRange.new(0.5, 1), Texture = SPARKLE })
+	light(core, color, 26, 5)
+	return core
+end
+
 -- star, mutation, level -> Model at position
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")
