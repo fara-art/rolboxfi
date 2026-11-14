@@ -42,7 +42,7 @@ local function retry(fn)
 		if ok then
 			return true, result
 		end
-		warn("[DataService] попытка", attempt, result)
+		warn("[DataService] attempt", attempt, result)
 		task.wait(attempt)
 	end
 	return false, nil
@@ -61,9 +61,9 @@ function DataService.load(player: Player)
 	end
 	if not ok then
 		if RunService:IsStudio() then
-			warn("[DataService] DataStore недоступен (включи API Services в Game Settings). Играем без сохранений.")
+			warn("[DataService] DataStore unavailable (enable API Services in Game Settings). Playing without saves.")
 		else
-			player:Kick("Не удалось загрузить данные. Зайди ещё раз.")
+			player:Kick("Failed to load your data. Please rejoin.")
 			return nil
 		end
 	end

@@ -80,7 +80,7 @@ local function recompute(player: Player, data)
 			data.discovered[group.id] = true
 			local pattern = Constellations.ById[group.id]
 			AnnounceEv:FireAllClients(
-				string.format("✨ %s открыл созвездие «%s» (x%s)!", player.DisplayName, pattern.name, pattern.mult),
+				string.format("✨ %s discovered the %s constellation (x%s)!", player.DisplayName, pattern.name, pattern.mult),
 				Color3.fromRGB(255, 220, 120)
 			)
 		end
@@ -188,7 +188,7 @@ RollFn.OnServerInvoke = function(player)
 
 	if star.chance >= Config.AnnounceChance then
 		AnnounceEv:FireAllClients(
-			string.format("🌟 %s выбил «%s» (1 к %s)!", player.DisplayName, star.name, Format.number(star.chance)),
+			string.format("🌟 %s rolled %s (1 in %s)!", player.DisplayName, star.name, Format.number(star.chance)),
 			star.color
 		)
 	end
@@ -296,7 +296,7 @@ task.spawn(function()
 		task.wait(Config.ShowerInterval)
 		ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
 		AnnounceEv:FireAllClients(
-			string.format("🌠 ЗВЕЗДОПАД! Удача x%s на %s", Config.ShowerLuck, Format.time(Config.ShowerDuration)),
+			string.format("🌠 STAR SHOWER! x%s luck for %s", Config.ShowerLuck, Format.time(Config.ShowerDuration)),
 			Color3.fromRGB(140, 200, 255)
 		)
 		for player in sessions do

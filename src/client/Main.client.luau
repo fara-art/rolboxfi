@@ -95,13 +95,13 @@ local gui = make("ScreenGui", {
 local top = panel({ Size = UDim2.new(0.6, 0, 0.09, 0), Position = UDim2.new(0.2, 0, 0.01, 0), Parent = gui })
 make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), Parent = top })
 local cashLabel = label({ Size = UDim2.new(0.3, 0, 1, 0), Text = "💰 0", TextColor3 = Color3.fromRGB(255, 220, 90), Parent = top })
-local incomeLabel = label({ Size = UDim2.new(0.22, 0, 1, 0), Text = "+0/с", TextColor3 = Color3.fromRGB(140, 255, 160), Parent = top })
+local incomeLabel = label({ Size = UDim2.new(0.22, 0, 1, 0), Text = "+0/s", TextColor3 = Color3.fromRGB(140, 255, 160), Parent = top })
 local luckLabel = label({ Size = UDim2.new(0.2, 0, 1, 0), Text = "🍀 x1", Parent = top })
 local showerLabel = label({ Size = UDim2.new(0.24, 0, 1, 0), Text = "", TextColor3 = Color3.fromRGB(140, 200, 255), Parent = top })
 
 -- Лево: крутка
 local left = panel({ Size = UDim2.new(0.2, 0, 0.6, 0), Position = UDim2.new(0.01, 0, 0.14, 0), Parent = gui })
-local resultLabel = label({ Size = UDim2.new(1, 0, 0.22, 0), Text = "Крути звёзды!", MaxText = 30, Parent = left })
+local resultLabel = label({ Size = UDim2.new(1, 0, 0.22, 0), Text = "Roll for stars!", MaxText = 30, Parent = left })
 local chanceLabel = label({ Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.22, 0), Text = "", TextColor3 = MUTED, MaxText = 18, Parent = left })
 local rollButton
 local autoButton
@@ -117,12 +117,12 @@ local sky = make("Frame", {
 local skyGrid = make("UIGridLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = sky })
 local skyHint = label({
 	Size = UDim2.new(0.5, 0, 0.05, 0), Position = UDim2.new(0.25, 0, 0.805, 0),
-	Text = "Выбери звезду справа и тыкни клетку. Тыкни звезду на небе, чтобы снять.", TextColor3 = MUTED, MaxText = 16, Font = Enum.Font.Gotham, Parent = gui,
+	Text = "Pick a star on the right, then tap a cell. Tap a placed star to remove it.", TextColor3 = MUTED, MaxText = 16, Font = Enum.Font.Gotham, Parent = gui,
 })
 
 -- Право: инвентарь
 local right = panel({ Size = UDim2.new(0.22, 0, 0.6, 0), Position = UDim2.new(0.77, 0, 0.14, 0), Parent = gui })
-label({ Size = UDim2.new(1, 0, 0.08, 0), Text = "Инвентарь", Parent = right })
+label({ Size = UDim2.new(1, 0, 0.08, 0), Text = "Inventory", Parent = right })
 local invList = make("ScrollingFrame", {
 	Size = UDim2.new(1, 0, 0.72, 0), Position = UDim2.new(0, 0, 0.09, 0), BackgroundTransparency = 1,
 	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 6, Parent = right,
@@ -156,8 +156,8 @@ local function popup(title: string)
 	return frame, list
 end
 
-local oddsFrame, oddsList = popup("Шансы (с твоей удачей)")
-local bookFrame, bookList = popup("Книга созвездий")
+local oddsFrame, oddsList = popup("Odds (with your luck)")
+local bookFrame, bookList = popup("Constellation Book")
 
 local function clear(container: Instance)
 	for _, child in container:GetChildren() do
@@ -175,7 +175,7 @@ local function renderOdds()
 		local star = Stars.List[i]
 		label({
 			Size = UDim2.new(1, -10, 0, 30), LayoutOrder = -i, ZIndex = 10, TextXAlignment = Enum.TextXAlignment.Left,
-			Text = string.format("%s  •  1 к %s  •  %s", star.name, Format.number(star.chance), Format.percent(odds[star.id])),
+			Text = string.format("%s  •  1 in %s  •  %s", star.name, Format.number(star.chance), Format.percent(odds[star.id])),
 			TextColor3 = star.color, MaxText = 20, Parent = oddsList,
 		})
 	end
@@ -202,13 +202,13 @@ local function renderBook()
 		end
 		label({
 			Size = UDim2.new(1, -80, 1, -10), Position = UDim2.new(0, 75, 0, 5), ZIndex = 10, TextXAlignment = Enum.TextXAlignment.Left,
-			Text = if found then string.format("%s  •  x%s", pattern.name, pattern.mult) else string.format("???  •  %d звёзд", #pattern.cells),
+			Text = if found then string.format("%s  •  x%s", pattern.name, pattern.mult) else string.format("???  •  %d stars", #pattern.cells),
 			TextColor3 = if found then TEXT else MUTED, MaxText = 20, Parent = row,
 		})
 	end
 	label({
 		Size = UDim2.new(1, -10, 0, 50), LayoutOrder = 999, ZIndex = 10, Font = Enum.Font.Gotham, TextColor3 = MUTED, MaxText = 16,
-		Text = string.format("Группа должна быть ровно этой формы, без лишних соседей (и по диагонали). Все звёзды одного типа: ещё x%s.", Constellations.PureBonus),
+		Text = string.format("A group must be exactly this shape with no extra neighbors (diagonals count). All stars of one type: extra x%s.", Constellations.PureBonus),
 		Parent = bookList,
 	})
 end
@@ -271,7 +271,7 @@ local function renderInventory()
 				Size = UDim2.new(1, -8, 0, 36), LayoutOrder = -i,
 				BackgroundColor3 = if selected then Color3.fromRGB(70, 60, 150) else BG,
 				TextColor3 = star.color, MaxText = 18,
-				Text = string.format("%s ×%d  (+%s/с)", star.name, count, Format.number(star.income)),
+				Text = string.format("%s ×%d  (+%s/s)", star.name, count, Format.number(star.income)),
 				Parent = invList,
 			}, function()
 				selectedStar = if selectedStar == star.id then nil else star.id
@@ -279,20 +279,20 @@ local function renderInventory()
 			end)
 		end
 	end
-	sellOne.Text = if selectedStar then "Продать 1" else "Выбери звезду"
-	sellAll.Text = if selectedStar then "Продать все" else ""
+	sellOne.Text = if selectedStar then "Sell 1" else "Select a star"
+	sellAll.Text = if selectedStar then "Sell all" else ""
 end
 
 local function renderUpgrades()
 	if state.luckLevel >= Config.MaxLuckLevel then
-		luckUpgrade.Text = "🍀 Удача: макс"
+		luckUpgrade.Text = "🍀 Luck: MAX"
 	else
-		luckUpgrade.Text = string.format("🍀 Удача +%s  (💰%s)", Config.LuckPerLevel, Format.number(Config.LuckCost(state.luckLevel)))
+		luckUpgrade.Text = string.format("🍀 Luck +%s  (💰%s)", Config.LuckPerLevel, Format.number(Config.LuckCost(state.luckLevel)))
 	end
 	if state.gridSize >= Config.MaxGridSize then
-		gridUpgrade.Text = "🌌 Небо: макс"
+		gridUpgrade.Text = "🌌 Sky: MAX"
 	else
-		gridUpgrade.Text = string.format("🌌 Небо %d×%d  (💰%s)", state.gridSize + 1, state.gridSize + 1, Format.number(Config.GridCost(state.gridSize)))
+		gridUpgrade.Text = string.format("🌌 Sky %d×%d  (💰%s)", state.gridSize + 1, state.gridSize + 1, Format.number(Config.GridCost(state.gridSize)))
 	end
 end
 
@@ -304,7 +304,7 @@ local function render()
 	if not state then
 		return
 	end
-	incomeLabel.Text = "+" .. Format.number(state.income) .. "/с"
+	incomeLabel.Text = "+" .. Format.number(state.income) .. "/s"
 	luckLabel.Text = "🍀 x" .. (math.floor(state.luck * 100 + 0.5) / 100)
 	renderSky()
 	renderInventory()
@@ -315,7 +315,7 @@ local function render()
 	if bookFrame.Visible then
 		renderBook()
 	end
-	autoButton.Text = if autoRoll then "Авто: ВКЛ" else "Авто: выкл"
+	autoButton.Text = if autoRoll then "Auto: ON" else "Auto: OFF"
 end
 
 ---------------------------------------------------------------- Buttons
@@ -343,7 +343,7 @@ local function doRoll()
 	if star then
 		resultLabel.Text = star.name
 		resultLabel.TextColor3 = star.color
-		chanceLabel.Text = "1 к " .. Format.number(star.chance)
+		chanceLabel.Text = "1 in " .. Format.number(star.chance)
 		local pop = TweenService:Create(resultLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = UDim2.new(1, 0, 0.22, 0) })
 		resultLabel.Size = UDim2.new(1.2, 0, 0.26, 0)
 		pop:Play()
@@ -352,8 +352,8 @@ local function doRoll()
 	rolling = false
 end
 
-rollButton = button({ Size = UDim2.new(1, 0, 0.2, 0), Position = UDim2.new(0, 0, 0.35, 0), Text = "🎲 КРУТИТЬ", MaxText = 32, Parent = left }, doRoll)
-autoButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.58, 0), Text = "Авто: выкл", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
+rollButton = button({ Size = UDim2.new(1, 0, 0.2, 0), Position = UDim2.new(0, 0, 0.35, 0), Text = "🎲 ROLL", MaxText = 32, Parent = left }, doRoll)
+autoButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.58, 0), Text = "Auto: OFF", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
 	if canAutoRoll() then
 		autoRoll = not autoRoll
 		render()
@@ -361,18 +361,18 @@ autoButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0
 		MarketplaceService:PromptGamePassPurchase(player, Config.GamePasses.AutoRoll)
 	end
 end)
-oddsButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.73, 0), Text = "📊 Шансы", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
+oddsButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.73, 0), Text = "📊 Odds", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
 	bookFrame.Visible = false
 	oddsFrame.Visible = not oddsFrame.Visible
 	renderOdds()
 end)
-bookButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.88, 0), Text = "📖 Созвездия", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
+bookButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.88, 0), Text = "📖 Constellations", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
 	oddsFrame.Visible = false
 	bookFrame.Visible = not bookFrame.Visible
 	renderBook()
 end)
 
-sellOne = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.84, 0), Text = "Выбери звезду", BackgroundColor3 = Color3.fromRGB(180, 70, 90), MaxText = 18, Parent = right }, function()
+sellOne = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.84, 0), Text = "Select a star", BackgroundColor3 = Color3.fromRGB(180, 70, 90), MaxText = 18, Parent = right }, function()
 	if selectedStar then
 		ActionEv:FireServer("Sell", selectedStar, 1)
 	end
