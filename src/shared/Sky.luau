@@ -61,6 +61,14 @@ export type Group = { id: string, pure: boolean, mult: number, cells: { string }
 export type Evaluation = { income: number, groups: { Group }, cellMult: { [string]: number } }
 
 function Sky.evaluate(grid: { [string]: any }, size: number, slabs: { [string]: string }?): Evaluation
+	if not Config.ConstellationsEnabled then
+		local total = 0
+		for key, cell in grid do
+			local slab = slabs and Config.SlabsById[slabs[key]]
+			total += Items.income(cell.id) * Evolution.mult(cell.age or 0) * (if slab then slab.mult else 1)
+		end
+		return { income = total, groups = {}, cellMult = {} }
+	end
 	local visited = {}
 	local groups = {}
 	local cellMult = {}

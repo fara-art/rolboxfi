@@ -25,7 +25,7 @@ local RING = 150 -- distance from hub center to satellite islands
 local HUB_RADIUS = 50
 local PLOT_SIZE = 64
 local SPACING = 7
-local STAR_HEIGHT = 4.2
+local STAR_HEIGHT = 4.9 -- above the stand's floor
 
 local MARBLE = Color3.fromRGB(246, 246, 250)
 local MARBLE_WARM = Color3.fromRGB(238, 232, 220)
@@ -398,7 +398,7 @@ local function buildForgeHouse(folder: Folder)
 
 	-- banner over the entrance
 	local banner = make("Part", { Name = "Banner", Size = Vector3.new(12, 2.4, 0.4), CFrame = cf * CFrame.new(0, 9, -8.3), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
-	worldText(banner, "signForge", 0, 14, 2.6)
+	worldText(banner, "signForge", 2.8, 14, 2.6)
 end
 
 ---------------------------------------------------------------- Black Hole island
@@ -576,41 +576,154 @@ local function buildBlackHole(folder: Folder, slot: number)
 end
 
 ---------------------------------------------------------------- plots
--- Plot cells: invisible build markers on every cell, slabs (with prompts) where the owner built them
-local function buildCells(plot, size: number, slabs, grid)
+-- ================================================================ museum on each plot
+local FLOOR_H = 16
+local HALF = 28.75 -- wall line from the plot center
+
+-- display spots: 1-7 left wall (front->back), 8-13 back wall, 14-20 right wall (back->front)
+local function spotLocal(spot: number): (number, number)
+	if spot <= 7 then
+		return -24, -18 + (spot - 1) * 7
+	elseif spot <= 13 then
+		return -17.5 + (spot - 8) * 7, 24
+	end
+	return 24, 24 - (spot - 14) * 7
+end
+
+local PEDESTAL_STYLE = {
+	stone = { base = Color3.fromRGB(95, 97, 110), body = Color3.fromRGB(150, 152, 165), top = Color3.fromRGB(180, 182, 194), mat = Enum.Material.Slate },
+	gold = { base = Color3.fromRGB(120, 85, 35), body = Color3.fromRGB(240, 190, 70), top = Color3.fromRGB(255, 215, 110), mat = Enum.Material.Foil, cushion = Color3.fromRGB(150, 30, 50) },
+	emerald = { base = Color3.fromRGB(25, 80, 55), body = Color3.fromRGB(60, 210, 130), top = Color3.fromRGB(130, 240, 175), mat = Enum.Material.Glass, cushion = Color3.fromRGB(20, 70, 50) },
+	marble = { base = GOLD, body = Color3.fromRGB(246, 246, 252), top = GOLD, mat = Enum.Material.Marble, cushion = Color3.fromRGB(70, 40, 120) },
+}
+
+-- a museum display stand; returns the part that carries the prompt
+local function buildPedestal(cf: CFrame, slab, parent: Instance, key: string): BasePart
+	local st = PEDESTAL_STYLE[slab.id] or PEDESTAL_STYLE.stone
+	local model = make("Model", { Name = key, Parent = parent })
+	local trimMat = if slab.id == "marble" then Enum.Material.SmoothPlastic else st.mat
+	make("Part", { Name = "Base", Size = Vector3.new(5.6, 0.5, 5.6), CFrame = cf * CFrame.new(0, 0.25, 0), Material = trimMat, Color = st.base, Parent = model })
+	local body = make("Part", {
+		Name = "Body", Size = Vector3.new(4.2, 1.6, 4.2), CFrame = cf * CFrame.new(0, 1.3, 0), Material = st.mat, Color = st.body,
+		Reflectance = if slab.id == "gold" then 0.2 else 0, Transparency = if slab.id == "emerald" then 0.2 else 0, Parent = model,
+	})
+	make("Part", { Name = "Top", Size = Vector3.new(5, 0.4, 5), CFrame = cf * CFrame.new(0, 2.3, 0), Material = trimMat, Color = st.top, Reflectance = if slab.id == "gold" then 0.2 else 0, Parent = model })
+	if st.cushion then
+		make("Part", { Name = "Cushion", Size = Vector3.new(3.6, 0.25, 3.6), CFrame = cf * CFrame.new(0, 2.62, 0), Material = Enum.Material.Fabric, Color = st.cushion, CanCollide = false, Parent = model })
+	end
+	if slab.id == "emerald" then
+		make("Part", { Name = "Core", Size = Vector3.new(1.4, 1.3, 1.4), CFrame = cf * CFrame.new(0, 1.3, 0), Material = Enum.Material.Neon, Color = Color3.fromRGB(120, 255, 180), CanCollide = false, Parent = model })
+		make("PointLight", { Color = Color3.fromRGB(120, 255, 180), Range = 9, Brightness = 0.6, Parent = body })
+	elseif slab.id == "marble" then
+		for _, c in { { -2.2, -2.2 }, { 2.2, -2.2 }, { -2.2, 2.2 }, { 2.2, 2.2 } } do
+			ball((cf * CFrame.new(c[1], 2.65, c[2])).Position, 0.5, { Name = "Stud", Material = Enum.Material.SmoothPlastic, Color = GOLD, CanCollide = false, Parent = model })
+		end
+	end
+	model.PrimaryPart = body
+	return body
+end
+
+-- walls, floors, lights, elevator and roof in the plot's theme
+local function buildMuseum(plot, floors: number, themeId: string)
+	plot.museum:ClearAllChildren()
+	local theme = Config.ThemesById[themeId] or Config.Themes[1]
+	local m = plot.museum
+	local function wall(name: string, size: Vector3, offset: Vector3)
+		return make("Part", { Name = name, Size = size, CFrame = plot.cf * CFrame.new(offset), Material = theme.wallMat, Color = theme.wall, Parent = m })
+	end
+	local function trim(name: string, size: Vector3, offset: Vector3)
+		return make("Part", { Name = name, Size = size, CFrame = plot.cf * CFrame.new(offset), Material = theme.trimMat, Color = theme.trim, Parent = m })
+	end
+	local wh = FLOOR_H - 0.4
+	for f = 1, floors do
+		local y0 = (f - 1) * FLOOR_H
+		local floorPart = make("Part", {
+			Name = "MuseumFloor", Size = Vector3.new(HALF * 2 + (if f > 1 then 3 else 0), 0.4, HALF * 2 + (if f > 1 then 3 else 0)),
+			CFrame = plot.cf * CFrame.new(0, y0 + 0.2, 0), Material = theme.floorMat, Color = theme.floor, Parent = m,
+		})
+		if f == 1 then
+			floorPart.Touched:Connect(plot.onTouch)
+		else
+			trim("Cornice", Vector3.new(HALF * 2 + 3.4, 0.6, HALF * 2 + 3.4), Vector3.new(0, y0 - 0.3, 0)) -- band between floors
+		end
+		local yc = y0 + 0.4 + wh / 2
+		wall("WallLeft", Vector3.new(1.5, wh, HALF * 2 + 1.5), Vector3.new(-HALF, yc, 0))
+		wall("WallRight", Vector3.new(1.5, wh, HALF * 2 + 1.5), Vector3.new(HALF, yc, 0))
+		wall("WallBack", Vector3.new(HALF * 2 + 1.5, wh, 1.5), Vector3.new(0, yc, HALF))
+		if f == 1 then
+			local door = 7
+			local side = HALF - door
+			wall("WallFront", Vector3.new(side, wh, 1.5), Vector3.new(-(door + side / 2), yc, -HALF))
+			wall("WallFront", Vector3.new(side, wh, 1.5), Vector3.new(door + side / 2, yc, -HALF))
+			wall("Lintel", Vector3.new(door * 2, wh - 10, 1.5), Vector3.new(0, y0 + 0.4 + 10 + (wh - 10) / 2, -HALF))
+			trim("DoorTrim", Vector3.new(door * 2 + 1.5, 0.8, 2.2), Vector3.new(0, y0 + 10.4, -HALF))
+		else
+			wall("WallFront", Vector3.new(HALF * 2 + 1.5, 3, 1.5), Vector3.new(0, y0 + 1.9, -HALF))
+			make("Part", { Name = "Window", Size = Vector3.new(HALF * 2, 8, 0.6), CFrame = plot.cf * CFrame.new(0, y0 + 7.4, -HALF), Material = Enum.Material.Glass, Color = theme.light, Transparency = 0.6, Parent = m })
+			wall("WallFront", Vector3.new(HALF * 2 + 1.5, wh - 11, 1.5), Vector3.new(0, y0 + 11.4 + (wh - 11) / 2, -HALF))
+		end
+		-- ceiling lights
+		for _, x in { -12, 12 } do
+			local lamp = make("Part", { Name = "Lamp", Size = Vector3.new(4, 0.4, 4), CFrame = plot.cf * CFrame.new(x, y0 + FLOOR_H - 0.6, 4), Material = Enum.Material.Neon, Color = theme.light, CanCollide = false, Parent = m })
+			make("PointLight", { Color = theme.light, Range = 34, Brightness = 1.1, Shadows = false, Parent = lamp })
+		end
+		-- elevator pad (only when there is somewhere to go)
+		if floors > 1 then
+			local pad = make("Part", { Name = "Elevator", Size = Vector3.new(5, 0.3, 5), CFrame = plot.cf * CFrame.new(16, y0 + 0.55, -22), Material = Enum.Material.Neon, Color = theme.trim, CanCollide = false, Parent = m })
+			local floorNumber = f
+			prompt(pad, "ElevatorPrompt", "promptElevator", nil, 8).Triggered:Connect(function(who)
+				local target = floorNumber % plot.builtFloors + 1
+				local character = who.Character
+				if character then
+					character:PivotTo(plot.cf * CFrame.new(16, (target - 1) * FLOOR_H + 3.5, -17))
+				end
+			end)
+		end
+	end
+	-- roof + corner columns
+	local top = floors * FLOOR_H
+	wall("Roof", Vector3.new(HALF * 2 + 3, 1.2, HALF * 2 + 3), Vector3.new(0, top + 0.6, 0))
+	trim("RoofTrim", Vector3.new(HALF * 2 + 4, 0.8, HALF * 2 + 4), Vector3.new(0, top + 1.6, 0))
+	for _, c in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
+		cylinder(plot.cf * CFrame.new(c[1] * (HALF + 0.6), top / 2 + 1, c[2] * (HALF + 0.6)), top + 2, 3.2, {
+			Name = "Column", Material = if theme.trimMat == Enum.Material.Neon then theme.wallMat else theme.trimMat, Color = theme.trim, Parent = m,
+		})
+	end
+	if themeId == "hell" then
+		for _, c in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
+			local flame = make("Part", { Name = "Flame", Size = Vector3.one, CFrame = plot.cf * CFrame.new(c[1] * (HALF + 0.6), top + 3, c[2] * (HALF + 0.6)), Transparency = 1, CanCollide = false, Parent = m })
+			make("Fire", { Heat = 10, Size = 6, Color = Color3.fromRGB(255, 100, 30), SecondaryColor = Color3.fromRGB(255, 220, 120), Parent = flame })
+		end
+	elseif themeId == "cosmos" then
+		local roofTop = make("Part", { Name = "StarDust", Size = Vector3.new(HALF * 2, 1, HALF * 2), CFrame = plot.cf * CFrame.new(0, top + 6, 0), Transparency = 1, CanCollide = false, Parent = m })
+		make("ParticleEmitter", { Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(190, 160, 255)), LightEmission = 0.7,
+			Rate = 20, Lifetime = NumberRange.new(3, 6), Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.4, 0), Parent = roofTop })
+	end
+	plot.builtFloors = floors
+	plot.builtTheme = themeId
+end
+
+-- display spots: invisible build markers on all of them, pedestals (with prompts) where the owner built one
+local function buildSpots(plot, floors: number, slabs, grid)
 	plot.pedestals:ClearAllChildren()
 	plot.markers:ClearAllChildren()
 	plot.cells = {}
-	-- the grid grows from one corner, so making the plot bigger never moves what is already built
-	local start = -(Config.MaxGridSize - 1) * SPACING / 2
-	for y = 1, size do
-		for x = 1, size do
-			local key = Sky.key(x, y)
-			local cf = plot.cf * CFrame.new(start + (x - 1) * SPACING, 0, start + (y - 1) * SPACING)
+	for f = 1, floors do
+		local y0 = (f - 1) * FLOOR_H + 0.4
+		for spot = 1, Config.SpotsPerFloor do
+			local key = Sky.key(spot, f)
+			local x, z = spotLocal(spot)
+			local cf = plot.cf * CFrame.new(x, y0, z)
 			plot.cells[key] = { cf = cf }
+			-- the marker covers the whole stand, so clicks never "fall through" to a neighbour
 			make("Part", {
-				Name = key, Size = Vector3.new(6, 0.3, 6), CFrame = cf * CFrame.new(0, 0.2, 0), Transparency = 1,
+				Name = key, Size = Vector3.new(6, 3, 6), CFrame = cf * CFrame.new(0, 1.5, 0), Transparency = 1,
 				CanCollide = false, CanTouch = false, CastShadow = false, Material = Enum.Material.Neon, Color = Color3.fromRGB(120, 230, 140), Parent = plot.markers,
 			})
 			local slab = Config.SlabsById[slabs[key]]
 			if slab then
-				local base = make("Part", {
-					Name = key, Size = Vector3.new(6, 0.9, 6), CFrame = cf * CFrame.new(0, 0.45, 0), Material = slab.material, Color = slab.color,
-					Reflectance = if slab.id == "gold" then 0.15 else 0, Transparency = if slab.id == "emerald" then 0.12 else 0, Parent = plot.pedestals,
-				})
-				make("Part", {
-					Name = "Top", Size = Vector3.new(5.1, 0.25, 5.1), CFrame = cf * CFrame.new(0, 1.0, 0), Material = slab.material,
-					Color = slab.color:Lerp(Color3.new(1, 1, 1), 0.25), CanCollide = false, Parent = base,
-				})
-				if slab.id ~= "stone" then
-					for _, c in { { -2.7, -2.7 }, { 2.7, -2.7 }, { -2.7, 2.7 }, { 2.7, 2.7 } } do
-						ball((cf * CFrame.new(c[1], 1, c[2])).Position, 0.6, { Name = "Stud", Material = Enum.Material.Neon, Color = if slab.id == "marble" then GOLD else slab.color, CanCollide = false, Parent = base })
-					end
-				end
-				if slab.id == "emerald" or slab.id == "marble" then
-					make("PointLight", { Color = slab.color, Range = 8, Brightness = 0.8, Parent = base })
-				end
-				local p = prompt(base, "PedestalPrompt", if grid[key] then "promptRemove" else "promptPlace", "slab_" .. slab.id, 6)
+				local body = buildPedestal(cf, slab, plot.pedestals, key)
+				local p = prompt(body, "PedestalPrompt", if grid[key] then "promptRemove" else "promptPlace", "slab_" .. slab.id, 6)
 				p:SetAttribute("Plot", plot.index)
 				p.Triggered:Connect(function(who)
 					if World.onPedestal then
@@ -635,15 +748,12 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 	for _ = 1, 10 do
 		cloudPuff((cf * CFrame.new(rng:NextNumber(-26, 26), -9, rng:NextNumber(-26, 26))).Position, rng:NextNumber(12, 18), plotFolder, 2)
 	end
-	for _, c in { { -30, -30 }, { 30, -30 }, { -30, 30 }, { 30, 30 } } do
-		local base = (cf * CFrame.new(c[1], 0, c[2])).Position
-		flowers(base, 4, 6, plotFolder)
-		pillar(base, 8, plotFolder)
-		crystal(base + Vector3.new(0, 11, 0), 1.6, GLASS, plotFolder)
+	for _, c in { { -31, -31 }, { 31, -31 } } do
+		flowers((cf * CFrame.new(c[1], 0, c[2])).Position, 1.5, 4, plotFolder)
 	end
 	bridge(direction, HUB_RADIUS - 2, RING - PLOT_SIZE / 2 + 1, plotFolder)
 
-	local post = make("Part", { Name = "SignPost", Size = Vector3.new(1, 7, 1), CFrame = cf * CFrame.new(-9, 3.5, -(PLOT_SIZE / 2 - 2)), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
+	local post = make("Part", { Name = "SignPost", Size = Vector3.new(1, 7, 1), CFrame = cf * CFrame.new(-10, 3.5, -(PLOT_SIZE / 2 - 1.5)), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
 	local label = worldText(post, "signFree", 5, 11, 3.2)
 	label:SetAttribute("Owner", "")
 	label:SetAttribute("Income", 0)
@@ -652,19 +762,20 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 		index = index,
 		cf = cf,
 		folder = plotFolder,
+		museum = make("Folder", { Name = "Museum", Parent = plotFolder }),
 		pedestals = make("Folder", { Name = "Pedestals", Parent = plotFolder }),
 		stars = make("Folder", { Name = "Stars", Parent = plotFolder }),
 		markers = make("Folder", { Name = "Markers", Parent = plotFolder }),
 		label = label,
 		owner = nil,
 		cells = {},
-		builtSize = 0,
+		builtFloors = 0,
+		builtTheme = "",
 	}
 	plots[index] = plot
-	buildCells(plot, Config.StartGridSize, {}, {})
 
 	local cooldown = {}
-	floor.Touched:Connect(function(hit)
+	plot.onTouch = function(hit: BasePart)
 		local who = Players:GetPlayerFromCharacter(hit.Parent)
 		if not who or plot.owner or (cooldown[who] and os.clock() - cooldown[who] < 1) then
 			return
@@ -673,7 +784,10 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 		if World.onPlotTouched then
 			World.onPlotTouched(who, index)
 		end
-	end)
+	end
+	floor.Touched:Connect(plot.onTouch)
+	buildMuseum(plot, 1, "sky")
+	buildSpots(plot, 1, {}, {})
 end
 
 ---------------------------------------------------------------- scenery
@@ -804,7 +918,8 @@ function World.releasePlot(player: Player)
 	plot.label:SetAttribute("Owner", "")
 	plot.label:SetAttribute("Income", 0)
 	plot.stars:ClearAllChildren()
-	buildCells(plot, Config.StartGridSize, {}, {})
+	buildMuseum(plot, 1, "sky")
+	buildSpots(plot, 1, {}, {})
 	playerPlot[player] = nil
 end
 
@@ -814,7 +929,7 @@ function World.spawnCFrame(player: Player): CFrame
 		return CFrame.new(0, 4, 20)
 	end
 	local cf = plots[index].cf
-	local position = (cf * CFrame.new(0, 4, -(PLOT_SIZE / 2 - 5))).Position
+	local position = (cf * CFrame.new(0, 4, -(PLOT_SIZE / 2 - 1.5))).Position -- just outside the museum door
 	return CFrame.lookAt(position, cf.Position + Vector3.new(0, 4, 0))
 end
 
@@ -874,7 +989,10 @@ function World.renderPlot(player: Player, data, evaluation, income: number)
 		return
 	end
 	local plot = plots[index]
-	buildCells(plot, data.gridSize, data.slabs, data.grid)
+	if plot.builtFloors ~= data.floors or plot.builtTheme ~= data.theme then
+		buildMuseum(plot, data.floors, data.theme)
+	end
+	buildSpots(plot, data.floors, data.slabs, data.grid)
 	plot.stars:ClearAllChildren()
 	plot.label:SetAttribute("Income", income)
 

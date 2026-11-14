@@ -153,6 +153,8 @@ local function pushState(player: Player)
 		discovered = data.discovered,
 		totalRolls = data.totalRolls,
 		rebirthRolls = data.rebirthRolls,
+		floors = data.floors,
+		theme = data.theme,
 		rebirths = data.rebirths,
 		mass = data.mass,
 		index = data.index,
@@ -195,15 +197,34 @@ local function giveFreeSlabs(data)
 	for key in data.grid do
 		data.slabs[key] = data.slabs[key] or "stone"
 	end
-	local c = math.floor(data.gridSize / 2)
+	-- first spots on the left wall of the ground floor
 	local given = 0
-	for _, offset in { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } } do
-		local key = Sky.key(c + offset[1], c + offset[2])
-		if given < Config.FreeStoneSlabs and not data.slabs[key] then
+	for spot = 1, Config.SpotsPerFloor do
+		local key = Sky.key(spot, 1)
+		if given >= Config.FreeStoneSlabs then
+			break
+		end
+		if not data.slabs[key] then
 			data.slabs[key] = "stone"
 			given += 1
 		end
 	end
+end
+
+-- old grid saves -> museum layout: stars go back to the catalogue, starter stands are given again
+local function migrateToMuseum(data)
+	if data.layoutVersion == 2 then
+		return
+	end
+	for _, cell in data.grid do
+		data.inventory[cell.id] = (data.inventory[cell.id] or 0) + 1
+	end
+	data.grid = {}
+	data.slabs = {}
+	data.freeSlabsGiven = false
+	data.floors = math.max(1, data.floors or 1)
+	data.theme = data.theme or "sky"
+	data.layoutVersion = 2
 end
 
 local function addToInventory(player: Player, data, key: string, count: number)
@@ -221,7 +242,7 @@ end
 
 local function inBounds(data, key: any): boolean
 	local x, y = Sky.parse(key)
-	return x ~= nil and y ~= nil and x >= 1 and y >= 1 and x <= data.gridSize and y <= data.gridSize
+	return x ~= nil and y ~= nil and x >= 1 and y >= 1 and x <= Config.SpotsPerFloor and y <= data.floors
 end
 
 local function rollItem(luck: number): string
@@ -278,6 +299,7 @@ Players.PlayerAdded:Connect(function(player)
 			data.best = key
 		end
 	end
+	migrateToMuseum(data)
 	giveFreeSlabs(data)
 	if data.rebirthRolls < 0 then
 		data.rebirthRolls = data.totalRolls
@@ -512,6 +534,7 @@ function actions.Rebirth(player, data)
 	data.rollSpeedLevel = 0
 	data.multiRollLevel = 0
 	data.slabs = {}
+	data.floors = 1
 	data.freeSlabsGiven = false
 	giveFreeSlabs(data)
 	data.rebirthRolls = 0 -- roll rewards start over every rebirth
@@ -540,9 +563,16 @@ function actions.BuyMulti(player, data)
 	end
 end
 
-function actions.BuyGrid(player, data)
-	if data.gridSize < Config.MaxGridSize and spend(player, data, Config.GridCost(data.gridSize)) then
-		data.gridSize += 1
+function actions.BuyFloor(player, data)
+	if data.floors < Config.MaxFloors and spend(player, data, Config.FloorCost(data.floors + 1)) then
+		data.floors += 1
+		recompute(player, data)
+	end
+end
+
+function actions.SetTheme(player, data, themeId)
+	if type(themeId) == "string" and Config.ThemesById[themeId] and World.plotOf(player) then
+		data.theme = themeId
 		recompute(player, data)
 	end
 end

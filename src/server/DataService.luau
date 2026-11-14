@@ -38,6 +38,9 @@ local function default()
 		freeSlabsGiven = false,
 		best = "", -- rarest item ever found (leaderboard)
 		rebirthRolls = -1, -- rolls since the last rebirth (roll rewards); -1 = not migrated yet
+		floors = 1, -- museum floors
+		theme = "sky",
+		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}
 end
 

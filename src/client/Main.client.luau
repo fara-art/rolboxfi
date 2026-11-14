@@ -392,7 +392,7 @@ local pickerW = window("pickTitle", "center", centerProps())
 local forgeW = window("forgeTitle", "center", centerProps())
 local holeW = window("holeTitle", "center", centerProps())
 local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
-local settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.46, 0), Position = UDim2.new(0.31, 0, 0.22, 0) })
+local settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.56, 0), Position = UDim2.new(0.31, 0, 0.18, 0) })
 
 -- catalogue: list + sell bar at the bottom
 catalogueW.body.Size = UDim2.new(1, 0, 1, -124)
@@ -600,7 +600,8 @@ renderers[upgradesW] = function()
 	local speedNext = math.floor(Config.RollCooldown(state.rollSpeedLevel + 1) * 100) / 100
 	upgrade(2, "upSpeed", t("upSpeedDesc", speedNow, speedNext), state.rollSpeedLevel >= Config.MaxRollSpeedLevel, Config.RollSpeedCost(state.rollSpeedLevel), "BuySpeed", BLUE)
 	upgrade(3, "upMulti", t("upMultiDesc", 1 + state.multiRollLevel, 2 + state.multiRollLevel), state.multiRollLevel >= Config.MaxMultiRollLevel, Config.MultiRollCost(state.multiRollLevel), "BuyMulti", LILAC)
-	upgrade(4, "upSky", t("upSkyDesc", state.gridSize, state.gridSize, state.gridSize + 1, state.gridSize + 1), state.gridSize >= Config.MaxGridSize, Config.GridCost(state.gridSize), "BuyGrid", GOLD)
+	local floors = state.floors or 1
+	upgrade(4, "upFloor", t("upFloorDesc", floors, floors + 1), floors >= Config.MaxFloors, Config.FloorCost(floors + 1), "BuyFloor", GOLD)
 end
 
 ---------------------------------------------------------------- Star Index (+ roll rewards)
@@ -982,11 +983,25 @@ renderers[settingsW] = function()
 		end)
 	end
 	-- from which odds the big reveal / announcements show up
-	local alertRow = row(body, 3, 110, WHITE)
+	local alertRow = row(body, 3, 160, WHITE)
 	text({ Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 14, 0, 6), Text = t("rareAlert"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = alertRow })
 	local options = make("Frame", { Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 0, 46), BackgroundTransparency = 1, ZIndex = 22, Parent = alertRow })
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = options })
 	local current = (state and state.settings and state.settings.rareAlert) or 50000000
+	text({ Size = UDim2.new(0.42, 0, 0, 40), Position = UDim2.new(0, 14, 0, 106), Text = t("customAlert"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 22, Parent = alertRow })
+	local custom = make("TextBox", {
+		Size = UDim2.new(0.5, 0, 0, 40), Position = UDim2.new(0.46, 0, 0, 106), BackgroundColor3 = PANEL_2, Text = if current > 0 then Format.number(current) else "",
+		PlaceholderText = "5M, 2.5B, 1e12", TextColor3 = TEXT, FontFace = TITLE, TextScaled = true, ClearTextOnFocus = false, ZIndex = 23, Parent = alertRow,
+	}, { corner(10), stroke(INK, 2.5), pad(6), make("UITextSizeConstraint", { MaxTextSize = 18 }) })
+	custom.FocusLost:Connect(function()
+		local value = Format.parse(custom.Text)
+		if value and value >= 1 and state then
+			state.settings = state.settings or {}
+			state.settings.rareAlert = value
+			ActionEv:FireServer("SetSetting", "rareAlert", value)
+			renderers[settingsW]()
+		end
+	end)
 	for _, value in { 1000, 1000000, 50000000, 1000000000, 0 } do
 		btn(if current == value then BLUE else GREY, {
 			Size = UDim2.new(0.2, -5, 1, 0), Text = if value == 0 then t("alertOff") else t("oneIn", Format.number(value)), Max = 15, ZIndex = 23, Parent = options,
@@ -1373,8 +1388,10 @@ end)
 local buildMode = false
 local buildTool: string? = Config.Slabs[1].id -- slab id, "remove", or nil (nothing selected)
 local pendingRemove: string? = nil -- slab waiting for the ✓ confirmation
+local pendingPlace: string? = nil -- phones: spot waiting for the ✓ confirmation
+local hoverKey: string? = nil -- PC: spot under the mouse
 local setBuildMode -- defined below (the panel's EXIT button needs it)
-local buildPanel = panelFrame({ Size = UDim2.new(0, 640, 0, 150), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -100), Visible = false, ZIndex = 30, Parent = gui })
+local buildPanel = panelFrame({ Size = UDim2.new(0, 640, 0, 196), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -100), Visible = false, ZIndex = 30, Parent = gui })
 
 local function myPlotFolder(): Instance?
 	local map = workspace:FindFirstChild("Map")
@@ -1398,8 +1415,14 @@ local function refreshMarkers()
 	end
 	for _, marker in markers:GetChildren() do
 		if marker:IsA("BasePart") then
-			marker.Transparency = if not buildMode then 1 elseif marker.Name == pendingRemove then 0.15 elseif buildTool then 0.55 else 0.85
-			marker.Color = if marker.Name == pendingRemove or buildTool == "remove" then RED elseif buildTool then MINT else WHITE
+			local name = marker.Name
+			local focused = name == pendingRemove or name == pendingPlace or name == hoverKey
+			marker.Transparency = if not buildMode then 1 elseif focused then 0.3 elseif buildTool then 0.78 else 0.9
+			marker.Color = if name == pendingRemove then RED
+				elseif name == pendingPlace or name == hoverKey then BLUE
+				elseif buildTool == "remove" then RED
+				elseif buildTool then MINT
+				else WHITE
 		end
 	end
 end
@@ -1421,6 +1444,7 @@ local function renderBuildPanel()
 		card.Activated:Connect(function()
 			buildTool = if buildTool == slab.id then nil else slab.id -- tap again to deselect
 			pendingRemove = nil
+			pendingPlace = nil
 			renderBuildPanel()
 			refreshMarkers()
 		end)
@@ -1429,6 +1453,7 @@ local function renderBuildPanel()
 	btn(if buildTool == "remove" then RED else GREY, { Size = UDim2.new(0, 84, 1, 0), LayoutOrder = 10, Text = t("removeTool"), Max = 14, ZIndex = 31, Parent = row }, function()
 		buildTool = if buildTool == "remove" then nil else "remove"
 		pendingRemove = nil
+		pendingPlace = nil
 		renderBuildPanel()
 		refreshMarkers()
 	end)
@@ -1436,20 +1461,40 @@ local function renderBuildPanel()
 		setBuildMode(false)
 	end)
 
-	-- removal needs a confirmation
-	if pendingRemove then
+	-- themes for the museum
+	local themes = make("Frame", { Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(0, 0, 0, 132), BackgroundTransparency = 1, ZIndex = 31, Parent = buildPanel })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Parent = themes })
+	text({ Size = UDim2.new(0, 70, 1, 0), LayoutOrder = 0, Text = t("theme"), FontFace = TITLE, TextColor3 = BLUE, Max = 15, ZIndex = 32, Parent = themes })
+	for i, theme in Config.Themes do
+		local current = state and state.theme == theme.id
+		btn(theme.wall, {
+			Size = UDim2.new(0, 104, 1, 0), LayoutOrder = i, Text = t("theme_" .. theme.id), Max = 13, ZIndex = 32, Parent = themes,
+			TextColor3 = WHITE,
+		}, function()
+			ActionEv:FireServer("SetTheme", theme.id)
+		end):FindFirstChildOfClass("UIStroke").Color = if current then BLUE else INK
+	end
+
+	-- removing (and placing on phones) needs a confirmation
+	local pending = pendingRemove or pendingPlace
+	if pending then
+		local removing = pendingRemove ~= nil
 		local bar = panelFrame({ Size = UDim2.new(0, 400, 0, 58), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), ZIndex = 32, Parent = buildPanel })
-		text({ Size = UDim2.new(1, -130, 1, 0), Text = t("confirmRemove"), FontFace = TITLE, TextColor3 = RED, TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 33, Parent = bar })
+		text({ Size = UDim2.new(1, -130, 1, 0), Text = t(if removing then "confirmRemove" else "confirmPlace"), FontFace = TITLE, TextColor3 = if removing then RED else BLUE, TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 33, Parent = bar })
 		btn(MINT, { Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -120, 0, 0), Text = "✓", FontFace = Font.fromEnum(Enum.Font.SourceSansBold), Max = 30, ZIndex = 33, Parent = bar }, function()
 			if pendingRemove then
 				ActionEv:FireServer("RemoveSlab", pendingRemove)
+			elseif pendingPlace and buildTool and buildTool ~= "remove" then
+				ActionEv:FireServer("BuildSlab", pendingPlace, buildTool)
 			end
 			pendingRemove = nil
+			pendingPlace = nil
 			renderBuildPanel()
 			refreshMarkers()
 		end)
-		btn(GREY, { Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -58, 0, 0), Text = "✕", FontFace = Font.fromEnum(Enum.Font.SourceSansBold), Max = 30, ZIndex = 33, Parent = bar }, function()
+		btn(GREY, { Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -58, 0, 0), Text = "X", Max = 26, ZIndex = 33, Parent = bar }, function()
 			pendingRemove = nil
+			pendingPlace = nil
 			renderBuildPanel()
 			refreshMarkers()
 		end)
@@ -1484,6 +1529,8 @@ setBuildMode = function(on: boolean)
 	end
 	buildMode = on
 	pendingRemove = nil
+	pendingPlace = nil
+	hoverKey = nil
 	buildPanel.Visible = on
 	if on then
 		renderBuildPanel()
@@ -1510,7 +1557,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	if not markers or not camera then
 		return
 	end
-	local ray = camera:ViewportPointToRay(input.Position.X, input.Position.Y)
+	-- input positions exclude the top bar inset, ScreenPointToRay expects exactly that
+	local ray = camera:ScreenPointToRay(input.Position.X, input.Position.Y)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { markers }
@@ -1519,11 +1567,37 @@ UserInputService.InputBegan:Connect(function(input, processed)
 		local key = hit.Instance.Name
 		if buildTool == "remove" then
 			pendingRemove = if pendingRemove == key then nil else key -- tap again to cancel
-			renderBuildPanel()
-			refreshMarkers()
+		elseif input.UserInputType == Enum.UserInputType.Touch then
+			pendingPlace = if pendingPlace == key then nil else key -- phones: tap, then ✓
 		else
-			ActionEv:FireServer("BuildSlab", key, buildTool)
+			ActionEv:FireServer("BuildSlab", key, buildTool) -- PC: click builds right away
 		end
+		renderBuildPanel()
+		refreshMarkers()
+	end
+end)
+
+-- PC: the spot under the mouse lights up blue
+RunService.Heartbeat:Connect(function()
+	if not buildMode or not UserInputService.MouseEnabled then
+		return
+	end
+	local plot = myPlotFolder()
+	local markers = plot and plot:FindFirstChild("Markers")
+	local camera = workspace.CurrentCamera
+	if not markers or not camera then
+		return
+	end
+	local mouse = UserInputService:GetMouseLocation() -- viewport coordinates (with the top bar)
+	local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { markers }
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	local key = if hit and hit.Instance and buildTool then hit.Instance.Name else nil
+	if key ~= hoverKey then
+		hoverKey = key
+		refreshMarkers()
 	end
 end)
 
@@ -1557,9 +1631,8 @@ local function addButtons(parent: Frame, entries)
 	end
 end
 
-local bottomRow = buttonGroup(4, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
+local bottomRow = buttonGroup(3, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
 addButtons(bottomRow, {
-	{ "mySky", skyW, MINT, "sky" },
 	{ "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
 	{ "rewards", rewardsW, RED, "rewards" },
 	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
@@ -1613,6 +1686,9 @@ render = function()
 	rollsValue.Text = Format.number(state.totalRolls)
 	rebirthValue.Text = tostring(state.rebirths)
 	adminButton.Visible = state.isAdmin == true
+	if buildMode then
+		renderBuildPanel()
+	end
 	renderTelescope()
 
 	local rewardReady = false

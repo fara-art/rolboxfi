@@ -14,11 +14,26 @@ function Config.MultiRollCost(level: number): number
 	return math.floor(5000 * 8 ^ level)
 end
 
--- Plot (pedestal grid)
-Config.StartGridSize = 4
+-- Museum on the plot: display spots along the walls, more floors can be bought
+Config.SpotsPerFloor = 20 -- 7 on the left wall, 6 at the back, 7 on the right
+Config.MaxFloors = 5
+function Config.FloorCost(floor: number): number
+	return math.floor(25000 * 25 ^ (floor - 2))
+end
+Config.StartGridSize = 4 -- legacy (old saves / admin)
 Config.MaxGridSize = 8
-function Config.GridCost(size: number): number
-	return math.floor(1000 * 8 ^ (size - Config.StartGridSize))
+
+-- Museum themes (free to switch)
+Config.Themes = {
+	{ id = "sky", wall = Color3.fromRGB(245, 245, 250), wallMat = Enum.Material.Marble, trim = Color3.fromRGB(236, 196, 100), trimMat = Enum.Material.SmoothPlastic, floor = Color3.fromRGB(232, 226, 214), floorMat = Enum.Material.Marble, light = Color3.fromRGB(255, 236, 200) },
+	{ id = "hell", wall = Color3.fromRGB(70, 28, 26), wallMat = Enum.Material.Basalt, trim = Color3.fromRGB(255, 100, 30), trimMat = Enum.Material.Neon, floor = Color3.fromRGB(90, 35, 25), floorMat = Enum.Material.CrackedLava, light = Color3.fromRGB(255, 120, 60) },
+	{ id = "cosmos", wall = Color3.fromRGB(28, 22, 58), wallMat = Enum.Material.Slate, trim = Color3.fromRGB(150, 110, 255), trimMat = Enum.Material.Neon, floor = Color3.fromRGB(18, 14, 40), floorMat = Enum.Material.Glass, light = Color3.fromRGB(170, 140, 255) },
+	{ id = "ice", wall = Color3.fromRGB(205, 235, 255), wallMat = Enum.Material.Ice, trim = Color3.fromRGB(140, 210, 255), trimMat = Enum.Material.Glass, floor = Color3.fromRGB(225, 242, 255), floorMat = Enum.Material.Glacier, light = Color3.fromRGB(200, 235, 255) },
+	{ id = "emerald", wall = Color3.fromRGB(225, 242, 228), wallMat = Enum.Material.Marble, trim = Color3.fromRGB(60, 200, 130), trimMat = Enum.Material.SmoothPlastic, floor = Color3.fromRGB(190, 225, 195), floorMat = Enum.Material.Marble, light = Color3.fromRGB(210, 255, 220) },
+}
+Config.ThemesById = {}
+for _, theme in Config.Themes do
+	Config.ThemesById[theme.id] = theme
 end
 Config.PlotReach = 52 -- how far from plot center you can place stars / build
 
@@ -148,6 +163,56 @@ Config.StarIcons = {
 	darkmatter = "119288797918952",
 	multiverse = "82842345020371",
 	cosmicweb = "127974564338567",
+	tarantula = "123461818609017",
+	sgra = "83094720206032",
+	crab = "82952577689950",
+	catseye = "95691637097229",
+	r136a1 = "104836728930765",
+	polaris = "90914236497013",
+	vycma = "72733119044409",
+	quasar3c273 = "71869625658553",
+	sombrero = "139179750417158",
+	canopus = "118670464850146",
+	cygnusx1 = "93855375341192",
+	sgr1806 = "114268005931850",
+	przybylski = "79651415993461",
+	antares = "133530052254963",
+	capella = "128365757101406",
+	lagoon = "77800780879420",
+	tabby = "121136077862040",
+	arcturus = "136967584858281",
+	rigel = "129215265229548",
+	procyon = "85472242928493",
+	deneb = "139863159535101",
+	helix = "131708372907605",
+	tycho = "85061805605116",
+	betelgeuse = "114246982847890",
+	stephenson = "83914423488804",
+	triangulum = "81304937631722",
+	crabpulsar = "118531779655048",
+	sn1987a = "125899262161824",
+	vela = "122680715959272",
+	spica = "94529889701180",
+	achernar = "119183086522446",
+	altair = "105809618647246",
+	aldebaran = "81995092900761",
+	whirlpool = "72672089543141",
+	eagle = "93070181389880",
+	ton618 = "134472432610677",
+	horsehead = "109288878392815",
+	andromeda = "107702880617095",
+	uyscuti = "130122821572177",
+	proxima = "74336715909517",
+	ringneb = "71948079613438",
+	algol = "123781888335562",
+	sirius = "111552954312549",
+	hoag = "129591721557417",
+	mira = "138541845763737",
+	vega = "103122323717926",
+	etacarinae = "123635141173829",
+	kepler = "129281011786240",
+	einstein = "103369165914547",
+	orion = "99434913869769",
 }
 
 -- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
