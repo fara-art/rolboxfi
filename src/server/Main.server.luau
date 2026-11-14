@@ -15,8 +15,6 @@ local Format = require(Shared.Format)
 local DataService = require(script.Parent.DataService)
 local World = require(script.Parent.World)
 
-World.build()
-
 -- Remotes
 local remotes = Instance.new("Folder")
 remotes.Name = "Remotes"
@@ -34,6 +32,8 @@ local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
+
+World.build()
 
 local GOLD = Color3.fromRGB(255, 196, 70)
 local rng = Random.new()

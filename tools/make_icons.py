@@ -1,145 +1,205 @@
-# Draws the star icons (original art, no licensing issues). Run: python3 tools/make_icons.py
+# Cartoon icon set: thick dark outline, glossy gradient fill, sparkles.
+# Original art (no third-party images). Run: python3 tools/make_icons.py
 import math, pathlib
-import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
-S = 1024  # draw big, downscale for smooth edges
+S = 1024
 OUT = 256
 root = pathlib.Path(__file__).resolve().parent.parent / "assets" / "icons"
 root.mkdir(parents=True, exist_ok=True)
-yy, xx = np.mgrid[0:S, 0:S].astype(np.float32)
-C = S / 2
+INK = (26, 28, 48)
 
-def layer():
-    return Image.new("RGBA", (S, S), (0, 0, 0, 0))
 
-def glow(img, color, radius, strength=1.0, cx=C, cy=C):
-    d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2) / radius
-    a = np.clip(np.exp(-d * d * 2.2) * 255 * strength, 0, 255).astype(np.uint8)
-    g = np.zeros((S, S, 4), np.uint8)
-    g[..., 0], g[..., 1], g[..., 2], g[..., 3] = color[0], color[1], color[2], a
-    return Image.alpha_composite(img, Image.fromarray(g, "RGBA"))
+def blank(mode="RGBA"):
+    return Image.new(mode, (S, S), 0 if mode == "L" else (0, 0, 0, 0))
 
-def sphere(img, cx, cy, r, dark, light, rim=None):
-    # shaded ball: light from top-left
-    d = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
-    inside = d <= r
-    hx, hy = cx - r * 0.35, cy - r * 0.4
-    t = np.clip(np.sqrt((xx - hx) ** 2 + (yy - hy) ** 2) / (r * 1.5), 0, 1)
-    out = np.zeros((S, S, 4), np.float32)
-    for i in range(3):
-        out[..., i] = light[i] * (1 - t) + dark[i] * t
-    edge = np.clip((r - d) / 3, 0, 1)
-    out[..., 3] = edge * 255
-    if rim:
-        rr = np.clip(1 - np.abs(d - r * 0.97) / (r * 0.06), 0, 1) * inside
-        for i in range(3):
-            out[..., i] = out[..., i] * (1 - rr * 0.6) + rim[i] * rr * 0.6
-    return Image.alpha_composite(img, Image.fromarray(out.astype(np.uint8), "RGBA"))
 
-def poly(img, points, color, blur=0):
-    l = layer()
-    ImageDraw.Draw(l).polygon(points, fill=color)
-    if blur:
-        l = l.filter(ImageFilter.GaussianBlur(blur))
-    return Image.alpha_composite(img, l)
+def gradient(top, bottom, box):
+    x0, y0, x1, y1 = box
+    g = Image.new("RGBA", (S, S))
+    d = ImageDraw.Draw(g)
+    h = max(1, y1 - y0)
+    for y in range(S):
+        t = min(1, max(0, (y - y0) / h))
+        c = tuple(int(top[i] * (1 - t) + bottom[i] * t) for i in range(3)) + (255,)
+        d.line([(0, y), (S, y)], fill=c)
+    return g
 
-def ellipse(img, box, color=None, outline=None, width=1, blur=0, angle=0):
-    l = layer()
-    ImageDraw.Draw(l).ellipse(box, fill=color, outline=outline, width=width)
-    if angle:
-        l = l.rotate(angle, resample=Image.BICUBIC, center=(C, C))
-    if blur:
-        l = l.filter(ImageFilter.GaussianBlur(blur))
-    return Image.alpha_composite(img, l)
 
-def spikes(img, n, inner, outer, color, rot=0, cx=C, cy=C, blur=0):
+def dilate(mask, px):
+    return mask.filter(ImageFilter.GaussianBlur(px / 2)).point(lambda v: 255 if v > 6 else 0)
+
+
+def shape(img, draw_fn, top, bottom, outline=28, gloss=True, shadow=True, ink=INK):
+    """draw_fn(draw) paints the silhouette in white on an L mask."""
+    mask = blank("L")
+    draw_fn(ImageDraw.Draw(mask))
+    box = mask.getbbox()
+    if not box:
+        return img
+    ring = dilate(mask, outline)
+    if shadow:
+        sh = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        sh.paste((10, 20, 40, 90), (0, 0), ring)
+        img = Image.alpha_composite(img, ImageChops.offset(sh, 10, 16))
+    edge = Image.new("RGBA", (S, S), ink + (255,))
+    edge.putalpha(ring)
+    img = Image.alpha_composite(img, edge)
+    fill = gradient(top, bottom, box)
+    fill.putalpha(mask)
+    img = Image.alpha_composite(img, fill)
+    if gloss:
+        x0, y0, x1, y1 = box
+        w, h = x1 - x0, y1 - y0
+        g = blank("L")
+        ImageDraw.Draw(g).ellipse((x0 + w * 0.14, y0 + h * 0.08, x0 + w * 0.62, y0 + h * 0.42), fill=120)
+        g = ImageChops.multiply(g.filter(ImageFilter.GaussianBlur(10)), mask)
+        shine = Image.new("RGBA", (S, S), (255, 255, 255, 255))
+        shine.putalpha(g)
+        img = Image.alpha_composite(img, shine)
+    return img
+
+
+def star_points(cx, cy, outer, inner, n=5, rot=-math.pi / 2):
     pts = []
     for i in range(n * 2):
         a = rot + i * math.pi / n
         r = outer if i % 2 == 0 else inner
         pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r))
-    return poly(img, pts, color, blur)
+    return pts
+
+
+def sparkle(img, cx, cy, r):
+    return shape(img, lambda d: d.polygon(star_points(cx, cy, r, r * 0.3, 4), fill=255),
+                 (255, 255, 255), (220, 240, 255), outline=max(8, r * 0.18), gloss=False, shadow=False)
+
 
 def save(img, name):
     img.resize((OUT, OUT), Image.LANCZOS).save(root / f"{name}.png")
+    return img
 
-# 1 Stardust: drifting cluster of soft motes
-img = layer()
-rng = np.random.default_rng(7)
-img = glow(img, (200, 200, 255), 330, 0.35)
-for _ in range(16):
-    x, y = rng.normal(C, 150), rng.normal(C, 150)
-    r = rng.uniform(14, 40)
-    img = glow(img, (235, 235, 255), r * 2.2, 0.8, x, y)
-    img = ellipse(img, (x - r / 2, y - r / 2, x + r / 2, y + r / 2), (255, 255, 255, 255))
-save(img, "dust")
 
-# 2 Spark: four-point twinkle
-img = layer()
-img = glow(img, (255, 236, 170), 300, 0.7)
-img = spikes(img, 4, 60, 430, (255, 240, 190, 140), blur=18)
-img = spikes(img, 4, 45, 400, (255, 252, 235, 255))
-img = spikes(img, 4, 25, 200, (255, 255, 255, 255), rot=math.pi / 4)
-img = glow(img, (255, 255, 255), 90, 1)
-save(img, "spark")
+C = S / 2
+icons = {}
 
-# 3 Red Dwarf: small warm ember
-img = layer()
-img = glow(img, (255, 80, 50), 360, 0.75)
-img = sphere(img, C, C, 230, (150, 20, 20), (255, 170, 110), rim=(255, 120, 80))
-save(img, "dwarf")
+# ---------------- stars
+img = blank()
+for (x, y, r) in [(380, 600, 170), (650, 420, 150), (640, 720, 110)]:
+    img = shape(img, lambda d, x=x, y=y, r=r: d.polygon(star_points(x, y, r, r * 0.5), fill=255), (235, 230, 255), (170, 160, 230), outline=26)
+icons["dust"] = save(sparkle(img, 300, 300, 60), "dust")
 
-# 4 Yellow Sun: rays + bright disc
-img = layer()
-img = glow(img, (255, 200, 60), 420, 0.8)
-img = spikes(img, 14, 260, 470, (255, 196, 60, 255), rot=0.1)
-img = spikes(img, 14, 260, 420, (255, 226, 110, 255), rot=0.1 + math.pi / 14)
-img = sphere(img, C, C, 270, (240, 140, 20), (255, 248, 190))
-save(img, "sun")
+img = shape(blank(), lambda d: d.polygon(star_points(C, C, 420, 110, 4), fill=255), (255, 252, 220), (255, 214, 90), outline=30)
+icons["spark"] = save(sparkle(img, 760, 250, 70), "spark")
 
-# 5 Blue Giant: big glowing sphere
-img = layer()
-img = glow(img, (80, 160, 255), 470, 0.9)
-img = sphere(img, C, C, 380, (20, 70, 200), (190, 235, 255), rim=(160, 220, 255))
-save(img, "giant")
+img = shape(blank(), lambda d: d.ellipse((190, 190, 834, 834), fill=255), (255, 140, 110), (200, 40, 50), outline=30)
+icons["dwarf"] = save(sparkle(img, 780, 240, 60), "dwarf")
 
-# 6 Pulsar: beams + core
-img = layer()
-img = glow(img, (170, 90, 255), 380, 0.6)
-for flip in (1, -1):
-    img = poly(img, [(C - 30, C), (C + 30, C), (C + 120, C - flip * 500), (C - 120, C - flip * 500)], (210, 160, 255, 150), blur=25)
-    img = poly(img, [(C - 12, C), (C + 12, C), (C + 45, C - flip * 500), (C - 45, C - flip * 500)], (250, 235, 255, 255), blur=4)
-img = sphere(img, C, C, 150, (110, 40, 220), (240, 220, 255))
-save(img, "pulsar")
+img = shape(blank(), lambda d: d.polygon(star_points(C, C, 470, 330, 12, 0), fill=255), (255, 200, 80), (255, 140, 30), outline=28)
+img = shape(img, lambda d: d.ellipse((250, 250, 774, 774), fill=255), (255, 248, 170), (255, 190, 40), outline=24)
+icons["sun"] = save(img, "sun")
 
-# 7 Neutron Star: tiny blazing core with field rings
-img = layer()
-img = glow(img, (90, 255, 220), 400, 0.55)
-for k, ang in enumerate((25, -25, 90)):
-    img = ellipse(img, (C - 430, C - 140, C + 430, C + 140), outline=(140, 255, 230, 220), width=16, blur=3, angle=ang)
-img = glow(img, (220, 255, 250), 180, 1)
-img = sphere(img, C, C, 95, (60, 220, 200), (255, 255, 255))
-save(img, "neutron")
+img = shape(blank(), lambda d: d.ellipse((120, 120, 904, 904), fill=255), (150, 220, 255), (40, 100, 230), outline=32)
+icons["giant"] = save(sparkle(img, 800, 200, 70), "giant")
 
-# 8 Quasar: accretion disk + jets
-img = layer()
-img = glow(img, (255, 80, 200), 420, 0.6)
-for flip in (1, -1):
-    img = poly(img, [(C - 18, C), (C + 18, C), (C + 70, C - flip * 510), (C - 70, C - flip * 510)], (255, 200, 245, 200), blur=12)
-img = ellipse(img, (C - 470, C - 120, C + 470, C + 120), (255, 90, 190, 210), blur=10, angle=-18)
-img = ellipse(img, (C - 360, C - 80, C + 360, C + 80), (255, 190, 120, 230), blur=8, angle=-18)
-img = ellipse(img, (C - 200, C - 45, C + 200, C + 45), (255, 245, 220, 255), blur=5, angle=-18)
-img = glow(img, (255, 255, 255), 120, 1)
-save(img, "quasar")
+img = shape(blank(), lambda d: (d.polygon([(470, 512), (554, 512), (640, 40), (384, 40)], fill=255), d.polygon([(470, 512), (554, 512), (640, 984), (384, 984)], fill=255)),
+            (240, 225, 255), (190, 150, 255), outline=24, gloss=False)
+img = shape(img, lambda d: d.ellipse((290, 290, 734, 734), fill=255), (200, 150, 255), (110, 50, 210), outline=28)
+icons["pulsar"] = save(img, "pulsar")
 
-# 9 Supernova: layered burst
-img = layer()
-img = glow(img, (255, 210, 120), 480, 0.9)
-img = spikes(img, 16, 200, 500, (255, 120, 80, 200), rot=0.2, blur=6)
-img = spikes(img, 12, 180, 450, (255, 200, 90, 255), rot=0.5)
-img = spikes(img, 8, 150, 380, (255, 250, 220, 255), rot=0.1)
-img = glow(img, (255, 255, 255), 220, 1)
-img = ellipse(img, (C - 110, C - 110, C + 110, C + 110), (255, 255, 255, 255))
-save(img, "supernova")
-print("icons ->", root)
+img = blank()
+for ang in (30, -30):
+    ring = blank("L")
+    ImageDraw.Draw(ring).ellipse((80, 340, 944, 684), outline=255, width=46)
+    ring = ring.rotate(ang, resample=Image.BICUBIC, center=(C, C))
+    img = shape(img, lambda d, ring=ring: d.bitmap((0, 0), ring, fill=255), (170, 255, 235), (60, 200, 190), outline=20, gloss=False, shadow=False)
+img = shape(img, lambda d: d.ellipse((330, 330, 694, 694), fill=255), (220, 255, 250), (50, 200, 180), outline=26)
+icons["neutron"] = save(sparkle(img, 780, 230, 60), "neutron")
+
+disk = blank("L")
+ImageDraw.Draw(disk).ellipse((60, 380, 964, 644), fill=255)
+disk = disk.rotate(18, resample=Image.BICUBIC, center=(C, C))
+img = shape(blank(), lambda d: (d.polygon([(490, 512), (534, 512), (590, 40), (434, 40)], fill=255), d.polygon([(490, 512), (534, 512), (590, 984), (434, 984)], fill=255)),
+            (255, 230, 250), (255, 150, 230), outline=22, gloss=False)
+img = shape(img, lambda d: d.bitmap((0, 0), disk, fill=255), (255, 170, 230), (220, 60, 170), outline=26)
+img = shape(img, lambda d: d.ellipse((392, 392, 632, 632), fill=255), (255, 255, 240), (255, 200, 120), outline=22)
+icons["quasar"] = save(img, "quasar")
+
+img = shape(blank(), lambda d: d.polygon(star_points(C, C, 480, 230, 10, 0.2), fill=255), (255, 150, 90), (230, 70, 50), outline=28)
+img = shape(img, lambda d: d.polygon(star_points(C, C, 360, 190, 8, 0.6), fill=255), (255, 240, 150), (255, 180, 60), outline=24)
+img = shape(img, lambda d: d.ellipse((380, 380, 644, 644), fill=255), (255, 255, 255), (255, 240, 200), outline=20)
+icons["supernova"] = save(img, "supernova")
+
+# ---------------- UI icons
+# catalogue: treasure chest
+img = shape(blank(), lambda d: d.rounded_rectangle((150, 420, 874, 860), 50, fill=255), (215, 140, 70), (150, 80, 40), outline=30)
+img = shape(img, lambda d: d.rounded_rectangle((130, 250, 894, 470), 90, fill=255), (235, 165, 90), (175, 100, 50), outline=30)
+img = shape(img, lambda d: (d.rectangle((440, 250, 584, 860), fill=255)), (255, 225, 110), (230, 165, 40), outline=22, gloss=False, shadow=False)
+img = shape(img, lambda d: d.rounded_rectangle((430, 410, 594, 560), 30, fill=255), (255, 240, 160), (240, 180, 50), outline=22, shadow=False)
+icons["ui_catalogue"] = save(sparkle(img, 820, 220, 70), "ui_catalogue")
+
+# my sky: island on a cloud
+img = shape(blank(), lambda d: [d.ellipse(b, fill=255) for b in [(100, 560, 480, 880), (330, 480, 730, 880), (580, 570, 930, 880)]], (255, 255, 255), (210, 225, 245), outline=26)
+img = shape(img, lambda d: d.polygon([(220, 520), (804, 520), (680, 700), (344, 700)], fill=255), (240, 230, 210), (190, 170, 150), outline=24)
+img = shape(img, lambda d: d.rounded_rectangle((190, 440, 834, 560), 60, fill=255), (150, 235, 120), (70, 180, 70), outline=24)
+img = shape(img, lambda d: d.polygon(star_points(512, 250, 190, 85), fill=255), (255, 240, 130), (255, 180, 40), outline=24)
+icons["ui_sky"] = save(img, "ui_sky")
+
+# upgrades: big up arrow
+img = shape(blank(), lambda d: d.polygon([(512, 90), (900, 500), (680, 500), (680, 920), (344, 920), (344, 500), (124, 500)], fill=255), (140, 255, 160), (30, 175, 80), outline=32)
+icons["ui_upgrades"] = save(sparkle(img, 820, 220, 60), "ui_upgrades")
+
+# index: book
+img = shape(blank(), lambda d: d.rounded_rectangle((170, 130, 860, 900), 60, fill=255), (110, 200, 255), (30, 110, 220), outline=32)
+img = shape(img, lambda d: d.rounded_rectangle((250, 760, 850, 860), 30, fill=255), (255, 255, 255), (215, 225, 240), outline=20, gloss=False, shadow=False)
+img = shape(img, lambda d: d.polygon(star_points(530, 430, 200, 90), fill=255), (255, 240, 130), (255, 180, 40), outline=22, shadow=False)
+icons["ui_index"] = save(img, "ui_index")
+
+# constellations: navy disc with connected stars
+img = shape(blank(), lambda d: d.ellipse((110, 110, 914, 914), fill=255), (70, 90, 190), (30, 40, 110), outline=32)
+pts = [(300, 640), (430, 420), (600, 520), (720, 300)]
+img = shape(img, lambda d: d.line(pts, fill=255, width=26, joint="curve"), (255, 220, 120), (255, 190, 60), outline=14, gloss=False, shadow=False)
+for (x, y) in pts:
+    img = shape(img, lambda d, x=x, y=y: d.polygon(star_points(x, y, 80, 36), fill=255), (255, 250, 200), (255, 200, 60), outline=16, shadow=False, gloss=False)
+icons["ui_constellations"] = save(img, "ui_constellations")
+
+# odds: die
+img = shape(blank(), lambda d: d.rounded_rectangle((170, 170, 854, 854), 120, fill=255), (255, 255, 255), (205, 215, 235), outline=32)
+for (x, y) in [(320, 320), (512, 512), (704, 704), (704, 320), (320, 704)]:
+    img = shape(img, lambda d, x=x, y=y: d.ellipse((x - 62, y - 62, x + 62, y + 62), fill=255), (90, 120, 240), (40, 60, 180), outline=10, gloss=False, shadow=False)
+icons["ui_odds"] = save(img, "ui_odds")
+
+# rewards: gift box
+img = shape(blank(), lambda d: d.rounded_rectangle((180, 440, 844, 900), 40, fill=255), (255, 110, 120), (210, 40, 70), outline=30)
+img = shape(img, lambda d: d.rounded_rectangle((140, 330, 884, 480), 40, fill=255), (255, 140, 150), (225, 60, 90), outline=30)
+img = shape(img, lambda d: (d.rectangle((450, 330, 574, 900), fill=255)), (255, 230, 120), (235, 170, 40), outline=20, gloss=False, shadow=False)
+img = shape(img, lambda d: (d.ellipse((260, 150, 520, 360), fill=255), d.ellipse((504, 150, 764, 360), fill=255)), (255, 230, 120), (235, 170, 40), outline=24, shadow=False)
+icons["ui_rewards"] = save(img, "ui_rewards")
+
+# cash: gold coin with a star
+img = shape(blank(), lambda d: d.ellipse((130, 130, 894, 894), fill=255), (255, 225, 100), (230, 150, 20), outline=32)
+img = shape(img, lambda d: d.ellipse((250, 250, 774, 774), fill=255), (255, 205, 70), (245, 175, 30), outline=16, gloss=False, shadow=False)
+img = shape(img, lambda d: d.polygon(star_points(C, C + 10, 200, 90), fill=255), (255, 250, 210), (255, 215, 90), outline=16, shadow=False)
+icons["ui_cash"] = save(img, "ui_cash")
+
+# luck: four-leaf clover
+img = blank()
+for (x, y) in [(512, 300), (724, 512), (512, 724), (300, 512)]:
+    img = shape(img, lambda d, x=x, y=y: d.ellipse((x - 190, y - 190, x + 190, y + 190), fill=255), (150, 245, 130), (40, 170, 70), outline=28)
+img = shape(img, lambda d: d.ellipse((420, 420, 604, 604), fill=255), (120, 220, 110), (40, 150, 60), outline=18, gloss=False, shadow=False)
+icons["ui_luck"] = save(img, "ui_luck")
+
+# rolls: telescope
+img = shape(blank(), lambda d: d.polygon([(250, 900), (512, 560), (774, 900)], fill=0) or d.line([(300, 900), (512, 600), (724, 900)], fill=255, width=50), (150, 110, 80), (100, 70, 50), outline=22, gloss=False)
+tube = blank("L")
+ImageDraw.Draw(tube).rounded_rectangle((180, 430, 900, 610), 60, fill=255)
+tube = tube.rotate(30, resample=Image.BICUBIC, center=(C, C))
+img = shape(img, lambda d: d.bitmap((0, 0), tube, fill=255), (130, 200, 255), (50, 110, 220), outline=30)
+icons["ui_rolls"] = save(sparkle(img, 800, 200, 80), "ui_rolls")
+
+# preview sheet
+names = list(icons)
+sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))
+for i, n in enumerate(names):
+    sheet.alpha_composite(Image.open(root / f"{n}.png"), ((i % 10) * OUT, (i // 10) * OUT))
+sheet.save(root.parent / "icons_preview.png")
+print(len(names), "icons ->", root)
