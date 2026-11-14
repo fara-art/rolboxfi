@@ -18,6 +18,8 @@ local World = {}
 -- callbacks set by Main
 World.onPlotTouched = nil :: ((Player, number) -> ())?
 World.onPedestal = nil :: ((Player, number, string) -> ())?
+World.onForge = nil :: ((Player) -> ())?
+World.onHole = nil :: ((Player) -> ())?
 
 local RING = 150 -- distance from hub center to satellite islands
 local HUB_RADIUS = 50
@@ -283,42 +285,53 @@ local function buildHub(folder: Folder)
 	end
 end
 
----------------------------------------------------------------- Star Forge island
-local function buildForge(folder: Folder, slot: number)
-	local direction = directionAt(slot)
-	local center = direction * RING
-	local cf = CFrame.lookAt(center, Vector3.zero)
-	World.ForgePosition = center
-	roundIsland(center, 34, folder, MARBLE_WARM)
-	bridge(direction, HUB_RADIUS - 2, RING - 33, folder)
-
-	-- gazebo
-	for _, corner in { { -11, -11 }, { 11, -11 }, { -11, 11 }, { 11, 11 } } do
-		pillar((cf * CFrame.new(corner[1], 0, corner[2])).Position, 14, folder)
+---------------------------------------------------------------- Star Forge house (on the hub, next to spawn)
+local function buildForgeHouse(folder: Folder)
+	-- front faces the hub center (local -Z)
+	local cf = CFrame.lookAt(Vector3.new(0, 0, 33), Vector3.zero)
+	local BRICK = Color3.fromRGB(222, 170, 140)
+	local ROOF = Color3.fromRGB(96, 150, 232)
+	make("Part", { Name = "HouseFloor", Size = Vector3.new(17, 0.4, 15), CFrame = cf * CFrame.new(0, 0.2, 0), Material = Enum.Material.Marble, Color = MARBLE_WARM, Parent = folder })
+	make("Part", { Name = "BackWall", Size = Vector3.new(17, 10, 1), CFrame = cf * CFrame.new(0, 5, 7), Material = Enum.Material.Brick, Color = BRICK, Parent = folder })
+	for _, side in { -8, 8 } do
+		make("Part", { Name = "SideWall", Size = Vector3.new(1, 10, 15), CFrame = cf * CFrame.new(side, 5, 0), Material = Enum.Material.Brick, Color = BRICK, Parent = folder })
+		pillar((cf * CFrame.new(side, 0, -7.5)).Position, 10, folder)
 	end
-	make("Part", { Name = "Roof", Size = Vector3.new(28, 2, 28), CFrame = cf * CFrame.new(0, 15.5, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
-	local dome = make("Part", { Name = "Dome", Size = Vector3.new(22, 8, 22), CFrame = cf * CFrame.new(0, 16.5, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
-	make("SpecialMesh", { MeshType = Enum.MeshType.Sphere, Parent = dome })
-	crystal((cf * CFrame.new(0, 23, 0)).Position, 2.5, Color3.fromRGB(255, 200, 120), folder)
+	make("Part", { Name = "Ceiling", Size = Vector3.new(19, 1, 17), CFrame = cf * CFrame.new(0, 10.6, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
+	for _, side in { -1, 1 } do
+		make("Part", {
+			Name = "Roof", Size = Vector3.new(11, 0.8, 18), CFrame = cf * CFrame.new(side * 4.6, 13.2, 0) * CFrame.Angles(0, 0, math.rad(-28 * side)),
+			Material = Enum.Material.SmoothPlastic, Color = ROOF, Parent = folder,
+		})
+	end
+	local chimney = cylinder(cf * CFrame.new(5, 15, 4), 6, 2.4, { Name = "Chimney", Material = Enum.Material.Brick, Color = BRICK, Parent = folder })
+	make("Smoke", { Color = Color3.fromRGB(255, 255, 255), Opacity = 0.15, RiseVelocity = 4, Size = 2, Parent = chimney })
 
-	-- forge table (anvil)
-	local tableBase = make("Part", { Name = "ForgeTable", Size = Vector3.new(8, 3, 5), CFrame = cf * CFrame.new(0, 1.5, 0), Material = Enum.Material.Marble, Color = Color3.fromRGB(120, 120, 135), Parent = folder })
-	local anvil = make("Part", { Name = "Anvil", Size = Vector3.new(6, 1.4, 2.6), CFrame = cf * CFrame.new(0, 3.7, 0), Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 84, 96), Parent = folder })
+	-- furnace at the back
+	local furnace = make("Part", { Name = "Furnace", Size = Vector3.new(8, 5, 3), CFrame = cf * CFrame.new(0, 2.5, 5), Material = Enum.Material.Brick, Color = Color3.fromRGB(190, 130, 105), Parent = folder })
+	local mouth = make("Part", { Name = "Mouth", Size = Vector3.new(4, 2.2, 0.3), CFrame = furnace.CFrame * CFrame.new(0, -0.8, -1.6), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 130, 40), Parent = folder })
+	make("Fire", { Heat = 4, Size = 3, Color = Color3.fromRGB(255, 140, 50), SecondaryColor = Color3.fromRGB(255, 230, 140), Parent = mouth })
+	make("PointLight", { Color = Color3.fromRGB(255, 150, 70), Range = 16, Brightness = 2, Parent = mouth })
+
+	-- forge table in front
+	local tableBase = make("Part", { Name = "ForgeTable", Size = Vector3.new(6, 3, 3.5), CFrame = cf * CFrame.new(0, 1.7, -3), Material = Enum.Material.Marble, Color = Color3.fromRGB(125, 125, 140), Parent = folder })
+	local anvil = make("Part", { Name = "Anvil", Size = Vector3.new(5, 1.2, 2.2), CFrame = cf * CFrame.new(0, 3.8, -3), Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 84, 96), Parent = folder })
 	make("ParticleEmitter", {
 		Color = ColorSequence.new(Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 120, 40)), LightEmission = 1, Rate = 6,
 		Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(4, 8), SpreadAngle = Vector2.new(60, 60),
 		Acceleration = Vector3.new(0, -20, 0), Size = NumberSequence.new(0.25, 0), Parent = anvil,
 	})
-	prompt(tableBase, "ForgePrompt", "promptForge", nil, 12)
-	worldText(anvil, "signForge", 6, 20, 3.5)
+	local forgePrompt = prompt(tableBase, "ForgePrompt", "promptForge", nil, 12)
+	forgePrompt.Triggered:Connect(function(who)
+		if World.onForge then
+			World.onForge(who)
+		end
+	end)
+	World.ForgePosition = tableBase.Position
 
-	-- furnace with chimney
-	local furnace = make("Part", { Name = "Furnace", Size = Vector3.new(10, 8, 6), CFrame = cf * CFrame.new(0, 4, 8.5), Material = Enum.Material.Brick, Color = Color3.fromRGB(214, 160, 130), Parent = folder })
-	local mouth = make("Part", { Name = "Mouth", Size = Vector3.new(5, 3, 0.4), CFrame = furnace.CFrame * CFrame.new(0, -1.5, -3.05), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 130, 40), Parent = folder })
-	make("Fire", { Heat = 5, Size = 4, Color = Color3.fromRGB(255, 140, 50), SecondaryColor = Color3.fromRGB(255, 230, 140), Parent = mouth })
-	make("PointLight", { Color = Color3.fromRGB(255, 150, 70), Range = 18, Brightness = 2, Parent = mouth })
-	local chimney = cylinder(furnace.CFrame * CFrame.new(0, 7, 1), 8, 2.6, { Name = "Chimney", Material = Enum.Material.Brick, Color = Color3.fromRGB(200, 145, 115), Parent = folder })
-	make("Smoke", { Color = Color3.fromRGB(255, 255, 255), Opacity = 0.15, RiseVelocity = 4, Size = 2, Parent = chimney })
+	-- banner over the entrance
+	local banner = make("Part", { Name = "Banner", Size = Vector3.new(12, 2.4, 0.4), CFrame = cf * CFrame.new(0, 9, -8.3), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
+	worldText(banner, "signForge", 0, 14, 2.6)
 end
 
 ---------------------------------------------------------------- Black Hole island
@@ -365,7 +378,11 @@ local function buildBlackHole(folder: Folder, slot: number)
 		local a = i / 6 * math.pi * 2
 		crystal(center + Vector3.new(math.cos(a) * 14, 3, math.sin(a) * 14), 2, Color3.fromRGB(190, 140, 255), folder)
 	end
-	prompt(altar, "BlackHolePrompt", "promptHole", nil, 14)
+	prompt(altar, "BlackHolePrompt", "promptHole", nil, 14).Triggered:Connect(function(who)
+		if World.onHole then
+			World.onHole(who)
+		end
+	end)
 	worldText(altar, "signHole", 7, 20, 3.5)
 end
 
@@ -535,11 +552,11 @@ function World.build()
 		end
 	end
 	try("hub", buildHub, make("Folder", { Name = "Hub", Parent = map }))
-	try("forge", buildForge, make("Folder", { Name = "Forge", Parent = map }), 3) -- +Z
+	try("forge", buildForgeHouse, make("Folder", { Name = "Forge", Parent = map }))
 	try("black hole", buildBlackHole, make("Folder", { Name = "BlackHoleIsland", Parent = map }), 7) -- -Z
 	local plotFolder = make("Folder", { Name = "Plots", Parent = map })
 	local index = 0
-	for _, slot in { 1, 2, 4, 5, 6, 8 } do
+	for _, slot in { 1, 2, 3, 4, 5, 6, 8 } do
 		index += 1
 		try("plot " .. index, buildPlot, index, slot, plotFolder)
 	end

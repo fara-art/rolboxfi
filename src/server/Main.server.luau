@@ -29,6 +29,7 @@ local ActionEv = remote("RemoteEvent", "Action")
 local StateEv = remote("RemoteEvent", "State")
 local AnnounceEv = remote("RemoteEvent", "Announce") -- (langKey, args, color)
 local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
+local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -277,6 +278,14 @@ World.onPlotTouched = function(player, index)
 		recompute(player, data)
 		pushState(player)
 	end
+end
+
+World.onForge = function(player)
+	OpenWindowEv:FireClient(player, "forge")
+end
+
+World.onHole = function(player)
+	OpenWindowEv:FireClient(player, "hole")
 end
 
 World.onPedestal = function(player, index, cellKey)

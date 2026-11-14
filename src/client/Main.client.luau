@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
@@ -26,6 +25,7 @@ local ActionEv = Remotes:WaitForChild("Action")
 local StateEv = Remotes:WaitForChild("State")
 local AnnounceEv = Remotes:WaitForChild("Announce")
 local PickerEv = Remotes:WaitForChild("OpenPicker")
+local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
 
 local state = nil
 local selected: string? = nil
@@ -103,6 +103,14 @@ local function shade(color: Color3, amount: number): Color3
 	return color:Lerp(Color3.new(0, 0, 0), amount)
 end
 
+-- Localized static labels: re-applied when the language changes
+local bound = {}
+local function bind(inst: TextLabel | TextButton, key: string)
+	table.insert(bound, { inst = inst, key = key })
+	inst.Text = t(key)
+	return inst
+end
+
 -- Uploaded UI icon (Config.UiIcons) or nil when not configured
 local function uiIcon(key: string, props)
 	local id = Config.UiIcons[key]
@@ -148,6 +156,34 @@ local function btn(color: Color3, props, onClick, iconKey: string?)
 	return b
 end
 
+-- Square icon-only button. If the image is missing or still in moderation, shows a short caption instead.
+local function iconButton(iconKey: string, captionKey: string, color: Color3, props, onClick)
+	props.Text = ""
+	props.Max = props.Max or 14
+	local b = btn(color, props, onClick)
+	make("UIAspectRatioConstraint", { AspectRatio = 1, Parent = b })
+	local icon = uiIcon(iconKey, {
+		Size = UDim2.new(1.2, 0, 1.2, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
+		ZIndex = (props.ZIndex or 1) + 1, Parent = b,
+	})
+	local function caption()
+		bind(b, captionKey)
+		if icon then
+			icon.Visible = false
+		end
+	end
+	if not icon then
+		caption()
+	else
+		task.delay(6, function()
+			if not icon.IsLoaded then
+				caption()
+			end
+		end)
+	end
+	return b
+end
+
 -- red "!" bubble in a button's corner
 local function badge(target: GuiObject)
 	return make("TextLabel", {
@@ -163,14 +199,6 @@ local function clear(container: Instance)
 			child:Destroy()
 		end
 	end
-end
-
--- Localized static labels: re-applied when the language changes
-local bound = {}
-local function bind(inst: TextLabel | TextButton, key: string)
-	table.insert(bound, { inst = inst, key = key })
-	inst.Text = t(key)
-	return inst
 end
 
 -- Star icon: uploaded image if configured, otherwise a drawn glowing disc
@@ -268,7 +296,7 @@ end)
 local settingsButton -- created after windows exist
 
 ---------------------------------------------------------------- Telescope (left)
-local telescope = panelFrame({ Size = UDim2.new(0.17, 0, 0.4, 0), Position = UDim2.new(0, 16, 0, 164), Parent = gui }) -- below Roblox buttons, language and settings
+local telescope = panelFrame({ Size = UDim2.new(0.17, 0, 0.4, 0), Position = UDim2.new(0, 16, 0, 120), Parent = gui }) -- below Roblox buttons, language and settings
 bind(text({ Size = UDim2.new(1, 0, 0.08, 0), TextColor3 = BLUE, FontFace = TITLE, Max = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = telescope }), "telescope")
 local resultName = bind(text({ Size = UDim2.new(1, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.1, 0), FontFace = TITLE, Max = 24, Parent = telescope }), "rollHint")
 local resultChance = text({ Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, 0.26, 0), Text = "", TextColor3 = MUTED, Max = 15, Parent = telescope })
@@ -303,7 +331,7 @@ local function centerProps()
 	return { Size = CENTER.Size, Position = CENTER.Position }
 end
 
-local catalogueW = window("catalogue", "side", { Size = UDim2.new(0.25, 0, 0.66, 0), Position = UDim2.new(1, -16, 0.16, 0), AnchorPoint = Vector2.new(1, 0) })
+local catalogueW = window("catalogue", "side", { Size = UDim2.new(0.25, 0, 0.66, 0), Position = UDim2.new(1, -104, 0.16, 0), AnchorPoint = Vector2.new(1, 0) })
 local skyW = window("mySky", "center", centerProps())
 local upgradesW = window("upgrades", "center", centerProps())
 local indexW = window("indexTitle", "center", centerProps())
@@ -335,7 +363,10 @@ local function open(w, force: boolean?)
 	end
 	w.frame.Visible = willShow
 	if willShow and renderers[w] then
-		renderers[w]()
+		local ok, err = pcall(renderers[w])
+		if not ok then
+			warn("[UI] window failed to render: " .. tostring(err))
+		end
 	end
 end
 
@@ -860,9 +891,9 @@ renderers[settingsW] = function()
 	end
 end
 
-settingsButton = bind(btn(Color3.fromRGB(120, 130, 160), { Size = UDim2.new(0, 112, 0, 38), Position = UDim2.new(0, 16, 0, 114), Max = 15, Parent = gui }, function()
+settingsButton = iconButton("settings", "settings", Color3.fromRGB(120, 130, 160), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 136, 0, 64), Max = 10, Parent = gui }, function()
 	open(settingsW)
-end, "settings"), "settings")
+end)
 
 -- Rebirth celebration: sound, white flash, big title, camera punch
 local function celebrateRebirth()
@@ -889,20 +920,45 @@ local function celebrateRebirth()
 	end
 end
 
----------------------------------------------------------------- Bottom dock
-local dock = make("Frame", { Size = UDim2.new(0.84, 0, 0, 54), Position = UDim2.new(0.08, 0, 1, -66), BackgroundTransparency = 1, Parent = gui })
-make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.012, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = dock })
-local dockButtons = {}
-for order, entry in {
-	{ "catalogue", catalogueW, BLUE, "catalogue" }, { "mySky", skyW, MINT, "sky" }, { "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
-	{ "rewards", rewardsW, RED, "rewards" }, { "index", indexW, LILAC, "index" }, { "constellations", bookW, Color3.fromRGB(70, 90, 200), "constellations" },
-	{ "odds", oddsW, GOLD, "odds" },
-} do
-	local b = bind(btn(entry[3], { Size = UDim2.new(0.13, 0, 1, 0), LayoutOrder = order, Max = 17, Parent = dock }, function()
-		open(entry[2])
-	end, entry[4]), entry[1])
-	dockButtons[entry[1]] = b
+---------------------------------------------------------------- Icon buttons: bottom row + right column
+local BUTTON = 72
+local GAP = 12
+local function buttonGroup(count: number, horizontal: boolean, props)
+	props.BackgroundTransparency = 1
+	props.Size = if horizontal
+		then UDim2.new(0, count * BUTTON + (count - 1) * GAP, 0, BUTTON)
+		else UDim2.new(0, BUTTON, 0, count * BUTTON + (count - 1) * GAP)
+	local frame = make("Frame", props)
+	make("UIListLayout", {
+		FillDirection = if horizontal then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical,
+		Padding = UDim.new(0, GAP), SortOrder = Enum.SortOrder.LayoutOrder, Parent = frame,
+	})
+	return frame
 end
+
+local dockButtons = {}
+local function addButtons(parent: Frame, entries)
+	for order, entry in entries do
+		local b = iconButton(entry[4], entry[1], entry[3], { Size = UDim2.new(0, BUTTON, 0, BUTTON), LayoutOrder = order, Parent = parent }, function()
+			open(entry[2])
+		end)
+		dockButtons[entry[1]] = b
+	end
+end
+
+local bottomRow = buttonGroup(4, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
+addButtons(bottomRow, {
+	{ "mySky", skyW, MINT, "sky" },
+	{ "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
+	{ "rewards", rewardsW, RED, "rewards" },
+	{ "constellations", bookW, Color3.fromRGB(70, 90, 200), "constellations" },
+})
+local rightColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
+addButtons(rightColumn, {
+	{ "catalogue", catalogueW, BLUE, "catalogue" },
+	{ "index", indexW, LILAC, "index" },
+	{ "odds", oddsW, GOLD, "odds" },
+})
 local rewardsBadge = badge(dockButtons.rewards)
 local indexBadge = badge(dockButtons.index)
 
@@ -970,7 +1026,10 @@ render = function()
 
 	for _, w in windows do
 		if w.frame.Visible and renderers[w] then
-			renderers[w]()
+			local ok, err = pcall(renderers[w])
+			if not ok then
+				warn("[UI] window failed to render: " .. tostring(err))
+			end
 		end
 	end
 end
@@ -1054,10 +1113,11 @@ PickerEv.OnClientEvent:Connect(function(cellKey: string)
 	open(pickerW, true)
 end)
 
-ProximityPromptService.PromptTriggered:Connect(function(prompt)
-	if prompt.Name == "ForgePrompt" then
+-- Forge / Black Hole windows are opened by the server when you use their prompts
+OpenWindowEv.OnClientEvent:Connect(function(name: string)
+	if name == "forge" then
 		open(forgeW, true)
-	elseif prompt.Name == "BlackHolePrompt" then
+	elseif name == "hole" then
 		open(holeW, true)
 	end
 end)
