@@ -2,7 +2,8 @@
 <Item class="Workspace" referent="RBX12"><Properties><string name="Name">Workspace</string></Properties><Item class="Part" referent="RBX10"><Properties><string name="Name">Baseplate</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>-8</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>512</X><Y>16</Y><Z>512</Z></Vector3></Properties></Item>
 <Item class="SpawnLocation" referent="RBX11"><Properties><string name="Name">SpawnLocation</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>0.5</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3></Properties></Item>
 </Item>
-<Item class="ReplicatedStorage" referent="RBX14"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX13"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[local Config = {}
+<Item class="Lighting" referent="RBX13"><Properties><string name="Name">Lighting</string><float name="ClockTime">0</float><float name="Brightness">1</float></Properties></Item>
+<Item class="ReplicatedStorage" referent="RBX15"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX14"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[local Config = {}
 
 Config.RollCooldown = 1 -- секунд между крутками
 
@@ -288,7 +289,7 @@ return Stars
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="ServerScriptService" referent="RBX16"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX15"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX7"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+<Item class="ServerScriptService" referent="RBX17"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX16"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX7"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 
@@ -719,7 +720,7 @@ return DataService
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX19"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX18"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX17"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX9"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+<Item class="StarterPlayer" referent="RBX20"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX19"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX18"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX9"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService = game:GetService("TweenService")
@@ -838,7 +839,7 @@ local sky = make("Frame", {
 local skyGrid = make("UIGridLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = sky })
 local skyHint = label({
 	Size = UDim2.new(0.5, 0, 0.05, 0), Position = UDim2.new(0.25, 0, 0.805, 0),
-	Text = "Pick a star on the right, then tap a cell. Tap a placed star to remove it.", TextColor3 = MUTED, MaxText = 16, Font = Enum.Font.Gotham, Parent = gui,
+	Text = "Pick a star on the right, then tap a cell. Tap a placed star to remove it.", TextColor3 = TEXT, TextStrokeTransparency = 0.2, MaxText = 16, Font = Enum.Font.GothamMedium, Parent = gui,
 })
 
 -- Право: инвентарь
@@ -1001,7 +1002,8 @@ local function renderInventory()
 		end
 	end
 	sellOne.Text = if selectedStar then "Sell 1" else "Select a star"
-	sellAll.Text = if selectedStar then "Sell all" else ""
+	sellOne.Size = if selectedStar then UDim2.new(0.48, 0, 0.16, 0) else UDim2.new(1, 0, 0.16, 0)
+	sellAll.Visible = selectedStar ~= nil
 end
 
 local function renderUpgrades()
@@ -1098,7 +1100,7 @@ sellOne = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0, 0
 		ActionEv:FireServer("Sell", selectedStar, 1)
 	end
 end)
-sellAll = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0.52, 0, 0.84, 0), Text = "", BackgroundColor3 = Color3.fromRGB(150, 50, 70), MaxText = 18, Parent = right }, function()
+sellAll = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0.52, 0, 0.84, 0), Text = "Sell all", Visible = false, BackgroundColor3 = Color3.fromRGB(150, 50, 70), MaxText = 18, Parent = right }, function()
 	if selectedStar and state then
 		ActionEv:FireServer("Sell", selectedStar, state.inventory[selectedStar] or 0)
 	end

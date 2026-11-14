@@ -117,7 +117,7 @@ local sky = make("Frame", {
 local skyGrid = make("UIGridLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = sky })
 local skyHint = label({
 	Size = UDim2.new(0.5, 0, 0.05, 0), Position = UDim2.new(0.25, 0, 0.805, 0),
-	Text = "Pick a star on the right, then tap a cell. Tap a placed star to remove it.", TextColor3 = MUTED, MaxText = 16, Font = Enum.Font.Gotham, Parent = gui,
+	Text = "Pick a star on the right, then tap a cell. Tap a placed star to remove it.", TextColor3 = TEXT, TextStrokeTransparency = 0.2, MaxText = 16, Font = Enum.Font.GothamMedium, Parent = gui,
 })
 
 -- Право: инвентарь
@@ -280,7 +280,8 @@ local function renderInventory()
 		end
 	end
 	sellOne.Text = if selectedStar then "Sell 1" else "Select a star"
-	sellAll.Text = if selectedStar then "Sell all" else ""
+	sellOne.Size = if selectedStar then UDim2.new(0.48, 0, 0.16, 0) else UDim2.new(1, 0, 0.16, 0)
+	sellAll.Visible = selectedStar ~= nil
 end
 
 local function renderUpgrades()
@@ -377,7 +378,7 @@ sellOne = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0, 0
 		ActionEv:FireServer("Sell", selectedStar, 1)
 	end
 end)
-sellAll = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0.52, 0, 0.84, 0), Text = "", BackgroundColor3 = Color3.fromRGB(150, 50, 70), MaxText = 18, Parent = right }, function()
+sellAll = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0.52, 0, 0.84, 0), Text = "Sell all", Visible = false, BackgroundColor3 = Color3.fromRGB(150, 50, 70), MaxText = 18, Parent = right }, function()
 	if selectedStar and state then
 		ActionEv:FireServer("Sell", selectedStar, state.inventory[selectedStar] or 0)
 	end

@@ -33,6 +33,7 @@ xml = ('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
        'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">\n'
        + item("Workspace", "Workspace", part("Part", "Baseplate", -8, (512, 16, 512))
               + part("SpawnLocation", "SpawnLocation", 0.5, (12, 1, 12)))
+       + item("Lighting", "Lighting", extra='<float name="ClockTime">0</float><float name="Brightness">1</float>')
        + item("ReplicatedStorage", "ReplicatedStorage", item("Folder", "Shared", shared))
        + item("ServerScriptService", "ServerScriptService", item("Folder", "Server", server))
        + item("StarterPlayer", "StarterPlayer",
