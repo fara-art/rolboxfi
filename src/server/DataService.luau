@@ -26,6 +26,13 @@ local function default()
 		totalRolls = 0,
 		rebirths = 0,
 		mass = 0, -- Black Hole progress
+		rollSpeedLevel = 0,
+		multiRollLevel = 0,
+		bonusLuck = 0, -- from Index rows and roll milestones, survives rebirth
+		index = {}, -- [itemKey] = true, every star ever found
+		indexClaims = {}, -- [mutationId] = true
+		milestones = {}, -- ["1"] = true (string keys for DataStore)
+		lang = "", -- "" = auto
 	}
 end
 

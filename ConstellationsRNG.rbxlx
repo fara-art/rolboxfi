@@ -1,18 +1,32 @@
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
-<Item class="Workspace" referent="RBX15"><Properties><string name="Name">Workspace</string></Properties><Item class="SpawnLocation" referent="RBX14"><Properties><string name="Name">SpawnLocation</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>0.5</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3></Properties></Item>
+<Item class="Workspace" referent="RBX17"><Properties><string name="Name">Workspace</string></Properties><Item class="SpawnLocation" referent="RBX16"><Properties><string name="Name">SpawnLocation</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>0.5</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3></Properties></Item>
 </Item>
-<Item class="Lighting" referent="RBX16"><Properties><string name="Name">Lighting</string><float name="ClockTime">0</float><float name="Brightness">1</float></Properties></Item>
-<Item class="ReplicatedStorage" referent="RBX18"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX17"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[local Config = {}
+<Item class="Lighting" referent="RBX18"><Properties><string name="Name">Lighting</string><float name="ClockTime">14.5</float><float name="Brightness">2</float></Properties></Item>
+<Item class="ReplicatedStorage" referent="RBX20"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX19"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[local Config = {}
 
-Config.RollCooldown = 1 -- seconds between rolls
+-- Rolling
+Config.AutoRollUnlock = 50 -- total rolls needed to unlock auto roll
+Config.MaxRollSpeedLevel = 10
+function Config.RollCooldown(level: number): number
+	return math.max(0.3, 1 * 0.88 ^ level)
+end
+function Config.RollSpeedCost(level: number): number
+	return math.floor(400 * 2.6 ^ level)
+end
+Config.MaxMultiRollLevel = 4 -- rolls per click = 1 + level
+function Config.MultiRollCost(level: number): number
+	return math.floor(5000 * 8 ^ level)
+end
 
+-- Plot (pedestal grid)
 Config.StartGridSize = 4
 Config.MaxGridSize = 8
--- cost to expand the sky from size to size + 1
 function Config.GridCost(size: number): number
 	return math.floor(1000 * 8 ^ (size - Config.StartGridSize))
 end
+Config.PlotReach = 52 -- how far from plot center you can place stars
 
+-- Luck
 Config.LuckPerLevel = 0.25
 Config.MaxLuckLevel = 40
 function Config.LuckCost(level: number): number
@@ -24,6 +38,7 @@ Config.SellMultiplier = 20 -- sell value = income/s * this (also Black Hole mass
 -- Star Forge: ForgeAmount of the same item -> 1 of the next star (mutation kept)
 Config.ForgeAmount = 5
 Config.ForgeCostMult = 10 -- cash cost = next star income * this
+Config.ForgeReach = 26
 
 -- Black Hole / Rebirth
 function Config.RebirthCost(rebirths: number): number
@@ -31,12 +46,22 @@ function Config.RebirthCost(rebirths: number): number
 end
 Config.RebirthIncomeBonus = 1 -- income x(1 + rebirths * this)
 Config.RebirthLuckBonus = 0.5 -- luck + rebirths * this
+Config.AltarReach = 30
 
--- Comets: fly across the screen, click for a lucky roll
-Config.CometMinDelay = 40
-Config.CometMaxDelay = 90
-Config.CometLifetime = 8
-Config.CometLuck = 5
+-- Star Index: complete a mutation row (all stars) -> claim permanent luck
+Config.IndexRowLuck = 0.5
+
+-- Roll milestones (claimed in the Index)
+Config.RollMilestones = {
+	{ rolls = 100, cash = 2000 },
+	{ rolls = 250, luck = 0.25 },
+	{ rolls = 500, cash = 20000 },
+	{ rolls = 1000, luck = 0.5 },
+	{ rolls = 2500, cash = 250000 },
+	{ rolls = 5000, luck = 1 },
+	{ rolls = 10000, cash = 5000000 },
+	{ rolls = 25000, luck = 2 },
+}
 
 -- Star Shower: server-wide luck event
 Config.ShowerInterval = 600
@@ -48,11 +73,24 @@ Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
 Config.AutosaveInterval = 120
 Config.DataStoreName = "ConstellationsRNG_v1"
 
--- Game pass IDs. 0 = not created yet (AutoRoll with 0 is free, for testing)
+-- Game pass IDs. 0 = not created yet
 Config.GamePasses = {
 	Luck2x = 0,
 	Cash2x = 0,
-	AutoRoll = 0,
+}
+
+-- Star icons: upload assets/icons/*.png to Roblox and paste the image IDs here.
+-- Empty = drawn fallback circle.
+Config.StarIcons = {
+	dust = "",
+	spark = "",
+	dwarf = "",
+	sun = "",
+	giant = "",
+	pulsar = "",
+	neutron = "",
+	quasar = "",
+	supernova = "",
 }
 
 return Config
@@ -201,7 +239,172 @@ end
 
 return Items
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Mutations</string><ProtectedString name="Source"><![CDATA[-- Mutation rolled separately from the star. Multiplies income.
+<Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Lang</string><ProtectedString name="Source"><![CDATA[-- All player-facing text. Lang.t(lang, key, ...) -> string.format(template, ...)
+local Items = require(script.Parent.Items)
+
+local Lang = {}
+
+Lang.Strings = {
+	en = {
+		cash = "CASH", perSec = "PER SEC", luck = "LUCK", rolls = "ROLLS", rebirths = "REBIRTHS",
+		telescope = "TELESCOPE", rollHint = "Roll for a star", roll = "ROLL", rollN = "ROLL x%d",
+		autoOn = "AUTO: ON", autoOff = "AUTO: OFF", autoLocked = "AUTO  %d/%d",
+		oneIn = "1 in %s", andMore = "+%d more", totalRolls = "Total rolls: %s",
+		catalogue = "CATALOGUE", mySky = "MY SKY", upgrades = "UPGRADES", index = "INDEX",
+		constellations = "CONSTELLATIONS", odds = "ODDS",
+		oddsTitle = "ODDS AT YOUR LUCK", mutations = "MUTATIONS",
+		perSecShort = "+%s/s", sellsFor = "Sells for %s",
+		sell1 = "SELL 1", sellAll = "SELL ALL", emptyCatalogue = "Roll to find stars",
+		tip = "Walk onto a free plot to claim it. Press E at a pedestal to place a star — stars earn only on your plot.",
+		skyNoPlot = "Claim a plot first: walk onto a free one.",
+		skyHint = "This is your plot from above. Place stars at the pedestals.",
+		pickTitle = "PLACE A STAR", pickEmpty = "No stars yet. Roll first!",
+		forgeTitle = "STAR FORGE", forgeHint = "%d of the same star + cash = the next star. Mutation is kept.",
+		forgeBtn = "FORGE  %s", forgeMax = "Top star, can't forge", forgeHave = "%d/%d",
+		holeTitle = "BLACK HOLE", mass = "%s / %s mass", holeFeed = "Feed it stars to grow its mass.",
+		holeNow = "Now: income x%s, luck +%s", holeNext = "After rebirth: income x%s, luck +%s",
+		holeWarn = "Rebirth resets cash, stars, plot and upgrades. Index and constellations stay.",
+		rebirth = "REBIRTH", notEnough = "NOT ENOUGH MASS", feed1 = "FEED 1", feedAll = "FEED ALL",
+		upLuck = "Luck", upSpeed = "Roll speed", upMulti = "Multi roll", upSky = "Plot size",
+		upMax = "MAX", buy = "BUY  %s",
+		upLuckDesc = "x%s → x%s", upSpeedDesc = "%ss → %ss", upMultiDesc = "%d → %d per roll", upSkyDesc = "%dx%d → %dx%d",
+		indexTitle = "STAR INDEX", tabStars = "STARS", tabRolls = "ROLL REWARDS",
+		claim = "CLAIM", claimed = "CLAIMED", rewardLuck = "+%s luck", rewardCash = "+%s cash", rollsReq = "%s rolls",
+		rowReward = "Complete the row: +%s luck forever",
+		bookTitle = "CONSTELLATION BOOK", unknown = "Unknown", nStars = "%d stars", incomeX = "income x%s",
+		bookHint = "Place stars on pedestals in exactly this shape, with no extra neighbours (diagonals count). All stars of one kind: another x%s.",
+		shower = "STAR SHOWER  x%s LUCK  %s",
+		annDiscover = "%s discovered %s (x%s)", annRolled = "%s rolled %s (1 in %s)", annForged = "%s forged %s",
+		annExploded = "%s's %s exploded into %s!", annRebirth = "%s was reborn from the Black Hole (rebirth %s)",
+		annShower = "STAR SHOWER! x%s luck for %s",
+		toastForged = "Forged %s", toastNeedCash = "Need %s cash", toastNeedSame = "Need %d of the same star",
+		toastNewIndex = "New in the Index: %s", toastClaimed = "This plot is yours!", toastNotYours = "This is not your plot",
+		toastTooFar = "Come closer", toastAutoUnlocked = "Auto roll unlocked!", toastHavePlot = "You already have a plot",
+		signFree = "FREE PLOT\nstep in to claim", signPlot = "%s's plot\n+%s/s",
+		signForge = "STAR FORGE", signHole = "BLACK HOLE", signHub = "SKY HAVEN",
+		promptPlace = "Place star", promptRemove = "Take star", promptForge = "Forge", promptHole = "Black Hole", pedestal = "Pedestal",
+		langButton = "EN",
+	},
+	ru = {
+		cash = "ДЕНЬГИ", perSec = "В СЕКУНДУ", luck = "УДАЧА", rolls = "КРУТКИ", rebirths = "ПЕРЕРОЖД.",
+		telescope = "ТЕЛЕСКОП", rollHint = "Крути звезду", roll = "КРУТИТЬ", rollN = "КРУТИТЬ x%d",
+		autoOn = "АВТО: ВКЛ", autoOff = "АВТО: ВЫКЛ", autoLocked = "АВТО  %d/%d",
+		oneIn = "1 к %s", andMore = "ещё +%d", totalRolls = "Всего круток: %s",
+		catalogue = "КАТАЛОГ", mySky = "МОЁ НЕБО", upgrades = "УЛУЧШЕНИЯ", index = "ИНДЕКС",
+		constellations = "СОЗВЕЗДИЯ", odds = "ШАНСЫ",
+		oddsTitle = "ШАНСЫ С ТВОЕЙ УДАЧЕЙ", mutations = "МУТАЦИИ",
+		perSecShort = "+%s/с", sellsFor = "Продажа: %s",
+		sell1 = "ПРОДАТЬ 1", sellAll = "ПРОДАТЬ ВСЕ", emptyCatalogue = "Крути, чтобы найти звёзды",
+		tip = "Зайди на свободный участок, чтобы занять его. Нажми E у постамента, чтобы поставить звезду — деньги приносят только звёзды на участке.",
+		skyNoPlot = "Сначала займи участок: просто зайди на свободный.",
+		skyHint = "Это твой участок сверху. Ставь звёзды на постаменты.",
+		pickTitle = "ПОСТАВИТЬ ЗВЕЗДУ", pickEmpty = "Звёзд пока нет. Сначала покрути!",
+		forgeTitle = "ЗВЁЗДНАЯ КУЗНЯ", forgeHint = "%d одинаковых звёзд + деньги = следующая звезда. Мутация сохраняется.",
+		forgeBtn = "КОВАТЬ  %s", forgeMax = "Это лучшая звезда", forgeHave = "%d/%d",
+		holeTitle = "ЧЁРНАЯ ДЫРА", mass = "%s / %s массы", holeFeed = "Корми её звёздами, чтобы росла масса.",
+		holeNow = "Сейчас: доход x%s, удача +%s", holeNext = "После перерождения: доход x%s, удача +%s",
+		holeWarn = "Перерождение сбрасывает деньги, звёзды, участок и улучшения. Индекс и созвездия остаются.",
+		rebirth = "ПЕРЕРОДИТЬСЯ", notEnough = "МАЛО МАССЫ", feed1 = "СКОРМИТЬ 1", feedAll = "СКОРМИТЬ ВСЕ",
+		upLuck = "Удача", upSpeed = "Скорость крутки", upMulti = "Мульти-крутка", upSky = "Размер участка",
+		upMax = "МАКС", buy = "КУПИТЬ  %s",
+		upLuckDesc = "x%s → x%s", upSpeedDesc = "%sс → %sс", upMultiDesc = "%d → %d за раз", upSkyDesc = "%dx%d → %dx%d",
+		indexTitle = "ИНДЕКС ЗВЁЗД", tabStars = "ЗВЁЗДЫ", tabRolls = "НАГРАДЫ ЗА КРУТКИ",
+		claim = "ЗАБРАТЬ", claimed = "ПОЛУЧЕНО", rewardLuck = "+%s удачи", rewardCash = "+%s денег", rollsReq = "%s круток",
+		rowReward = "Собери ряд: +%s удачи навсегда",
+		bookTitle = "КНИГА СОЗВЕЗДИЙ", unknown = "Неизвестно", nStars = "звёзд: %d", incomeX = "доход x%s",
+		bookHint = "Ставь звёзды на постаменты ровно такой фигурой, без лишних соседей (диагонали тоже считаются). Все звёзды одного вида: ещё x%s.",
+		shower = "ЗВЕЗДОПАД  x%s УДАЧИ  %s",
+		annDiscover = "%s открыл созвездие %s (x%s)", annRolled = "%s выбил %s (1 к %s)", annForged = "%s выковал %s",
+		annExploded = "У %s звезда %s взорвалась в %s!", annRebirth = "%s переродился из Чёрной дыры (перерождение %s)",
+		annShower = "ЗВЕЗДОПАД! x%s удачи на %s",
+		toastForged = "Выковано: %s", toastNeedCash = "Нужно %s денег", toastNeedSame = "Нужно %d одинаковых звёзд",
+		toastNewIndex = "Новое в индексе: %s", toastClaimed = "Участок теперь твой!", toastNotYours = "Это не твой участок",
+		toastTooFar = "Подойди ближе", toastAutoUnlocked = "Автокрутка открыта!", toastHavePlot = "У тебя уже есть участок",
+		signFree = "СВОБОДНЫЙ УЧАСТОК\nзайди, чтобы занять", signPlot = "Участок %s\n+%s/с",
+		signForge = "ЗВЁЗДНАЯ КУЗНЯ", signHole = "ЧЁРНАЯ ДЫРА", signHub = "НЕБЕСНАЯ ГАВАНЬ",
+		promptPlace = "Поставить звезду", promptRemove = "Забрать звезду", promptForge = "Ковать", promptHole = "Чёрная дыра", pedestal = "Постамент",
+		langButton = "RU",
+	},
+}
+
+Lang.StarNames = {
+	ru = {
+		dust = "Звёздная пыль", spark = "Искра", dwarf = "Красный карлик", sun = "Жёлтое солнце", giant = "Голубой гигант",
+		pulsar = "Пульсар", neutron = "Нейтронная звезда", quasar = "Квазар", supernova = "Сверхновая",
+	},
+}
+
+Lang.MutationNames = {
+	ru = { normal = "Обычная", shiny = "Сияние", golden = "Золото", void = "Пустота", celestial = "Небеса" },
+}
+
+Lang.ConstellationNames = {
+	ru = {
+		pair = "Двойная звезда", triangle = "Летний треугольник", belt = "Пояс Ориона", pegasus = "Квадрат Пегаса",
+		rhombus = "Ромб Дельфина", cross = "Южный Крест", cassiopeia = "Кассиопея", dipper = "Большая Медведица", ring = "Кольцо Галактики",
+	},
+}
+
+function Lang.t(lang: string, key: string, ...): string
+	local strings = Lang.Strings[lang] or Lang.Strings.en
+	local template = strings[key] or Lang.Strings.en[key] or key
+	if select("#", ...) > 0 then
+		local ok, result = pcall(string.format, template, ...)
+		return if ok then result else template
+	end
+	return template
+end
+
+function Lang.star(lang: string, star): string
+	local names = Lang.StarNames[lang]
+	return names and names[star.id] or star.name
+end
+
+function Lang.mutation(lang: string, mutation): string
+	local names = Lang.MutationNames[lang]
+	return names and names[mutation.id] or mutation.name
+end
+
+function Lang.constellation(lang: string, pattern): string
+	local names = Lang.ConstellationNames[lang]
+	return names and names[pattern.id] or pattern.name
+end
+
+-- "Golden Pulsar" / "Пульсар · Золото"
+function Lang.item(lang: string, key: string): string
+	local star, mutation = Items.parse(key)
+	if not star then
+		return "?"
+	end
+	if mutation.id == "normal" then
+		return Lang.star(lang, star)
+	end
+	if lang == "ru" then
+		return Lang.star(lang, star) .. " · " .. Lang.mutation(lang, mutation)
+	end
+	return mutation.name .. " " .. star.name
+end
+
+-- Server sends messages as { key, args } where an arg may be { item = key } or { constellation = id }.
+function Lang.resolve(lang: string, key: string, args: { any }?): string
+	local Constellations = require(script.Parent.Constellations)
+	local out = {}
+	for i, arg in args or {} do
+		if type(arg) == "table" and arg.item then
+			out[i] = Lang.item(lang, arg.item)
+		elseif type(arg) == "table" and arg.constellation then
+			local pattern = Constellations.ById[arg.constellation]
+			out[i] = if pattern then Lang.constellation(lang, pattern) else "?"
+		else
+			out[i] = tostring(arg)
+		end
+	end
+	return Lang.t(lang, key, table.unpack(out))
+end
+
+return Lang
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">Mutations</string><ProtectedString name="Source"><![CDATA[-- Mutation rolled separately from the star. Multiplies income.
 local Mutations = {}
 
 Mutations.List = {
@@ -220,7 +423,7 @@ end
 
 return Mutations
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">Odds</string><ProtectedString name="Source"><![CDATA[local Stars = require(script.Parent.Stars)
+<Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">Odds</string><ProtectedString name="Source"><![CDATA[local Stars = require(script.Parent.Stars)
 local Mutations = require(script.Parent.Mutations)
 
 local Odds = {}
@@ -271,7 +474,7 @@ end
 
 return Odds
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">Sky</string><ProtectedString name="Source"><![CDATA[-- Sky logic: find star groups, match constellations, compute income
+<Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">Sky</string><ProtectedString name="Source"><![CDATA[-- Sky logic: find star groups, match constellations, compute income
 -- grid[key] = { id = itemKey, age = seconds }
 local Items = require(script.Parent.Items)
 local Evolution = require(script.Parent.Evolution)
@@ -397,7 +600,7 @@ end
 
 return Sky
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX9"><Properties><string name="Name">Stars</string><ProtectedString name="Source"><![CDATA[-- chance = "1 in N", income = cash per second while placed on the sky
+<Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">Stars</string><ProtectedString name="Source"><![CDATA[-- chance = "1 in N", income = cash per second while placed on the sky
 -- evolvesTo = what it can explode into at max evolution level
 local Stars = {}
 
@@ -423,13 +626,14 @@ return Stars
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="ServerScriptService" referent="RBX20"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX19"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX10"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+<Item class="ServerScriptService" referent="RBX22"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX21"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX11"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Stars = require(Shared.Stars)
+local Mutations = require(Shared.Mutations)
 local Constellations = require(Shared.Constellations)
 local Items = require(Shared.Items)
 local Evolution = require(Shared.Evolution)
@@ -453,15 +657,24 @@ end
 local RollFn = remote("RemoteFunction", "Roll")
 local ActionEv = remote("RemoteEvent", "Action")
 local StateEv = remote("RemoteEvent", "State")
-local AnnounceEv = remote("RemoteEvent", "Announce")
-local CometEv = remote("RemoteEvent", "Comet")
+local AnnounceEv = remote("RemoteEvent", "Announce") -- (langKey, args, color)
+local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
 
-local GOLD = Color3.fromRGB(255, 214, 140)
+local GOLD = Color3.fromRGB(255, 196, 70)
 local rng = Random.new()
 local sessions: { [Player]: any } = {}
+
+---------------------------------------------------------------- messaging
+local function toast(player: Player, key: string, args: { any }?, color: Color3?)
+	AnnounceEv:FireClient(player, key, args or {}, color or GOLD)
+end
+
+local function announceAll(key: string, args: { any }, color: Color3?)
+	AnnounceEv:FireAllClients(key, args, color or GOLD)
+end
 
 ---------------------------------------------------------------- helpers
 local function checkPass(player: Player, name: string): boolean
@@ -487,7 +700,7 @@ local function isShower(): boolean
 end
 
 local function getLuck(player: Player, data): number
-	local luck = 1 + data.luckLevel * Config.LuckPerLevel + data.rebirths * Config.RebirthLuckBonus
+	local luck = 1 + data.luckLevel * Config.LuckPerLevel + data.rebirths * Config.RebirthLuckBonus + data.bonusLuck
 	if sessions[player].passes.Luck2x then
 		luck *= 2
 	end
@@ -499,28 +712,38 @@ end
 
 local function incomePerSecond(player: Player, data): number
 	local session = sessions[player]
+	if not World.plotOf(player) or not session.eval then
+		return 0
+	end
 	local mult = (1 + data.rebirths * Config.RebirthIncomeBonus) * (if session.passes.Cash2x then 2 else 1)
 	return session.eval.income * mult
-end
-
-local function toast(player: Player, text: string, color: Color3?)
-	AnnounceEv:FireClient(player, text, color or GOLD)
 end
 
 local function recompute(player: Player, data)
 	local session = sessions[player]
 	session.eval = Sky.evaluate(data.grid, data.gridSize)
-	for _, group in session.eval.groups do
-		if not data.discovered[group.id] then
-			data.discovered[group.id] = true
-			local pattern = Constellations.ById[group.id]
-			AnnounceEv:FireAllClients(
-				string.format("%s discovered %s  (x%s)", player.DisplayName, pattern.name, pattern.mult),
-				GOLD
-			)
+	if World.plotOf(player) then
+		for _, group in session.eval.groups do
+			if not data.discovered[group.id] then
+				data.discovered[group.id] = true
+				announceAll("annDiscover", { player.DisplayName, { constellation = group.id }, Constellations.ById[group.id].mult })
+			end
 		end
+		World.renderPlot(player, data, session.eval, incomePerSecond(player, data))
 	end
-	World.renderPlot(player, data, session.eval, incomePerSecond(player, data))
+end
+
+local function setStat(player: Player, name: string, value: number)
+	local stats = player:FindFirstChild("leaderstats")
+	local stat = stats and stats:FindFirstChild(name)
+	if stat then
+		stat.Value = value
+	end
+end
+
+local function setCash(player: Player, data, value: number)
+	data.cash = value
+	setStat(player, "Cash", value)
 end
 
 local function pushState(player: Player)
@@ -535,24 +758,22 @@ local function pushState(player: Player)
 		grid = data.grid,
 		gridSize = data.gridSize,
 		luckLevel = data.luckLevel,
+		rollSpeedLevel = data.rollSpeedLevel,
+		multiRollLevel = data.multiRollLevel,
 		luck = getLuck(player, data),
 		income = incomePerSecond(player, data),
-		groups = session.eval.groups,
+		groups = if session.eval then session.eval.groups else {},
 		discovered = data.discovered,
 		totalRolls = data.totalRolls,
 		rebirths = data.rebirths,
 		mass = data.mass,
+		index = data.index,
+		indexClaims = data.indexClaims,
+		milestones = data.milestones,
+		lang = data.lang,
+		hasPlot = World.plotOf(player) ~= nil,
 		passes = session.passes,
 	})
-end
-
-local function setCash(player: Player, data, value: number)
-	data.cash = value
-	local stats = player:FindFirstChild("leaderstats")
-	local cash = stats and stats:FindFirstChild("Cash")
-	if cash then
-		cash.Value = value
-	end
 end
 
 local function takeFromInventory(data, key: string, count: number): boolean
@@ -565,8 +786,16 @@ local function takeFromInventory(data, key: string, count: number): boolean
 	return true
 end
 
-local function addToInventory(data, key: string, count: number)
+local function discover(player: Player, data, key: string)
+	if not data.index[key] then
+		data.index[key] = true
+		toast(player, "toastNewIndex", { { item = key } }, Items.parse(key).color)
+	end
+end
+
+local function addToInventory(player: Player, data, key: string, count: number)
 	data.inventory[key] = (data.inventory[key] or 0) + count
+	discover(player, data, key)
 end
 
 -- integer in [0, max], rejects NaN / junk from the client
@@ -588,23 +817,27 @@ local function rollItem(luck: number): string
 	return Items.key(star.id, mutation.id)
 end
 
-local function announceIfRare(player: Player, key: string, verb: string)
+local function announceIfRare(player: Player, key: string)
 	local chance = Items.chance(key)
 	if chance >= Config.AnnounceChance then
-		local star = Items.parse(key)
-		AnnounceEv:FireAllClients(
-			string.format("%s %s %s  (1 in %s)", player.DisplayName, verb, Items.name(key), Format.number(chance)),
-			star.color
-		)
+		announceAll("annRolled", { player.DisplayName, { item = key }, Format.number(chance) }, Items.parse(key).color)
 	end
+end
+
+local function spend(player: Player, data, cost: number): boolean
+	if data.cash < cost then
+		toast(player, "toastNeedCash", { Format.number(cost) })
+		return false
+	end
+	setCash(player, data, data.cash - cost)
+	return true
 end
 
 ---------------------------------------------------------------- join / leave
 local function onCharacter(player: Player, character: Model)
 	character:WaitForChild("HumanoidRootPart", 10)
-	local cf = World.spawnCFrame(player)
-	if cf and character.Parent then
-		character:PivotTo(cf)
+	if character.Parent then
+		character:PivotTo(World.spawnCFrame(player))
 	end
 end
 
@@ -613,26 +846,25 @@ Players.PlayerAdded:Connect(function(player)
 	if not data then
 		return
 	end
-	sessions[player] = {
-		lastRoll = 0,
-		passes = {},
-		eval = nil,
-		nextComet = os.clock() + rng:NextNumber(20, 40),
-		cometExpires = nil,
-	}
+	sessions[player] = { lastRoll = 0, passes = {}, eval = nil }
 	refreshPasses(player)
-	World.assignPlot(player)
+
+	-- older saves: put everything owned into the Index
+	for key in data.inventory do
+		data.index[key] = true
+	end
+	for _, cell in data.grid do
+		data.index[cell.id] = true
+	end
 
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
-	local cash = Instance.new("NumberValue")
-	cash.Name = "Cash"
-	cash.Value = data.cash
-	cash.Parent = stats
-	local rebirths = Instance.new("IntValue")
-	rebirths.Name = "Rebirths"
-	rebirths.Value = data.rebirths
-	rebirths.Parent = stats
+	for _, info in { { "Cash", "NumberValue", data.cash }, { "Rolls", "IntValue", data.totalRolls }, { "Rebirths", "IntValue", data.rebirths } } do
+		local value = Instance.new(info[2])
+		value.Name = info[1]
+		value.Value = info[3]
+		value.Parent = stats
+	end
 	stats.Parent = player
 
 	recompute(player, data)
@@ -661,6 +893,38 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, _, pu
 	end
 end)
 
+---------------------------------------------------------------- plots
+World.onPlotTouched = function(player, index)
+	local data = DataService.get(player)
+	if not data or not sessions[player] or World.plotOf(player) then
+		return
+	end
+	if World.claimPlot(player, index) then
+		toast(player, "toastClaimed", {}, Color3.fromRGB(90, 200, 140))
+		recompute(player, data)
+		pushState(player)
+	end
+end
+
+World.onPedestal = function(player, index, cellKey)
+	local data = DataService.get(player)
+	if not data or not sessions[player] then
+		return
+	end
+	if World.plotOf(player) ~= index then
+		return toast(player, "toastNotYours")
+	end
+	local placed = data.grid[cellKey]
+	if placed then
+		data.grid[cellKey] = nil
+		addToInventory(player, data, placed.id, 1)
+		recompute(player, data)
+		pushState(player)
+	else
+		PickerEv:FireClient(player, cellKey)
+	end
+end
+
 ---------------------------------------------------------------- roll
 RollFn.OnServerInvoke = function(player)
 	local session = sessions[player]
@@ -669,47 +933,48 @@ RollFn.OnServerInvoke = function(player)
 		return nil
 	end
 	local now = os.clock()
-	if now - session.lastRoll < Config.RollCooldown * 0.9 then
+	if now - session.lastRoll < Config.RollCooldown(data.rollSpeedLevel) * 0.9 then
 		return nil
 	end
 	session.lastRoll = now
 
-	local key = rollItem(getLuck(player, data))
-	addToInventory(data, key, 1)
-	data.totalRolls += 1
-	announceIfRare(player, key, "rolled")
+	local before = data.totalRolls
+	local luck = getLuck(player, data)
+	local results = {}
+	for i = 1, 1 + data.multiRollLevel do
+		local key = rollItem(luck)
+		results[i] = key
+		addToInventory(player, data, key, 1)
+		announceIfRare(player, key)
+	end
+	data.totalRolls += #results
+	setStat(player, "Rolls", data.totalRolls)
+	if before < Config.AutoRollUnlock and data.totalRolls >= Config.AutoRollUnlock then
+		toast(player, "toastAutoUnlocked", {}, Color3.fromRGB(90, 200, 140))
+	end
 	pushState(player)
-	return key
+	return results
 end
 
 ---------------------------------------------------------------- actions
 local actions = {}
 
 function actions.Place(player, data, cellKey, itemKey)
-	if not inBounds(data, cellKey) or not Items.parse(itemKey) then
+	local index = World.plotOf(player)
+	if not index or not inBounds(data, cellKey) or not Items.parse(itemKey) then
 		return
+	end
+	if not World.isNearPlot(player, index) then
+		return toast(player, "toastTooFar")
 	end
 	if not takeFromInventory(data, itemKey, 1) then
 		return
 	end
 	local old = data.grid[cellKey]
 	if old then
-		addToInventory(data, old.id, 1)
+		addToInventory(player, data, old.id, 1)
 	end
 	data.grid[cellKey] = { id = itemKey, age = 0 }
-	recompute(player, data)
-end
-
-function actions.Remove(player, data, cellKey)
-	if type(cellKey) ~= "string" then
-		return
-	end
-	local old = data.grid[cellKey]
-	if not old then
-		return
-	end
-	data.grid[cellKey] = nil
-	addToInventory(data, old.id, 1)
 	recompute(player, data)
 end
 
@@ -728,28 +993,34 @@ function actions.Forge(player, data, itemKey)
 	if not star then
 		return
 	end
+	if World.distanceTo(player, World.ForgePosition) > Config.ForgeReach then
+		return toast(player, "toastTooFar")
+	end
 	local nextStar = Stars.List[star.index + 1]
 	if not nextStar then
-		return toast(player, "This star can't be forged any further")
+		return
 	end
-	local cost = nextStar.income * Config.ForgeCostMult
 	if (data.inventory[itemKey] or 0) < Config.ForgeAmount then
-		return toast(player, string.format("Need %d of the same star", Config.ForgeAmount))
+		return toast(player, "toastNeedSame", { Config.ForgeAmount })
 	end
-	if data.cash < cost then
-		return toast(player, "Need " .. Format.number(cost) .. " cash")
+	if not spend(player, data, nextStar.income * Config.ForgeCostMult) then
+		return
 	end
 	takeFromInventory(data, itemKey, Config.ForgeAmount)
-	setCash(player, data, data.cash - cost)
 	local result = Items.key(nextStar.id, mutation.id)
-	addToInventory(data, result, 1)
-	toast(player, "Forged " .. Items.name(result), nextStar.color)
-	announceIfRare(player, result, "forged")
+	addToInventory(player, data, result, 1)
+	toast(player, "toastForged", { { item = result } }, nextStar.color)
+	if Items.chance(result) >= Config.AnnounceChance then
+		announceAll("annForged", { player.DisplayName, { item = result } }, nextStar.color)
+	end
 end
 
 function actions.Feed(player, data, itemKey, count)
 	if not Items.parse(itemKey) then
 		return
+	end
+	if World.distanceTo(player, World.AltarPosition) > Config.AltarReach then
+		return toast(player, "toastTooFar")
 	end
 	count = toCount(count, data.inventory[itemKey] or 0)
 	if takeFromInventory(data, itemKey, count) then
@@ -758,8 +1029,10 @@ function actions.Feed(player, data, itemKey, count)
 end
 
 function actions.Rebirth(player, data)
-	local cost = Config.RebirthCost(data.rebirths)
-	if data.mass < cost then
+	if World.distanceTo(player, World.AltarPosition) > Config.AltarReach then
+		return toast(player, "toastTooFar")
+	end
+	if data.mass < Config.RebirthCost(data.rebirths) then
 		return
 	end
 	data.rebirths += 1
@@ -768,51 +1041,72 @@ function actions.Rebirth(player, data)
 	data.grid = {}
 	data.gridSize = Config.StartGridSize
 	data.luckLevel = 0
+	data.rollSpeedLevel = 0
+	data.multiRollLevel = 0
 	setCash(player, data, 0)
-	local stats = player:FindFirstChild("leaderstats")
-	if stats and stats:FindFirstChild("Rebirths") then
-		stats.Rebirths.Value = data.rebirths
-	end
+	setStat(player, "Rebirths", data.rebirths)
 	recompute(player, data)
-	AnnounceEv:FireAllClients(string.format("%s was reborn from the Black Hole  (Rebirth %d)", player.DisplayName, data.rebirths), Color3.fromRGB(255, 150, 70))
-end
-
-function actions.CatchComet(player, data)
-	local session = sessions[player]
-	if not session.cometExpires or os.clock() > session.cometExpires then
-		return
-	end
-	session.cometExpires = nil
-	local key = rollItem(getLuck(player, data) * Config.CometLuck)
-	addToInventory(data, key, 1)
-	local star = Items.parse(key)
-	toast(player, "Comet caught: " .. Items.name(key), star.color)
-	announceIfRare(player, key, "caught a comet with")
+	announceAll("annRebirth", { player.DisplayName, data.rebirths }, Color3.fromRGB(176, 110, 255))
 end
 
 function actions.BuyLuck(player, data)
-	if data.luckLevel >= Config.MaxLuckLevel then
-		return
+	if data.luckLevel < Config.MaxLuckLevel and spend(player, data, Config.LuckCost(data.luckLevel)) then
+		data.luckLevel += 1
 	end
-	local cost = Config.LuckCost(data.luckLevel)
-	if data.cash < cost then
-		return
+end
+
+function actions.BuySpeed(player, data)
+	if data.rollSpeedLevel < Config.MaxRollSpeedLevel and spend(player, data, Config.RollSpeedCost(data.rollSpeedLevel)) then
+		data.rollSpeedLevel += 1
 	end
-	setCash(player, data, data.cash - cost)
-	data.luckLevel += 1
+end
+
+function actions.BuyMulti(player, data)
+	if data.multiRollLevel < Config.MaxMultiRollLevel and spend(player, data, Config.MultiRollCost(data.multiRollLevel)) then
+		data.multiRollLevel += 1
+	end
 end
 
 function actions.BuyGrid(player, data)
-	if data.gridSize >= Config.MaxGridSize then
+	if data.gridSize < Config.MaxGridSize and spend(player, data, Config.GridCost(data.gridSize)) then
+		data.gridSize += 1
+		recompute(player, data)
+	end
+end
+
+function actions.ClaimIndexRow(player, data, mutationId)
+	local mutation = type(mutationId) == "string" and Mutations.ById[mutationId]
+	if not mutation or data.indexClaims[mutationId] then
 		return
 	end
-	local cost = Config.GridCost(data.gridSize)
-	if data.cash < cost then
+	for _, star in Stars.List do
+		if not data.index[Items.key(star.id, mutationId)] then
+			return
+		end
+	end
+	data.indexClaims[mutationId] = true
+	data.bonusLuck += Config.IndexRowLuck
+end
+
+function actions.ClaimMilestone(player, data, number)
+	local milestone = type(number) == "number" and Config.RollMilestones[number]
+	local id = tostring(number)
+	if not milestone or data.milestones[id] or data.totalRolls < milestone.rolls then
 		return
 	end
-	setCash(player, data, data.cash - cost)
-	data.gridSize += 1
-	recompute(player, data)
+	data.milestones[id] = true
+	if milestone.cash then
+		setCash(player, data, data.cash + milestone.cash)
+	end
+	if milestone.luck then
+		data.bonusLuck += milestone.luck
+	end
+end
+
+function actions.SetLang(player, data, lang)
+	if lang == "en" or lang == "ru" then
+		data.lang = lang
+	end
 end
 
 ActionEv.OnServerEvent:Connect(function(player, action, a, b)
@@ -825,10 +1119,10 @@ ActionEv.OnServerEvent:Connect(function(player, action, a, b)
 	pushState(player)
 end)
 
----------------------------------------------------------------- every second: income, aging, comets
+---------------------------------------------------------------- every second: income and aging
 local function tickPlayer(player: Player, session)
 	local data = DataService.get(player)
-	if not data or not session.eval then
+	if not data or not session.eval or not World.plotOf(player) then
 		return
 	end
 
@@ -843,14 +1137,12 @@ local function tickPlayer(player: Player, session)
 		if after == Evolution.MaxLevel then
 			local star, mutation = Items.parse(cell.id)
 			if star and star.evolvesTo and rng:NextNumber() < Evolution.ExplodeChance then
-				local oldName = Items.name(cell.id)
+				local oldKey = cell.id
 				cell.id = Items.key(star.evolvesTo, mutation.id)
 				cell.age = 0
 				changed = true
-				AnnounceEv:FireAllClients(
-					string.format("%s's %s exploded into %s!", player.DisplayName, oldName, Items.name(cell.id)),
-					Stars.ById[star.evolvesTo].color
-				)
+				discover(player, data, cell.id)
+				announceAll("annExploded", { player.DisplayName, { item = oldKey }, { item = cell.id } }, Stars.ById[star.evolvesTo].color)
 			end
 		end
 	end
@@ -860,17 +1152,6 @@ local function tickPlayer(player: Player, session)
 	end
 
 	setCash(player, data, data.cash + incomePerSecond(player, data))
-
-	local now = os.clock()
-	if session.cometExpires then
-		if now > session.cometExpires then
-			session.cometExpires = nil
-		end
-	elseif now >= session.nextComet then
-		session.cometExpires = now + Config.CometLifetime + 0.5
-		session.nextComet = now + rng:NextNumber(Config.CometMinDelay, Config.CometMaxDelay)
-		CometEv:FireClient(player, Config.CometLifetime)
-	end
 end
 
 task.spawn(function()
@@ -882,15 +1163,27 @@ task.spawn(function()
 	end
 end)
 
+---------------------------------------------------------------- falling off the world: back to base, no death
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		for _, player in Players:GetPlayers() do
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if root and root.Position.Y < -40 then
+				root.AssemblyLinearVelocity = Vector3.zero
+				character:PivotTo(World.spawnCFrame(player))
+			end
+		end
+	end
+end)
+
 ---------------------------------------------------------------- Star Shower
 task.spawn(function()
 	while true do
 		task.wait(Config.ShowerInterval)
 		ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
-		AnnounceEv:FireAllClients(
-			string.format("STAR SHOWER  —  x%s luck for %s", Config.ShowerLuck, Format.time(Config.ShowerDuration)),
-			Color3.fromRGB(150, 210, 255)
-		)
+		announceAll("annShower", { Config.ShowerLuck, Format.time(Config.ShowerDuration) }, Color3.fromRGB(90, 170, 255))
 		for player in sessions do
 			pushState(player)
 		end
@@ -901,7 +1194,7 @@ task.spawn(function()
 	end
 end)
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX11"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- Player progress saving (DataStore)
+<Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- Player progress saving (DataStore)
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -929,6 +1222,13 @@ local function default()
 		totalRolls = 0,
 		rebirths = 0,
 		mass = 0, -- Black Hole progress
+		rollSpeedLevel = 0,
+		multiRollLevel = 0,
+		bonusLuck = 0, -- from Index rows and roll milestones, survives rebirth
+		index = {}, -- [itemKey] = true, every star ever found
+		indexClaims = {}, -- [mutationId] = true
+		milestones = {}, -- ["1"] = true (string keys for DataStore)
+		lang = "", -- "" = auto
 	}
 end
 
@@ -1027,43 +1327,285 @@ end)
 
 return DataService
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX12"><Properties><string name="Name">World</string><ProtectedString name="Source"><![CDATA[-- Builds the map at runtime and renders every player's sky above their plot.
--- Look: old brass observatory floating in deep space. Dark stone, brass trim, warm light.
+<Item class="ModuleScript" referent="RBX13"><Properties><string name="Name">StarModels</string><ProtectedString name="Source"><![CDATA[-- 3D star models that sit on plot pedestals. Each star type has its own look,
+-- glow shell and particles. The client spins / bobs models tagged "StarModel".
+local CollectionService = game:GetService("CollectionService")
+
+local StarModels = {}
+
+local function part(model: Model, props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	if props.Shape then
+		p.Shape = props.Shape
+	end
+	for key, value in props do
+		if key ~= "Shape" then
+			p[key] = value
+		end
+	end
+	p.Parent = model
+	return p
+end
+
+local function orb(model: Model, cf: CFrame, diameter: number, color: Color3, transparency: number?)
+	return part(model, {
+		Name = "Orb", Shape = Enum.PartType.Ball, Size = Vector3.one * diameter, CFrame = cf,
+		Material = Enum.Material.Neon, Color = color, Transparency = transparency or 0,
+	})
+end
+
+local function bar(model: Model, cf: CFrame, size: Vector3, color: Color3, transparency: number?)
+	return part(model, { Name = "Bar", Size = size, CFrame = cf, Material = Enum.Material.Neon, Color = color, Transparency = transparency or 0 })
+end
+
+local function disk(model: Model, cf: CFrame, diameter: number, color: Color3, transparency: number)
+	return part(model, {
+		Name = "Disk", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.12, diameter, diameter),
+		CFrame = cf * CFrame.Angles(0, 0, math.rad(90)), Material = Enum.Material.Neon, Color = color, Transparency = transparency,
+	})
+end
+
+local function particles(parent: BasePart, props)
+	local e = Instance.new("ParticleEmitter")
+	e.LightEmission = 1
+	e.LightInfluence = 0
+	e.Rate = props.Rate or 8
+	e.Lifetime = props.Lifetime or NumberRange.new(1.2, 2.4)
+	e.Speed = props.Speed or NumberRange.new(0.6, 1.6)
+	e.SpreadAngle = props.Spread or Vector2.new(180, 180)
+	e.Acceleration = props.Acceleration or Vector3.new(0, 0.8, 0)
+	e.Drag = props.Drag or 1
+	e.RotSpeed = NumberRange.new(-90, 90)
+	e.Rotation = NumberRange.new(0, 360)
+	e.Color = ColorSequence.new(props.Color, props.Color2 or props.Color)
+	e.Size = props.Size or NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, 0.22), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	if props.Texture then
+		e.Texture = props.Texture
+	end
+	e.Parent = parent
+	return e
+end
+
+local function light(parent: BasePart, color: Color3, range: number, brightness: number)
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Range = range
+	l.Brightness = brightness
+	l.Shadows = false
+	l.Parent = parent
+end
+
+local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
+local WHITE = Color3.new(1, 1, 1)
+
+-- builders: (model, cf, color) -> core part
+local builders = {}
+
+builders.dust = function(m, cf, color)
+	local core = orb(m, cf, 0.5, WHITE)
+	for i = 1, 6 do
+		local a = i / 6 * math.pi * 2
+		orb(m, cf * CFrame.new(math.cos(a) * 0.8, math.sin(i * 1.7) * 0.4, math.sin(a) * 0.8), 0.25 + (i % 3) * 0.08, color)
+	end
+	orb(m, cf, 2.2, color, 0.88)
+	particles(core, { Color = color, Rate = 6, Texture = SPARKLE })
+	return core
+end
+
+builders.spark = function(m, cf, color)
+	local core = orb(m, cf, 0.6, WHITE)
+	bar(m, cf, Vector3.new(0.18, 2.6, 0.18), color)
+	bar(m, cf, Vector3.new(2.6, 0.18, 0.18), color)
+	bar(m, cf * CFrame.Angles(0, 0, math.rad(45)), Vector3.new(0.12, 1.4, 0.12), WHITE, 0.3)
+	bar(m, cf * CFrame.Angles(0, 0, math.rad(-45)), Vector3.new(0.12, 1.4, 0.12), WHITE, 0.3)
+	orb(m, cf, 1.8, color, 0.85)
+	particles(core, { Color = color, Color2 = WHITE, Rate = 8, Texture = SPARKLE })
+	light(core, color, 6, 0.8)
+	return core
+end
+
+builders.dwarf = function(m, cf, color)
+	local core = orb(m, cf, 1.3, color)
+	orb(m, cf, 1.9, Color3.fromRGB(255, 140, 90), 0.75)
+	orb(m, cf, 2.6, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 170, 90), Color2 = color, Rate = 10, Acceleration = Vector3.new(0, 2, 0) })
+	light(core, color, 8, 1)
+	return core
+end
+
+builders.sun = function(m, cf, color)
+	local core = orb(m, cf, 1.6, Color3.fromRGB(255, 236, 150))
+	orb(m, cf, 2.2, color, 0.6)
+	for i = 1, 10 do
+		local a = i / 10 * math.pi * 2
+		bar(m, cf * CFrame.Angles(0, 0, a) * CFrame.new(0, 1.55, 0), Vector3.new(0.25, 0.9, 0.25), Color3.fromRGB(255, 200, 70), 0.1)
+	end
+	orb(m, cf, 3.4, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 220, 110), Color2 = Color3.fromRGB(255, 140, 40), Rate = 14, Acceleration = Vector3.new(0, 1.5, 0) })
+	light(core, color, 12, 1.5)
+	return core
+end
+
+builders.giant = function(m, cf, color)
+	local core = orb(m, cf, 2.2, color)
+	orb(m, cf * CFrame.new(-0.35, 0.4, -0.35), 1, Color3.fromRGB(210, 240, 255), 0.2)
+	orb(m, cf, 3, Color3.fromRGB(150, 210, 255), 0.75)
+	orb(m, cf, 4, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(170, 220, 255), Color2 = color, Rate = 16, Texture = SPARKLE })
+	light(core, color, 14, 2)
+	return core
+end
+
+builders.pulsar = function(m, cf, color)
+	local core = orb(m, cf, 1.1, Color3.fromRGB(240, 220, 255))
+	orb(m, cf, 1.8, color, 0.55)
+	local tilt = cf * CFrame.Angles(0, 0, math.rad(18))
+	bar(m, tilt, Vector3.new(0.2, 6, 0.2), WHITE, 0.15)
+	bar(m, tilt, Vector3.new(0.6, 5.4, 0.6), color, 0.6)
+	disk(m, tilt, 2.8, color, 0.7)
+	particles(core, { Color = color, Color2 = WHITE, Rate = 20, Speed = NumberRange.new(2, 4), Spread = Vector2.new(10, 10), Acceleration = Vector3.zero })
+	light(core, color, 14, 2)
+	return core
+end
+
+builders.neutron = function(m, cf, color)
+	local core = orb(m, cf, 0.8, WHITE)
+	orb(m, cf, 1.4, color, 0.5)
+	disk(m, cf * CFrame.Angles(math.rad(30), 0, 0), 3.2, color, 0.75)
+	disk(m, cf * CFrame.Angles(math.rad(-30), 0, math.rad(60)), 3.2, color, 0.75)
+	disk(m, cf * CFrame.Angles(0, 0, math.rad(90)), 3.2, Color3.fromRGB(200, 255, 245), 0.8)
+	orb(m, cf, 4, color, 0.92)
+	particles(core, { Color = color, Color2 = WHITE, Rate = 22, Texture = SPARKLE, Speed = NumberRange.new(1, 2.5) })
+	light(core, color, 16, 2.5)
+	return core
+end
+
+builders.quasar = function(m, cf, color)
+	local core = orb(m, cf, 0.9, WHITE)
+	local tilt = cf * CFrame.Angles(math.rad(20), 0, math.rad(10))
+	disk(m, tilt, 4.4, color, 0.45)
+	disk(m, tilt, 3, Color3.fromRGB(255, 170, 120), 0.35)
+	disk(m, tilt, 1.8, Color3.fromRGB(255, 240, 210), 0.2)
+	bar(m, tilt, Vector3.new(0.18, 8, 0.18), Color3.fromRGB(255, 210, 250), 0.2)
+	bar(m, tilt, Vector3.new(0.5, 7, 0.5), color, 0.7)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(255, 200, 140), Rate = 30, Speed = NumberRange.new(1.5, 3), Texture = SPARKLE })
+	light(core, color, 18, 3)
+	return core
+end
+
+builders.supernova = function(m, cf, color)
+	local core = orb(m, cf, 1.6, WHITE)
+	orb(m, cf, 2.4, Color3.fromRGB(255, 230, 160), 0.4)
+	for i = 1, 14 do
+		local rot = CFrame.Angles(i * 1.3, i * 2.1, i * 0.7)
+		local length = 2.2 + (i % 3) * 0.6
+		bar(m, cf * rot * CFrame.new(0, length / 2, 0), Vector3.new(0.22, length, 0.22), if i % 2 == 0 then Color3.fromRGB(255, 190, 90) else WHITE, 0.1)
+	end
+	orb(m, cf, 5, Color3.fromRGB(255, 200, 120), 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 240, 200), Color2 = Color3.fromRGB(255, 120, 60), Rate = 45, Speed = NumberRange.new(2, 5), Texture = SPARKLE })
+	particles(core, { Color = WHITE, Rate = 8, Lifetime = NumberRange.new(0.3, 0.6), Speed = NumberRange.new(0, 0),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 4) }) })
+	light(core, Color3.fromRGB(255, 230, 180), 22, 4)
+	return core
+end
+
+-- star, mutation, level -> Model at position
+function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
+	local model = Instance.new("Model")
+	model.Name = star.id
+	local scale = 1 + (level - 1) * 0.08
+	local cf = CFrame.new(position)
+	local builder = builders[star.id] or builders.dwarf
+	local core = builder(model, cf, star.color)
+	model.PrimaryPart = core
+
+	-- glow ring on the pedestal top (outside the model so it doesn't spin or bob)
+	part(parent :: any, {
+		Name = "Halo", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.08, 3.4, 3.4),
+		CFrame = CFrame.new(position - Vector3.new(0, 2.9, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Material = Enum.Material.Neon, Color = star.color, Transparency = 0.55,
+	})
+
+	if mutation.id ~= "normal" then
+		particles(core, {
+			Color = mutation.color, Rate = 6 + mutation.index * 4, Texture = SPARKLE,
+			Speed = NumberRange.new(1, 2), Lifetime = NumberRange.new(1, 2),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0) }),
+		})
+		orb(model, cf, 3 + mutation.index * 0.3, mutation.color, 0.88)
+	end
+
+	if scale ~= 1 then
+		model:ScaleTo(scale)
+	end
+	model:SetAttribute("Spin", 20 + star.index * 6)
+	model.Parent = parent
+	CollectionService:AddTag(model, "StarModel")
+	return model
+end
+
+return StarModels
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX14"><Properties><string name="Name">World</string><ProtectedString name="Source"><![CDATA[-- Builds the sky world at runtime and renders stars on each plot's pedestals.
+-- Look: bright heaven. White marble, warm gold trim, soft clouds, pastel trees, glassy blue.
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Sky = require(Shared.Sky)
 local Evolution = require(Shared.Evolution)
-local Format = require(Shared.Format)
+local StarModels = require(script.Parent.StarModels)
 
 local World = {}
 
-local PLOT_COUNT = 8
-local HUB_RADIUS = 70
-local PLOT_RING = 140
-local PLOT_SIZE = 56
-local CELL = 5
-local SKY_HEIGHT = 22
+-- callbacks set by Main
+World.onPlotTouched = nil :: ((Player, number) -> ())?
+World.onPedestal = nil :: ((Player, number, string) -> ())?
 
-local STONE = Color3.fromRGB(38, 40, 52)
-local STONE_DARK = Color3.fromRGB(24, 25, 34)
-local BRASS = Color3.fromRGB(201, 162, 92)
-local PARCHMENT = Color3.fromRGB(236, 226, 200)
+local RING = 150 -- distance from hub center to satellite islands
+local HUB_RADIUS = 50
+local PLOT_SIZE = 64
+local SPACING = 7
+local STAR_HEIGHT = 4.5
 
+local MARBLE = Color3.fromRGB(246, 246, 250)
+local MARBLE_WARM = Color3.fromRGB(238, 232, 220)
+local GOLD = Color3.fromRGB(236, 196, 100)
+local GRASS = Color3.fromRGB(146, 214, 140)
+local GLASS = Color3.fromRGB(170, 220, 255)
+local CLOUD = Color3.fromRGB(255, 255, 255)
+
+local rng = Random.new(20261114)
 local plots = {}
 local playerPlot: { [Player]: number } = {}
+World.ForgePosition = Vector3.zero
+World.AltarPosition = Vector3.zero
 
+---------------------------------------------------------------- helpers
 local function make(className: string, props)
 	local inst = Instance.new(className)
+	if props.Shape then
+		inst.Shape = props.Shape -- shape first, so it doesn't reset the size
+	end
 	if inst:IsA("BasePart") then
 		inst.Anchored = true
 		inst.TopSurface = Enum.SurfaceType.Smooth
 		inst.BottomSurface = Enum.SurfaceType.Smooth
 	end
 	for key, value in props do
-		if key ~= "Parent" then
+		if key ~= "Parent" and key ~= "Shape" then
 			inst[key] = value
 		end
 	end
@@ -1074,198 +1616,463 @@ end
 local function cylinder(cf: CFrame, height: number, diameter: number, props)
 	props.Shape = Enum.PartType.Cylinder
 	props.Size = Vector3.new(height, diameter, diameter)
-	props.CFrame = cf * CFrame.Angles(0, 0, math.rad(90)) -- cylinder axis is X, stand it up
+	props.CFrame = cf * CFrame.Angles(0, 0, math.rad(90))
 	return make("Part", props)
 end
 
--- width is in pixels-at-design; converted to studs so signs shrink with distance
-local function sign(adornee: BasePart, text: string, offset: number, width: number)
+local function ball(position: Vector3, diameter: number, props)
+	props.Shape = Enum.PartType.Ball
+	props.Size = Vector3.new(diameter, diameter, diameter)
+	props.CFrame = CFrame.new(position)
+	return make("Part", props)
+end
+
+local function cloudPuff(center: Vector3, size: number, parent: Instance, count: number?)
+	for _ = 1, count or 5 do
+		local offset = Vector3.new(rng:NextNumber(-1, 1) * size * 0.6, rng:NextNumber(-0.25, 0.25) * size, rng:NextNumber(-1, 1) * size * 0.6)
+		ball(center + offset, size * rng:NextNumber(0.5, 0.9), {
+			Color = CLOUD, Material = Enum.Material.SmoothPlastic, Transparency = 0.08,
+			CanCollide = false, CastShadow = false, Parent = parent,
+		})
+	end
+end
+
+-- Text in the world. Client re-localizes everything tagged WorldText.
+local function worldText(adornee: BasePart, langKey: string, offset: number, studsWide: number, studsTall: number?)
 	local gui = make("BillboardGui", {
-		Size = UDim2.new(width / 20, 0, 2.5, 0),
+		Size = UDim2.new(studsWide, 0, studsTall or 3, 0),
 		StudsOffset = Vector3.new(0, offset, 0),
-		MaxDistance = 150,
+		MaxDistance = 160,
 		LightInfluence = 0,
 		Parent = adornee,
 	})
-	return make("TextLabel", {
+	local label = make("TextLabel", {
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
-		Text = text,
-		TextColor3 = PARCHMENT,
-		TextStrokeColor3 = Color3.new(0, 0, 0),
-		TextStrokeTransparency = 0.3,
+		Text = langKey,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextStrokeColor3 = Color3.fromRGB(40, 70, 120),
+		TextStrokeTransparency = 0.1,
 		TextScaled = true,
-		Font = Enum.Font.GothamBold,
+		FontFace = Font.new("rbxasset://fonts/families/FredokaOne.json"),
 		Parent = gui,
 	})
+	label:SetAttribute("LangKey", langKey)
+	CollectionService:AddTag(label, "WorldText")
+	return label
 end
 
-local function prompt(parent: BasePart, name: string, action: string, object: string)
-	return make("ProximityPrompt", {
+local function prompt(parent: BasePart, name: string, langKey: string, objKey: string?, distance: number?)
+	local p = make("ProximityPrompt", {
 		Name = name,
-		ActionText = action,
-		ObjectText = object,
+		ActionText = langKey,
+		ObjectText = "",
 		HoldDuration = 0,
-		MaxActivationDistance = 14,
+		MaxActivationDistance = distance or 12,
 		RequiresLineOfSight = false,
 		Parent = parent,
 	})
+	p:SetAttribute("LangKey", langKey)
+	if objKey then
+		p:SetAttribute("ObjKey", objKey)
+	end
+	CollectionService:AddTag(p, "WorldPrompt")
+	return p
 end
 
+-- round floating island: marble top, gold rim, clouds hugging the underside
+local function roundIsland(center: Vector3, radius: number, parent: Instance, topColor: Color3?, topMaterial: Enum.Material?)
+	cylinder(CFrame.new(center + Vector3.new(0, -2, 0)), 4, radius * 2, { Name = "Floor", Material = topMaterial or Enum.Material.Marble, Color = topColor or MARBLE, Parent = parent })
+	cylinder(CFrame.new(center + Vector3.new(0, -2.4, 0)), 3.6, radius * 2 + 2, { Name = "Rim", Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = parent })
+	cylinder(CFrame.new(center + Vector3.new(0, -7, 0)), 6, radius * 1.7, { Name = "Base", Material = Enum.Material.Marble, Color = MARBLE_WARM, Parent = parent })
+	for _ = 1, math.floor(radius / 4) do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(0, radius * 0.8)
+		cloudPuff(center + Vector3.new(math.cos(a) * r, -11 - rng:NextNumber(0, 4), math.sin(a) * r), rng:NextNumber(10, 18), parent, 3)
+	end
+end
+
+local function pillar(base: Vector3, height: number, parent: Instance)
+	cylinder(CFrame.new(base + Vector3.new(0, 0.6, 0)), 1.2, 4, { Name = "PillarFoot", Material = Enum.Material.Marble, Color = MARBLE, Parent = parent })
+	cylinder(CFrame.new(base + Vector3.new(0, height / 2, 0)), height, 2.6, { Name = "Pillar", Material = Enum.Material.Marble, Color = MARBLE, Parent = parent })
+	cylinder(CFrame.new(base + Vector3.new(0, height + 0.5, 0)), 1, 3.8, { Name = "PillarCap", Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = parent })
+end
+
+local function crystal(position: Vector3, size: number, color: Color3, parent: Instance)
+	local c = make("Part", {
+		Name = "Crystal",
+		Size = Vector3.new(size, size * 1.6, size),
+		CFrame = CFrame.new(position) * CFrame.Angles(0, math.rad(45), math.rad(45)),
+		Material = Enum.Material.Glass,
+		Color = color,
+		Transparency = 0.2,
+		CanCollide = false,
+		Parent = parent,
+	})
+	make("PointLight", { Color = color, Range = size * 4, Brightness = 1, Parent = c })
+	return c
+end
+
+local function tree(base: Vector3, parent: Instance, leafColor: Color3)
+	local height = rng:NextNumber(7, 10)
+	make("Part", {
+		Name = "Trunk", Size = Vector3.new(1.4, height, 1.4), CFrame = CFrame.new(base + Vector3.new(0, height / 2, 0)),
+		Material = Enum.Material.Wood, Color = Color3.fromRGB(235, 228, 214), Parent = parent,
+	})
+	for _ = 1, 4 do
+		ball(base + Vector3.new(rng:NextNumber(-2, 2), height + rng:NextNumber(-1, 2), rng:NextNumber(-2, 2)), rng:NextNumber(5, 7), {
+			Name = "Leaves", Material = Enum.Material.SmoothPlastic, Color = leafColor, CanCollide = false, Parent = parent,
+		})
+	end
+end
+
+local function bridge(direction: Vector3, from: number, to: number, parent: Instance)
+	local length = to - from
+	local cf = CFrame.lookAt(direction * (from + to) / 2 + Vector3.new(0, -0.5, 0), Vector3.new(0, -0.5, 0))
+	make("Part", { Name = "Deck", Size = Vector3.new(12, 1, length), CFrame = cf, Material = Enum.Material.Marble, Color = MARBLE, Parent = parent })
+	make("Part", { Name = "Runner", Size = Vector3.new(3, 1.05, length), CFrame = cf, Material = Enum.Material.SmoothPlastic, Color = GOLD, CanCollide = false, Parent = parent })
+	for _, side in { -6.2, 6.2 } do
+		make("Part", { Name = "Rail", Size = Vector3.new(0.5, 2.6, length), CFrame = cf * CFrame.new(side, 1.8, 0), Material = Enum.Material.Glass, Color = GLASS, Transparency = 0.45, Parent = parent })
+	end
+	-- arch at the hub end
+	local archCF = CFrame.lookAt(direction * (from + 2), Vector3.zero)
+	for _, side in { -7, 7 } do
+		pillar((archCF * CFrame.new(side, 0, 0)).Position, 12, parent)
+	end
+	make("Part", { Name = "ArchBeam", Size = Vector3.new(17, 1.6, 2.4), CFrame = archCF * CFrame.new(0, 13.4, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = parent })
+	-- cloud tufts under the bridge
+	for t = 0.2, 0.8, 0.3 do
+		cloudPuff(direction * (from + length * t) + Vector3.new(0, -6, 0), 9, parent, 2)
+	end
+end
+
+local function directionAt(slot: number): Vector3
+	local angle = (slot - 1) / 8 * math.pi * 2
+	return Vector3.new(math.cos(angle), 0, math.sin(angle))
+end
+
+---------------------------------------------------------------- atmosphere
 local function setupLighting()
-	Lighting.ClockTime = 0
-	Lighting.Brightness = 1.5
-	Lighting.Ambient = Color3.fromRGB(45, 45, 70)
-	Lighting.OutdoorAmbient = Color3.fromRGB(70, 70, 105)
-	Lighting.EnvironmentDiffuseScale = 0.3
+	Lighting.ClockTime = 14.5
+	Lighting.Brightness = 2.4
+	Lighting.Ambient = Color3.fromRGB(150, 170, 200)
+	Lighting.OutdoorAmbient = Color3.fromRGB(175, 195, 225)
+	Lighting.EnvironmentDiffuseScale = 0.6
+	Lighting.EnvironmentSpecularScale = 0.6
+	Lighting.GlobalShadows = true
 	for _, child in Lighting:GetChildren() do
-		if child:IsA("Sky") or child:IsA("BloomEffect") or child:IsA("Atmosphere") then
+		if child:IsA("Sky") or child:IsA("PostEffect") or child:IsA("Atmosphere") then
 			child:Destroy()
 		end
 	end
-	make("Sky", { StarCount = 8000, CelestialBodiesShown = false, Parent = Lighting })
-	make("BloomEffect", { Intensity = 0.8, Size = 28, Threshold = 0.95, Parent = Lighting })
+	make("Atmosphere", {
+		Density = 0.28, Offset = 0.1,
+		Color = Color3.fromRGB(205, 228, 255), Decay = Color3.fromRGB(150, 190, 240),
+		Glare = 0.25, Haze = 1.4, Parent = Lighting,
+	})
+	make("Sky", { CelestialBodiesShown = true, SunAngularSize = 14, StarCount = 0, Parent = Lighting })
+	make("BloomEffect", { Intensity = 0.4, Size = 24, Threshold = 1.6, Parent = Lighting })
+	make("SunRaysEffect", { Intensity = 0.06, Spread = 0.8, Parent = Lighting })
+	make("ColorCorrectionEffect", { Brightness = 0.03, Contrast = 0.05, Saturation = 0.12, TintColor = Color3.fromRGB(255, 252, 245), Parent = Lighting })
+
+	local terrain = workspace:FindFirstChildOfClass("Terrain")
+	if terrain and not terrain:FindFirstChildOfClass("Clouds") then
+		make("Clouds", { Cover = 0.55, Density = 0.6, Color = Color3.fromRGB(255, 255, 255), Parent = terrain })
+	end
+	workspace.FallenPartsDestroyHeight = -2000
 end
 
+---------------------------------------------------------------- hub
 local function buildHub(folder: Folder)
-	cylinder(CFrame.new(0, -2, 0), 4, HUB_RADIUS * 2, { Name = "Floor", Material = Enum.Material.Slate, Color = STONE, Parent = folder })
-	cylinder(CFrame.new(0, -2.3, 0), 3.4, HUB_RADIUS * 2 + 2, { Name = "Trim", Material = Enum.Material.Metal, Color = BRASS, Parent = folder })
-	-- inner ring of darker stone, like a star chart
-	cylinder(CFrame.new(0, 0.05, 0), 0.2, 44, { Name = "Inlay", Material = Enum.Material.Slate, Color = STONE_DARK, CanCollide = false, Parent = folder })
-	for i = 0, 11 do
-		local angle = i / 12 * math.pi * 2
+	roundIsland(Vector3.zero, HUB_RADIUS, folder)
+	-- gold compass inlay
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
 		make("Part", {
-			Name = "Ray",
-			Size = Vector3.new(0.4, 0.22, 20),
-			CFrame = CFrame.new(math.cos(angle) * 12, 0.06, math.sin(angle) * 12) * CFrame.Angles(0, -angle + math.pi / 2, 0),
-			Material = Enum.Material.Metal,
-			Color = BRASS,
-			CanCollide = false,
-			Parent = folder,
+			Name = "Inlay", Size = Vector3.new(0.6, 0.12, 30),
+			CFrame = CFrame.new(math.cos(a) * 22, 0.06, math.sin(a) * 22) * CFrame.Angles(0, -a - math.pi / 2, 0),
+			Material = Enum.Material.SmoothPlastic, Color = GOLD, CanCollide = false, Parent = folder,
 		})
 	end
 
-	-- Black Hole above the center + altar to feed it
-	local hole = make("Part", {
-		Name = "BlackHole",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(22, 22, 22),
-		CFrame = CFrame.new(0, 38, 0),
-		Color = Color3.new(0, 0, 0),
-		Material = Enum.Material.SmoothPlastic,
-		CanCollide = false,
-		Parent = folder,
+	-- fountain
+	cylinder(CFrame.new(0, 1, 0), 2, 26, { Name = "Basin", Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
+	cylinder(CFrame.new(0, 2.05, 0), 0.2, 23, { Name = "Water", Material = Enum.Material.Glass, Color = Color3.fromRGB(120, 200, 255), Transparency = 0.25, CanCollide = false, Parent = folder })
+	cylinder(CFrame.new(0, 5, 0), 6, 3, { Name = "Column", Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
+	cylinder(CFrame.new(0, 8.2, 0), 0.8, 9, { Name = "Bowl", Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
+	local orb = ball(Vector3.new(0, 11.5, 0), 4, { Name = "Orb", Material = Enum.Material.Neon, Color = Color3.fromRGB(170, 230, 255), CanCollide = false, Parent = folder })
+	make("PointLight", { Color = Color3.fromRGB(170, 230, 255), Range = 24, Brightness = 1.5, Parent = orb })
+	make("ParticleEmitter", {
+		Color = ColorSequence.new(Color3.fromRGB(200, 240, 255)), LightEmission = 0.6, Rate = 18,
+		Lifetime = NumberRange.new(1.5, 2.5), Speed = NumberRange.new(3, 6), SpreadAngle = Vector2.new(25, 25),
+		Acceleration = Vector3.new(0, -8, 0), Size = NumberSequence.new(0.5, 0), Transparency = NumberSequence.new(0.2, 1),
+		Parent = orb,
 	})
-	make("PointLight", { Color = Color3.fromRGB(255, 140, 60), Range = 50, Brightness = 2, Parent = hole })
-	local disk = cylinder(CFrame.new(0, 38, 0) * CFrame.Angles(math.rad(18), 0, 0), 0.4, 54, {
-		Name = "AccretionDisk",
-		Material = Enum.Material.Neon,
-		Color = Color3.fromRGB(255, 120, 40),
-		Transparency = 0.35,
-		CanCollide = false,
-		Parent = folder,
+	worldText(orb, "signHub", 6, 22, 4)
+
+	-- pillars with floating crystals between the bridges
+	for i = 0, 7 do
+		local a = (i + 0.5) / 8 * math.pi * 2
+		local base = Vector3.new(math.cos(a) * 43, 0, math.sin(a) * 43)
+		pillar(base, 14, folder)
+		crystal(base + Vector3.new(0, 18, 0), 2.2, if i % 2 == 0 then Color3.fromRGB(150, 220, 255) else Color3.fromRGB(190, 255, 220), folder)
+	end
+
+	-- trees
+	local leaves = { Color3.fromRGB(255, 205, 225), Color3.fromRGB(190, 240, 205), Color3.fromRGB(255, 230, 190), Color3.fromRGB(215, 205, 255) }
+	for i = 1, 4 do
+		local a = (i - 0.5) / 4 * math.pi * 2 + 0.3
+		tree(Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31), folder, leaves[i])
+	end
+
+	-- the spawn plate stays but invisible
+	local spawn = workspace:FindFirstChildOfClass("SpawnLocation")
+	if spawn then
+		spawn.Transparency = 1
+		spawn.CanCollide = false
+		spawn.CFrame = CFrame.new(0, 0.5, 20)
+		for _, child in spawn:GetChildren() do
+			if child:IsA("Decal") then
+				child:Destroy()
+			end
+		end
+	end
+end
+
+---------------------------------------------------------------- Star Forge island
+local function buildForge(folder: Folder, slot: number)
+	local direction = directionAt(slot)
+	local center = direction * RING
+	local cf = CFrame.lookAt(center, Vector3.zero)
+	World.ForgePosition = center
+	roundIsland(center, 34, folder, MARBLE_WARM)
+	bridge(direction, HUB_RADIUS - 2, RING - 33, folder)
+
+	-- gazebo
+	for _, corner in { { -11, -11 }, { 11, -11 }, { -11, 11 }, { 11, 11 } } do
+		pillar((cf * CFrame.new(corner[1], 0, corner[2])).Position, 14, folder)
+	end
+	make("Part", { Name = "Roof", Size = Vector3.new(28, 2, 28), CFrame = cf * CFrame.new(0, 15.5, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
+	local dome = make("Part", { Name = "Dome", Size = Vector3.new(22, 8, 22), CFrame = cf * CFrame.new(0, 16.5, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
+	make("SpecialMesh", { MeshType = Enum.MeshType.Sphere, Parent = dome })
+	crystal((cf * CFrame.new(0, 23, 0)).Position, 2.5, Color3.fromRGB(255, 200, 120), folder)
+
+	-- forge table (anvil)
+	local tableBase = make("Part", { Name = "ForgeTable", Size = Vector3.new(8, 3, 5), CFrame = cf * CFrame.new(0, 1.5, 0), Material = Enum.Material.Marble, Color = Color3.fromRGB(120, 120, 135), Parent = folder })
+	local anvil = make("Part", { Name = "Anvil", Size = Vector3.new(6, 1.4, 2.6), CFrame = cf * CFrame.new(0, 3.7, 0), Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 84, 96), Parent = folder })
+	make("ParticleEmitter", {
+		Color = ColorSequence.new(Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 120, 40)), LightEmission = 1, Rate = 6,
+		Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(4, 8), SpreadAngle = Vector2.new(60, 60),
+		Acceleration = Vector3.new(0, -20, 0), Size = NumberSequence.new(0.25, 0), Parent = anvil,
+	})
+	prompt(tableBase, "ForgePrompt", "promptForge", nil, 12)
+	worldText(anvil, "signForge", 6, 20, 3.5)
+
+	-- furnace with chimney
+	local furnace = make("Part", { Name = "Furnace", Size = Vector3.new(10, 8, 6), CFrame = cf * CFrame.new(0, 4, 8.5), Material = Enum.Material.Brick, Color = Color3.fromRGB(214, 160, 130), Parent = folder })
+	local mouth = make("Part", { Name = "Mouth", Size = Vector3.new(5, 3, 0.4), CFrame = furnace.CFrame * CFrame.new(0, -1.5, -3.05), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 130, 40), Parent = folder })
+	make("Fire", { Heat = 5, Size = 4, Color = Color3.fromRGB(255, 140, 50), SecondaryColor = Color3.fromRGB(255, 230, 140), Parent = mouth })
+	make("PointLight", { Color = Color3.fromRGB(255, 150, 70), Range = 18, Brightness = 2, Parent = mouth })
+	local chimney = cylinder(furnace.CFrame * CFrame.new(0, 7, 1), 8, 2.6, { Name = "Chimney", Material = Enum.Material.Brick, Color = Color3.fromRGB(200, 145, 115), Parent = folder })
+	make("Smoke", { Color = Color3.fromRGB(255, 255, 255), Opacity = 0.15, RiseVelocity = 4, Size = 2, Parent = chimney })
+end
+
+---------------------------------------------------------------- Black Hole island
+local function buildBlackHole(folder: Folder, slot: number)
+	local direction = directionAt(slot)
+	local center = direction * RING
+	World.AltarPosition = center
+	roundIsland(center, 34, folder, Color3.fromRGB(96, 84, 130))
+	bridge(direction, HUB_RADIUS - 2, RING - 33, folder)
+
+	local holePos = center + Vector3.new(0, 34, 0)
+	local hole = ball(holePos, 20, { Name = "BlackHole", Color = Color3.new(0, 0, 0), Material = Enum.Material.SmoothPlastic, CanCollide = false, CastShadow = false, Parent = folder })
+	make("PointLight", { Color = Color3.fromRGB(180, 110, 255), Range = 60, Brightness = 3, Parent = hole })
+	local disk = cylinder(CFrame.new(holePos) * CFrame.Angles(math.rad(16), 0, math.rad(8)), 0.4, 50, {
+		Name = "Disk", Material = Enum.Material.Neon, Color = Color3.fromRGB(176, 110, 255), Transparency = 0.35, CanCollide = false, CastShadow = false, Parent = folder,
+	})
+	cylinder(CFrame.new(holePos) * CFrame.Angles(math.rad(16), 0, math.rad(8)), 0.5, 32, {
+		Name = "InnerDisk", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 150, 220), Transparency = 0.25, CanCollide = false, CastShadow = false, Parent = folder,
 	})
 	make("ParticleEmitter", {
-		Color = ColorSequence.new(Color3.fromRGB(255, 170, 90), Color3.fromRGB(120, 40, 20)),
-		LightEmission = 1,
-		Rate = 40,
-		Lifetime = NumberRange.new(1.5, 3),
-		Speed = NumberRange.new(0.5, 2),
-		Size = NumberSequence.new(0.6, 0),
-		Parent = disk,
+		Color = ColorSequence.new(Color3.fromRGB(220, 170, 255), Color3.fromRGB(110, 50, 200)), LightEmission = 1, Rate = 40,
+		Lifetime = NumberRange.new(1.5, 3), Speed = NumberRange.new(0.5, 2), Size = NumberSequence.new(0.7, 0), Parent = disk,
 	})
-	local altar = cylinder(CFrame.new(0, 1.5, -24), 3, 9, { Name = "Altar", Material = Enum.Material.Basalt, Color = STONE_DARK, Parent = folder })
-	cylinder(CFrame.new(0, 3.1, -24), 0.3, 7, { Name = "AltarTop", Material = Enum.Material.Metal, Color = BRASS, Parent = folder })
-	prompt(altar, "BlackHolePrompt", "Open", "Black Hole")
-	sign(altar, "BLACK HOLE", 6, 220)
+	-- debris caught in orbit
+	for i = 1, 12 do
+		local a = i / 12 * math.pi * 2
+		local r = rng:NextNumber(20, 28)
+		make("Part", {
+			Name = "Debris", Size = Vector3.new(rng:NextNumber(1.5, 4), rng:NextNumber(1.5, 3), rng:NextNumber(1.5, 4)),
+			CFrame = CFrame.new(holePos + Vector3.new(math.cos(a) * r, rng:NextNumber(-6, 6), math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0),
+			Material = Enum.Material.Marble, Color = Color3.fromRGB(70, 60, 95), CanCollide = false, Parent = folder,
+		})
+	end
+	-- altar with a beam to the hole
+	local altar = cylinder(CFrame.new(center + Vector3.new(0, 1.5, 0)), 3, 10, { Name = "Altar", Material = Enum.Material.Basalt, Color = Color3.fromRGB(40, 32, 60), Parent = folder })
+	local top = cylinder(CFrame.new(center + Vector3.new(0, 3.15, 0)), 0.3, 8, { Name = "AltarTop", Material = Enum.Material.Neon, Color = Color3.fromRGB(176, 110, 255), Parent = folder })
+	local a0 = make("Attachment", { Parent = top })
+	local a1 = make("Attachment", { Parent = hole })
+	make("Beam", {
+		Attachment0 = a0, Attachment1 = a1, Color = ColorSequence.new(Color3.fromRGB(200, 150, 255)),
+		LightEmission = 1, Width0 = 1.2, Width1 = 4, FaceCamera = true, Transparency = NumberSequence.new(0.2, 0.7), Parent = top,
+	})
+	for i = 0, 5 do
+		local a = i / 6 * math.pi * 2
+		crystal(center + Vector3.new(math.cos(a) * 14, 3, math.sin(a) * 14), 2, Color3.fromRGB(190, 140, 255), folder)
+	end
+	prompt(altar, "BlackHolePrompt", "promptHole", nil, 14)
+	worldText(altar, "signHole", 7, 20, 3.5)
+end
 
-	-- Star Forge
-	local forge = make("Part", {
-		Name = "Forge",
-		Size = Vector3.new(10, 4, 7),
-		CFrame = CFrame.new(42, 2, 0),
-		Material = Enum.Material.Basalt,
-		Color = STONE_DARK,
-		Parent = folder,
-	})
-	make("Part", { Name = "Anvil", Size = Vector3.new(7, 1.6, 3), CFrame = CFrame.new(42, 4.8, 0), Material = Enum.Material.Metal, Color = Color3.fromRGB(70, 70, 78), Parent = folder })
-	local ember = make("Part", { Name = "Ember", Size = Vector3.new(3, 1, 3), CFrame = CFrame.new(42, 4.5, 5), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 110, 30), Parent = folder })
-	make("Fire", { Heat = 6, Size = 4, Color = Color3.fromRGB(255, 120, 40), SecondaryColor = Color3.fromRGB(255, 220, 120), Parent = ember })
-	make("PointLight", { Color = Color3.fromRGB(255, 130, 50), Range = 20, Brightness = 2, Parent = ember })
-	prompt(forge, "ForgePrompt", "Use", "Star Forge")
-	sign(forge, "STAR FORGE", 7, 220)
-
-	-- Observatory
-	local dome = make("Part", {
-		Name = "Dome",
-		Shape = Enum.PartType.Ball,
-		Size = Vector3.new(28, 28, 28),
-		CFrame = CFrame.new(-42, 0, 0),
-		Material = Enum.Material.Metal,
-		Color = Color3.fromRGB(150, 120, 75),
-		Parent = folder,
-	})
-	make("Part", {
-		Name = "Telescope",
-		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(18, 3, 3),
-		CFrame = CFrame.new(-36, 16, 0) * CFrame.Angles(0, 0, math.rad(40)),
-		Material = Enum.Material.Metal,
-		Color = BRASS,
-		Parent = folder,
-	})
-	prompt(dome, "ObservatoryPrompt", "Read", "Constellation Book")
-	sign(dome, "OBSERVATORY", 18, 240)
-
-	-- brass lamp posts around the edge
-	for i = 0, 7 do
-		local angle = (i + 0.5) / 8 * math.pi * 2
-		local base = Vector3.new(math.cos(angle) * (HUB_RADIUS - 4), 0, math.sin(angle) * (HUB_RADIUS - 4))
-		make("Part", { Name = "Post", Size = Vector3.new(0.8, 9, 0.8), CFrame = CFrame.new(base + Vector3.new(0, 4.5, 0)), Material = Enum.Material.Metal, Color = BRASS, Parent = folder })
-		local lamp = make("Part", { Name = "Lamp", Shape = Enum.PartType.Ball, Size = Vector3.new(2, 2, 2), CFrame = CFrame.new(base + Vector3.new(0, 9.5, 0)), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 214, 150), CanCollide = false, Parent = folder })
-		make("PointLight", { Color = Color3.fromRGB(255, 200, 140), Range = 18, Brightness = 1.2, Parent = lamp })
+---------------------------------------------------------------- plots
+local function buildPedestals(plot, size: number)
+	plot.pedestals:ClearAllChildren()
+	plot.cells = {}
+	plot.builtSize = size
+	local half = (size + 1) / 2
+	for y = 1, size do
+		for x = 1, size do
+			local key = Sky.key(x, y)
+			local cf = plot.cf * CFrame.new((x - half) * SPACING, 0, (y - half) * SPACING)
+			local base = cylinder(cf * CFrame.new(0, 0.75, 0), 1.5, 3.6, { Name = key, Material = Enum.Material.Marble, Color = MARBLE, Parent = plot.pedestals })
+			cylinder(cf * CFrame.new(0, 1.55, 0), 0.25, 3.9, { Name = "Rim", Material = Enum.Material.SmoothPlastic, Color = GOLD, CanCollide = false, Parent = base })
+			local p = prompt(base, "PedestalPrompt", "promptPlace", "pedestal", 5)
+			p:SetAttribute("Plot", plot.index)
+			p.Triggered:Connect(function(who)
+				if World.onPedestal then
+					World.onPedestal(who, plot.index, key)
+				end
+			end)
+			plot.cells[key] = { cf = cf, prompt = p }
+		end
 	end
 end
 
-local function buildPlot(index: number, folder: Folder)
-	local angle = (index - 1) / PLOT_COUNT * math.pi * 2
-	local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
-	local center = direction * PLOT_RING
-	local plotCF = CFrame.lookAt(center, Vector3.zero) -- faces the hub
-
+local function buildPlot(index: number, slot: number, folder: Folder)
+	local direction = directionAt(slot)
+	local center = direction * RING
+	local cf = CFrame.lookAt(center, Vector3.zero)
 	local plotFolder = make("Folder", { Name = "Plot" .. index, Parent = folder })
-	make("Part", { Name = "Floor", Size = Vector3.new(PLOT_SIZE, 4, PLOT_SIZE), CFrame = plotCF * CFrame.new(0, -2, 0), Material = Enum.Material.Slate, Color = STONE, Parent = plotFolder })
-	make("Part", { Name = "Trim", Size = Vector3.new(PLOT_SIZE + 2, 3.4, PLOT_SIZE + 2), CFrame = plotCF * CFrame.new(0, -2.3, 0), Material = Enum.Material.Metal, Color = BRASS, Parent = plotFolder })
+	plotFolder:SetAttribute("OwnerId", 0)
 
-	-- bridge to the hub
-	local from = HUB_RADIUS - 2
-	local to = PLOT_RING - PLOT_SIZE / 2 + 2
-	local length = to - from
-	local bridgeCF = CFrame.lookAt(direction * (from + to) / 2 + Vector3.new(0, -0.5, 0), Vector3.new(0, -0.5, 0))
-	make("Part", { Name = "Bridge", Size = Vector3.new(10, 1, length), CFrame = bridgeCF, Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(92, 66, 46), Parent = plotFolder })
-	for _, side in { -5.2, 5.2 } do
-		make("Part", { Name = "Rail", Size = Vector3.new(0.4, 2.4, length), CFrame = bridgeCF * CFrame.new(side, 1.7, 0), Material = Enum.Material.Metal, Color = BRASS, Parent = plotFolder })
+	local floor = make("Part", { Name = "Floor", Size = Vector3.new(PLOT_SIZE, 4, PLOT_SIZE), CFrame = cf * CFrame.new(0, -2, 0), Material = Enum.Material.Grass, Color = GRASS, Parent = plotFolder })
+	make("Part", { Name = "Border", Size = Vector3.new(PLOT_SIZE + 3, 3.6, PLOT_SIZE + 3), CFrame = cf * CFrame.new(0, -2.3, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = plotFolder })
+	make("Part", { Name = "Trim", Size = Vector3.new(PLOT_SIZE + 4, 1, PLOT_SIZE + 4), CFrame = cf * CFrame.new(0, -4.2, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
+	for _ = 1, 10 do
+		cloudPuff((cf * CFrame.new(rng:NextNumber(-26, 26), -9, rng:NextNumber(-26, 26))).Position, rng:NextNumber(12, 18), plotFolder, 2)
 	end
+	for _, c in { { -30, -30 }, { 30, -30 }, { -30, 30 }, { 30, 30 } } do
+		local base = (cf * CFrame.new(c[1], 0, c[2])).Position
+		pillar(base, 8, plotFolder)
+		crystal(base + Vector3.new(0, 11, 0), 1.6, GLASS, plotFolder)
+	end
+	bridge(direction, HUB_RADIUS - 2, RING - PLOT_SIZE / 2 + 1, plotFolder)
 
-	-- name sign at the entrance
-	local post = make("Part", {
-		Name = "SignPost",
-		Size = Vector3.new(1, 6, 1),
-		CFrame = plotCF * CFrame.new(-7, 3, -(PLOT_SIZE / 2 - 3)),
-		Material = Enum.Material.Metal,
-		Color = BRASS,
-		Parent = plotFolder,
-	})
-	local label = sign(post, "Empty Sky", 5, 320)
+	local post = make("Part", { Name = "SignPost", Size = Vector3.new(1, 7, 1), CFrame = cf * CFrame.new(-9, 3.5, -(PLOT_SIZE / 2 - 2)), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
+	local label = worldText(post, "signFree", 6, 18, 5)
+	label:SetAttribute("Owner", "")
+	label:SetAttribute("Income", 0)
 
-	plots[index] = {
-		cf = plotCF,
-		display = make("Folder", { Name = "Sky", Parent = plotFolder }),
+	local plot = {
+		index = index,
+		cf = cf,
+		folder = plotFolder,
+		pedestals = make("Folder", { Name = "Pedestals", Parent = plotFolder }),
+		stars = make("Folder", { Name = "Stars", Parent = plotFolder }),
 		label = label,
 		owner = nil,
+		cells = {},
+		builtSize = 0,
 	}
+	plots[index] = plot
+	buildPedestals(plot, Config.StartGridSize)
+
+	local cooldown = {}
+	floor.Touched:Connect(function(hit)
+		local who = Players:GetPlayerFromCharacter(hit.Parent)
+		if not who or plot.owner or (cooldown[who] and os.clock() - cooldown[who] < 1) then
+			return
+		end
+		cooldown[who] = os.clock()
+		if World.onPlotTouched then
+			World.onPlotTouched(who, index)
+		end
+	end)
 end
 
+---------------------------------------------------------------- scenery
+local function buildScenery(folder: Folder)
+	-- sea of clouds far below
+	for _ = 1, 70 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(30, 340)
+		ball(Vector3.new(math.cos(a) * r, rng:NextNumber(-70, -50), math.sin(a) * r), rng:NextNumber(30, 60), {
+			Name = "CloudSea", Color = CLOUD, Material = Enum.Material.SmoothPlastic, Transparency = 0.05, CanCollide = false, CastShadow = false, Parent = folder,
+		})
+	end
+
+	-- rainbow behind the Forge side
+	local bands = {
+		Color3.fromRGB(255, 120, 120), Color3.fromRGB(255, 180, 110), Color3.fromRGB(255, 235, 130), Color3.fromRGB(150, 230, 140),
+		Color3.fromRGB(130, 200, 255), Color3.fromRGB(150, 150, 255), Color3.fromRGB(200, 150, 255),
+	}
+	local segments = 36
+	for b, color in bands do
+		local radius = 200 - (b - 1) * 4
+		for s = 0, segments - 1 do
+			local a0 = s / segments * math.pi
+			local a1 = (s + 1) / segments * math.pi
+			local p0 = Vector3.new(math.cos(a0) * radius, math.sin(a0) * radius - 60, 330)
+			local p1 = Vector3.new(math.cos(a1) * radius, math.sin(a1) * radius - 60, 330)
+			make("Part", {
+				Name = "Rainbow", Size = Vector3.new(4, 1, (p1 - p0).Magnitude + 0.4), CFrame = CFrame.lookAt((p0 + p1) / 2, p1),
+				Material = Enum.Material.SmoothPlastic, Color = color, Transparency = 0.35, CanCollide = false, CastShadow = false, Parent = folder,
+			})
+		end
+	end
+
+	-- little floating islets with a tree or a crystal
+	for i = 1, 10 do
+		local a = (i + rng:NextNumber(-0.3, 0.3)) / 10 * math.pi * 2
+		local r = rng:NextNumber(215, 280)
+		local center = Vector3.new(math.cos(a) * r, rng:NextNumber(-15, 35), math.sin(a) * r)
+		local size = rng:NextNumber(10, 16)
+		cylinder(CFrame.new(center + Vector3.new(0, -1.5, 0)), 3, size, { Name = "Islet", Material = Enum.Material.Grass, Color = GRASS, Parent = folder })
+		cylinder(CFrame.new(center + Vector3.new(0, -4, 0)), 3, size * 0.75, { Name = "IsletBase", Material = Enum.Material.Marble, Color = MARBLE_WARM, Parent = folder })
+		cloudPuff(center + Vector3.new(0, -7, 0), size * 0.7, folder, 3)
+		if i % 2 == 0 then
+			tree(center, folder, Color3.fromRGB(255, 210, 230))
+		else
+			crystal(center + Vector3.new(0, 4, 0), 2.5, Color3.fromRGB(180, 230, 255), folder)
+		end
+	end
+
+	-- hot air balloons gently bobbing
+	local balloonColors = { Color3.fromRGB(255, 160, 170), Color3.fromRGB(150, 210, 255), Color3.fromRGB(255, 220, 130), Color3.fromRGB(170, 235, 190) }
+	for i, color in balloonColors do
+		local a = (i - 0.5) / #balloonColors * math.pi * 2 + 0.4
+		local origin = Vector3.new(math.cos(a) * 205, 40 + i * 6, math.sin(a) * 205)
+		local parts = {
+			ball(origin, 16, { Name = "Balloon", Material = Enum.Material.SmoothPlastic, Color = color, CanCollide = false, Parent = folder }),
+			make("Part", { Name = "Band", Size = Vector3.new(2, 16.4, 16.4), CFrame = CFrame.new(origin), Material = Enum.Material.SmoothPlastic, Color = MARBLE, CanCollide = false, Shape = Enum.PartType.Cylinder, Parent = folder }),
+			make("Part", { Name = "Basket", Size = Vector3.new(4, 3, 4), CFrame = CFrame.new(origin + Vector3.new(0, -13, 0)), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(170, 120, 80), CanCollide = false, Parent = folder }),
+		}
+		parts[2].CFrame = CFrame.new(origin) * CFrame.Angles(0, 0, math.rad(90))
+		for _, corner in { { -1.6, -1.6 }, { 1.6, -1.6 }, { -1.6, 1.6 }, { 1.6, 1.6 } } do
+			table.insert(parts, make("Part", {
+				Name = "Rope", Size = Vector3.new(0.15, 6, 0.15), CFrame = CFrame.new(origin + Vector3.new(corner[1], -9, corner[2])),
+				Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(120, 90, 60), CanCollide = false, Parent = folder,
+			}))
+		end
+		local info = TweenInfo.new(4 + i, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+		for _, part in parts do
+			TweenService:Create(part, info, { CFrame = part.CFrame + Vector3.new(0, 4, 0) }):Play()
+		end
+	end
+end
+
+---------------------------------------------------------------- public API
 function World.build()
 	setupLighting()
 	local baseplate = workspace:FindFirstChild("Baseplate")
@@ -1274,22 +2081,31 @@ function World.build()
 	end
 	local map = make("Folder", { Name = "Map", Parent = workspace })
 	buildHub(make("Folder", { Name = "Hub", Parent = map }))
+	buildForge(make("Folder", { Name = "Forge", Parent = map }), 3) -- +Z
+	buildBlackHole(make("Folder", { Name = "BlackHoleIsland", Parent = map }), 7) -- -Z
 	local plotFolder = make("Folder", { Name = "Plots", Parent = map })
-	for i = 1, PLOT_COUNT do
-		buildPlot(i, plotFolder)
+	local index = 0
+	for _, slot in { 1, 2, 4, 5, 6, 8 } do
+		index += 1
+		buildPlot(index, slot, plotFolder)
 	end
+	buildScenery(make("Folder", { Name = "Scenery", Parent = map }))
 end
 
-function World.assignPlot(player: Player): number?
-	for index, plot in plots do
-		if plot.owner == nil then
-			plot.owner = player
-			playerPlot[player] = index
-			plot.label.Text = player.DisplayName .. "'s Sky"
-			return index
-		end
+function World.plotOf(player: Player): number?
+	return playerPlot[player]
+end
+
+function World.claimPlot(player: Player, index: number): boolean
+	local plot = plots[index]
+	if not plot or plot.owner or playerPlot[player] then
+		return false
 	end
-	return nil
+	plot.owner = player
+	playerPlot[player] = index
+	plot.folder:SetAttribute("OwnerId", player.UserId)
+	plot.label:SetAttribute("Owner", player.DisplayName)
+	return true
 end
 
 function World.releasePlot(player: Player)
@@ -1299,18 +2115,39 @@ function World.releasePlot(player: Player)
 	end
 	local plot = plots[index]
 	plot.owner = nil
-	plot.display:ClearAllChildren()
-	plot.label.Text = "Empty Sky"
+	plot.folder:SetAttribute("OwnerId", 0)
+	plot.label:SetAttribute("Owner", "")
+	plot.label:SetAttribute("Income", 0)
+	plot.stars:ClearAllChildren()
+	buildPedestals(plot, Config.StartGridSize)
 	playerPlot[player] = nil
 end
 
-function World.spawnCFrame(player: Player): CFrame?
+function World.spawnCFrame(player: Player): CFrame
 	local index = playerPlot[player]
 	if not index then
-		return nil
+		return CFrame.new(0, 4, 20)
 	end
-	local position = (plots[index].cf * CFrame.new(0, 4, -10)).Position
-	return CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
+	local cf = plots[index].cf
+	local position = (cf * CFrame.new(0, 4, -(PLOT_SIZE / 2 - 5))).Position
+	return CFrame.lookAt(position, cf.Position + Vector3.new(0, 4, 0))
+end
+
+function World.isNearPlot(player: Player, index: number): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local plot = plots[index]
+	if not root or not plot then
+		return false
+	end
+	local offset = root.Position - plot.cf.Position
+	return Vector3.new(offset.X, 0, offset.Z).Magnitude <= Config.PlotReach
+end
+
+function World.distanceTo(player: Player, position: Vector3): number
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root then (root.Position - position).Magnitude else math.huge
 end
 
 local NEIGHBORS = { { 1, 0 }, { 0, 1 }, { 1, 1 }, { 1, -1 } }
@@ -1321,79 +2158,50 @@ function World.renderPlot(player: Player, data, evaluation, income: number)
 		return
 	end
 	local plot = plots[index]
-	local display = plot.display
-	display:ClearAllChildren()
-	plot.label.Text = string.format("%s's Sky   +%s/s", player.DisplayName, Format.number(income))
+	if plot.builtSize ~= data.gridSize then
+		buildPedestals(plot, data.gridSize)
+	end
+	plot.stars:ClearAllChildren()
+	plot.label:SetAttribute("Income", income)
 
-	local size = data.gridSize
-	local half = (size + 1) / 2
-	local function cellPosition(x: number, y: number): Vector3
-		return (plot.cf * CFrame.new((x - half) * CELL, SKY_HEIGHT, (y - half) * CELL)).Position
+	local function starPosition(key: string): Vector3?
+		local cell = plot.cells[key]
+		return cell and (cell.cf * CFrame.new(0, STAR_HEIGHT, 0)).Position
 	end
 
-	-- faint brass frame marking the sky area
-	make("Part", {
-		Name = "Frame",
-		Size = Vector3.new(size * CELL, 0.15, size * CELL),
-		CFrame = plot.cf * CFrame.new(0, SKY_HEIGHT - 4, 0),
-		Material = Enum.Material.Neon,
-		Color = BRASS,
-		Transparency = 0.9,
-		CanCollide = false,
-		CastShadow = false,
-		Parent = display,
-	})
+	for key, cell in plot.cells do
+		local placed = data.grid[key]
+		local langKey = if placed then "promptRemove" else "promptPlace"
+		cell.prompt:SetAttribute("LangKey", langKey)
+		cell.prompt.ActionText = langKey
+	end
 
 	for key, cell in data.grid do
-		local x, y = Sky.parse(key)
 		local star, mutation = Items.parse(cell.id)
-		if x and y and star and x <= size and y <= size then
-			local level = Evolution.level(cell.age or 0)
-			local diameter = 1.1 + star.index * 0.3 + (level - 1) * 0.15
-			local ball = make("Part", {
-				Name = key,
-				Shape = Enum.PartType.Ball,
-				Size = Vector3.new(diameter, diameter, diameter),
-				CFrame = CFrame.new(cellPosition(x, y)),
-				Material = Enum.Material.Neon,
-				Color = star.color,
-				CanCollide = false,
-				CastShadow = false,
-				Parent = display,
-			})
-			if mutation.id ~= "normal" then
-				make("Sparkles", { SparkleColor = mutation.color, Parent = ball })
-			end
-			if star.index >= 5 then
-				make("PointLight", { Color = star.color, Range = 10, Brightness = 1.5, Parent = ball })
-			end
+		local position = starPosition(key)
+		if star and position then
+			StarModels.create(star, mutation, Evolution.level(cell.age or 0), position, plot.stars)
 		end
 	end
 
-	-- constellation lines
 	for _, group in evaluation.groups do
 		local members = {}
 		for _, key in group.cells do
 			members[key] = true
 		end
-		local color = if group.pure then Color3.fromRGB(150, 230, 255) else BRASS
+		local color = if group.pure then Color3.fromRGB(120, 210, 255) else GOLD
 		for _, key in group.cells do
 			local x, y = Sky.parse(key)
 			for _, offset in NEIGHBORS do
-				local nx, ny = x + offset[1], y + offset[2]
-				if members[Sky.key(nx, ny)] then
-					local a, b = cellPosition(x, y), cellPosition(nx, ny)
-					make("Part", {
-						Name = "Line",
-						Size = Vector3.new(0.18, 0.18, (b - a).Magnitude),
-						CFrame = CFrame.lookAt((a + b) / 2, b),
-						Material = Enum.Material.Neon,
-						Color = color,
-						Transparency = 0.15,
-						CanCollide = false,
-						CastShadow = false,
-						Parent = display,
-					})
+				local otherKey = Sky.key(x + offset[1], y + offset[2])
+				if members[otherKey] then
+					local a, b = starPosition(key), starPosition(otherKey)
+					if a and b then
+						make("Part", {
+							Name = "Line", Size = Vector3.new(0.2, 0.2, (b - a).Magnitude), CFrame = CFrame.lookAt((a + b) / 2, b),
+							Material = Enum.Material.Neon, Color = color, CanCollide = false, CastShadow = false, Parent = plot.stars,
+						})
+					end
 				end
 			end
 		end
@@ -1404,11 +2212,13 @@ return World
 ]]></ProtectedString></Properties></Item>
 </Item>
 </Item>
-<Item class="StarterPlayer" referent="RBX23"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX22"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX21"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX13"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+<Item class="StarterPlayer" referent="RBX25"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX24"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX23"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX15"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local MarketplaceService = game:GetService("MarketplaceService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
+local LocalizationService = game:GetService("LocalizationService")
 
 local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -1421,36 +2231,45 @@ local Evolution = require(Shared.Evolution)
 local Odds = require(Shared.Odds)
 local Sky = require(Shared.Sky)
 local Format = require(Shared.Format)
+local Lang = require(Shared.Lang)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local RollFn = Remotes:WaitForChild("Roll")
 local ActionEv = Remotes:WaitForChild("Action")
 local StateEv = Remotes:WaitForChild("State")
 local AnnounceEv = Remotes:WaitForChild("Announce")
-local CometEv = Remotes:WaitForChild("Comet")
+local PickerEv = Remotes:WaitForChild("OpenPicker")
 
 local state = nil
 local selected: string? = nil
+local pickerCell: string? = nil
 local rolling = false
 local autoRoll = false
+local lastResult: { string }? = nil
 
----------------------------------------------------------------- Theme
--- Brass instruments of an old observatory: ink panels, thin brass lines, parchment text.
-local INK = Color3.fromRGB(11, 13, 24)
-local INK_2 = Color3.fromRGB(21, 24, 40)
-local BRASS = Color3.fromRGB(201, 162, 92)
-local BRASS_DIM = Color3.fromRGB(110, 90, 58)
-local PARCH = Color3.fromRGB(236, 226, 200)
-local MUTED = Color3.fromRGB(150, 144, 128)
-local RED = Color3.fromRGB(150, 62, 52)
-local GREEN = Color3.fromRGB(96, 132, 84)
-local SKY_BLUE = Color3.fromRGB(150, 210, 255)
-
-local function family(name: string, weight: Enum.FontWeight?)
-	return Font.new("rbxasset://fonts/families/" .. name .. ".json", weight or Enum.FontWeight.Regular)
+local autoLang = if string.sub(LocalizationService.RobloxLocaleId, 1, 2) == "ru" then "ru" else "en"
+local lang = autoLang
+local function t(key: string, ...): string
+	return Lang.t(lang, key, ...)
 end
-local TITLE = family("Michroma")
-local BODY = family("Jura", Enum.FontWeight.Bold)
+
+---------------------------------------------------------------- Theme: bright sky
+local WHITE = Color3.fromRGB(255, 255, 255)
+local PANEL = Color3.fromRGB(250, 252, 255)
+local PANEL_2 = Color3.fromRGB(233, 243, 255)
+local LINE = Color3.fromRGB(190, 216, 245)
+local TEXT = Color3.fromRGB(34, 52, 88)
+local MUTED = Color3.fromRGB(108, 130, 166)
+local BLUE = Color3.fromRGB(70, 158, 255)
+local MINT = Color3.fromRGB(56, 196, 146)
+local GOLD = Color3.fromRGB(255, 186, 60)
+local RED = Color3.fromRGB(240, 102, 102)
+local LILAC = Color3.fromRGB(150, 110, 255)
+local GREY = Color3.fromRGB(170, 184, 205)
+
+local TITLE = Font.new("rbxasset://fonts/families/FredokaOne.json")
+local BODY = Font.new("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.Bold)
+local BODY_SEMI = Font.new("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.SemiBold)
 
 ---------------------------------------------------------------- UI helpers
 local function make(className: string, props, children)
@@ -1468,11 +2287,11 @@ local function make(className: string, props, children)
 end
 
 local function corner(radius: number?)
-	return make("UICorner", { CornerRadius = UDim.new(0, radius or 4) })
+	return make("UICorner", { CornerRadius = UDim.new(0, radius or 12) })
 end
 
 local function stroke(color: Color3?, thickness: number?)
-	return make("UIStroke", { Color = color or BRASS_DIM, Thickness = thickness or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+	return make("UIStroke", { Color = color or LINE, Thickness = thickness or 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
 end
 
 local function pad(px: number)
@@ -1483,61 +2302,38 @@ local function pad(px: number)
 end
 
 local function text(props)
-	local max = props.Max or 22
+	local max = props.Max or 20
 	props.Max = nil
 	props.BackgroundTransparency = props.BackgroundTransparency or 1
-	props.TextColor3 = props.TextColor3 or PARCH
+	props.TextColor3 = props.TextColor3 or TEXT
 	props.FontFace = props.FontFace or BODY
 	props.TextScaled = true
 	return make("TextLabel", props, { make("UITextSizeConstraint", { MaxTextSize = max }) })
 end
 
-local KINDS = {
-	primary = { fill = BRASS, text = INK, line = BRASS },
-	ghost = { fill = INK_2, text = PARCH, line = BRASS_DIM },
-	danger = { fill = RED, text = PARCH, line = RED },
-	good = { fill = GREEN, text = PARCH, line = GREEN },
-}
+local function shade(color: Color3, amount: number): Color3
+	return color:Lerp(Color3.new(0, 0, 0), amount)
+end
 
-local function btn(kind: string, props, onClick)
-	local style = KINDS[kind]
+local function btn(color: Color3, props, onClick)
 	local max = props.Max or 18
 	props.Max = nil
-	props.BackgroundColor3 = style.fill
-	props.TextColor3 = style.text
+	props.BackgroundColor3 = color
+	props.TextColor3 = props.TextColor3 or WHITE
 	props.FontFace = props.FontFace or TITLE
 	props.TextScaled = true
 	props.AutoButtonColor = true
 	local b = make("TextButton", props, {
-		corner(),
-		stroke(style.line),
+		corner(10),
+		stroke(shade(color, 0.18), 2),
 		pad(6),
 		make("UITextSizeConstraint", { MaxTextSize = max }),
+		make("UIGradient", { Color = ColorSequence.new(WHITE, Color3.fromRGB(215, 225, 240)), Rotation = 90 }),
 	})
-	b.Activated:Connect(onClick)
-	return b
-end
-
--- Panel with a small caption and a brass rule under it. Returns frame, body.
-local function panel(caption: string?, props)
-	props.BackgroundColor3 = INK
-	props.BackgroundTransparency = 0.08
-	local frame = make("Frame", props, { corner(), stroke(BRASS_DIM), pad(10) })
-	local top = 0
-	if caption then
-		text({ Size = UDim2.new(1, 0, 0, 16), Text = caption, TextColor3 = BRASS, FontFace = TITLE, Max = 13, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = props.ZIndex, Parent = frame })
-		make("Frame", { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0, 22), BackgroundColor3 = BRASS_DIM, BorderSizePixel = 0, ZIndex = props.ZIndex, Parent = frame })
-		top = 30
+	if onClick then
+		b.Activated:Connect(onClick)
 	end
-	local body = make("Frame", { Size = UDim2.new(1, 0, 1, -top), Position = UDim2.new(0, 0, 0, top), BackgroundTransparency = 1, ZIndex = props.ZIndex, Parent = frame })
-	return frame, body
-end
-
-local function dot(color: Color3, scale: number, props)
-	props.Size = props.Size or UDim2.new(scale, 0, scale, 0)
-	props.BackgroundColor3 = color
-	props.BorderSizePixel = 0
-	return make("Frame", props, { make("UICorner", { CornerRadius = UDim.new(1, 0) }), make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+	return b
 end
 
 local function clear(container: Instance)
@@ -1548,475 +2344,644 @@ local function clear(container: Instance)
 	end
 end
 
----------------------------------------------------------------- Layout
+-- Localized static labels: re-applied when the language changes
+local bound = {}
+local function bind(inst: TextLabel | TextButton, key: string)
+	table.insert(bound, { inst = inst, key = key })
+	inst.Text = t(key)
+	return inst
+end
+
+-- Star icon: uploaded image if configured, otherwise a drawn glowing disc
+local function starIcon(star, mutation, props)
+	local holder = make("Frame", props, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+	holder.BackgroundTransparency = 1
+	local id = Config.StarIcons[star.id]
+	if id and id ~= "" then
+		make("ImageLabel", {
+			Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = holder.ZIndex,
+			Image = if string.find(id, "://") then id else "rbxassetid://" .. id, Parent = holder,
+		})
+	else
+		local disc = make("Frame", {
+			Size = UDim2.new(0.7, 0, 0.7, 0), Position = UDim2.new(0.15, 0, 0.15, 0), BackgroundColor3 = WHITE, ZIndex = holder.ZIndex, Parent = holder,
+		}, {
+			make("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			make("UIGradient", { Color = ColorSequence.new(star.color:Lerp(WHITE, 0.6), star.color), Rotation = 45 }),
+			stroke(shade(star.color, 0.25), 2),
+		})
+		local _ = disc
+	end
+	if mutation and mutation.id ~= "normal" then
+		make("Frame", {
+			Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = holder.ZIndex, Parent = holder,
+		}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(mutation.color, 3) })
+	end
+	return holder
+end
+
+---------------------------------------------------------------- Root
 local gui = make("ScreenGui", {
-	Name = "Observatory",
+	Name = "SkyHaven",
 	ResetOnSpawn = false,
+	IgnoreGuiInset = true,
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	Parent = player:WaitForChild("PlayerGui"),
 })
 
--- Header: instrument readouts
-local _, header = panel(nil, { Size = UDim2.new(0.56, 0, 0.085, 0), Position = UDim2.new(0.22, 0, 0.012, 0), Parent = gui })
-make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), Parent = header })
-local function readout(caption: string, width: number, color: Color3)
-	local box = make("Frame", { Size = UDim2.new(width, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
-	text({ Size = UDim2.new(1, 0, 0.32, 0), Text = caption, TextColor3 = MUTED, FontFace = TITLE, Max = 11, Parent = box })
-	return text({ Size = UDim2.new(1, 0, 0.68, 0), Position = UDim2.new(0, 0, 0.32, 0), Text = "0", TextColor3 = color, FontFace = TITLE, Max = 24, Parent = box })
+local function panelFrame(props)
+	props.BackgroundColor3 = props.BackgroundColor3 or PANEL
+	props.BackgroundTransparency = props.BackgroundTransparency or 0.04
+	return make("Frame", props, { corner(16), stroke(LINE, 2), pad(10) })
 end
-local cashValue = readout("CASH", 0.3, BRASS)
-local incomeValue = readout("PER SECOND", 0.24, PARCH)
-local luckValue = readout("LUCK", 0.18, PARCH)
-local rebirthValue = readout("REBIRTHS", 0.18, PARCH)
 
-local showerBanner = text({
-	Size = UDim2.new(0.3, 0, 0.032, 0), Position = UDim2.new(0.35, 0, 0.1, 0),
-	Text = "", TextColor3 = SKY_BLUE, FontFace = TITLE, Max = 15, Parent = gui,
-})
+---------------------------------------------------------------- Header
+local header = panelFrame({ Size = UDim2.new(0.5, 0, 0, 58), Position = UDim2.new(0.25, 0, 0, 8), Parent = gui })
+make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0.01, 0), Parent = header })
+local function readout(key: string, color: Color3)
+	local box = make("Frame", { Size = UDim2.new(0.19, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
+	bind(text({ Size = UDim2.new(1, 0, 0.36, 0), TextColor3 = MUTED, FontFace = BODY, Max = 12, Parent = box }), key)
+	return text({ Size = UDim2.new(1, 0, 0.64, 0), Position = UDim2.new(0, 0, 0.36, 0), Text = "0", TextColor3 = color, FontFace = TITLE, Max = 24, Parent = box })
+end
+local cashValue = readout("cash", Color3.fromRGB(230, 150, 20))
+local incomeValue = readout("perSec", MINT)
+local luckValue = readout("luck", BLUE)
+local rollsValue = readout("rolls", LILAC)
+local rebirthValue = readout("rebirths", TEXT)
 
--- Left: the roll
-local _, left = panel("TELESCOPE", { Size = UDim2.new(0.2, 0, 0.64, 0), Position = UDim2.new(0.01, 0, 0.13, 0), Parent = gui })
-local resultName = text({ Size = UDim2.new(1, 0, 0.14, 0), Text = "Point the lens", FontFace = TITLE, Max = 24, Parent = left })
-local resultChance = text({ Size = UDim2.new(1, 0, 0.07, 0), Position = UDim2.new(0, 0, 0.14, 0), Text = "and roll for a star", TextColor3 = MUTED, Max = 16, Parent = left })
-local rollButton
-local autoButton
-
--- Center: the sky grid
-local skyHolder = make("Frame", { Size = UDim2.new(0.5, 0, 0.66, 0), Position = UDim2.new(0.25, 0, 0.14, 0), BackgroundTransparency = 1, Visible = false, Parent = gui })
-local sky = make("Frame", {
-	Size = UDim2.new(1, 0, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
-	BackgroundColor3 = INK, BackgroundTransparency = 0.15, Parent = skyHolder,
-}, { corner(), stroke(BRASS, 1.5), pad(10), make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
-local skyGrid = make("UIGridLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = sky })
-text({
-	Size = UDim2.new(1, 0, 0.05, 0), Position = UDim2.new(0, 0, 1.01, 0),
-	Text = "Select a star, then tap a cell. Tap a placed star to take it back.",
-	TextColor3 = PARCH, TextStrokeTransparency = 0.3, Max = 15, Parent = skyHolder,
-})
-
--- Right: inventory
-local _, right = panel("STAR CATALOGUE", { Size = UDim2.new(0.21, 0, 0.58, 0), Position = UDim2.new(0.78, 0, 0.28, 0), Parent = gui })
-local invList = make("ScrollingFrame", {
-	Size = UDim2.new(1, 0, 0.6, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
-	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 3, ScrollBarImageColor3 = BRASS_DIM, Parent = right,
-}, { make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
-local detail = text({ Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, 0.62, 0), Text = "Nothing selected", TextColor3 = MUTED, Max = 15, Parent = right })
-local actionsFrame = make("Frame", { Size = UDim2.new(1, 0, 0.28, 0), Position = UDim2.new(0, 0, 0.72, 0), BackgroundTransparency = 1, Visible = false, Parent = right })
-local sellOne, sellAll, forgeButton, feedButton
-
--- Bottom: upgrades
-local bottom = make("Frame", { Size = UDim2.new(0.5, 0, 0.07, 0), Position = UDim2.new(0.25, 0, 0.9, 0), BackgroundTransparency = 1, Parent = gui })
-make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = bottom })
-local luckUpgrade, gridUpgrade
-
--- Announcements
+local showerBanner = text({ Size = UDim2.new(0.4, 0, 0, 22), Position = UDim2.new(0.3, 0, 0, 70), Text = "", TextColor3 = BLUE, FontFace = TITLE, TextStrokeColor3 = WHITE, TextStrokeTransparency = 0, Max = 18, Parent = gui })
 local announce = text({
-	Size = UDim2.new(0.6, 0, 0.04, 0), Position = UDim2.new(0.2, 0, 0.135, 0),
-	Text = "", TextTransparency = 1, TextStrokeTransparency = 1, FontFace = TITLE, Max = 20, ZIndex = 5, Parent = gui,
+	Size = UDim2.new(0.6, 0, 0, 30), Position = UDim2.new(0.2, 0, 0, 94), Text = "", TextTransparency = 1,
+	TextStrokeColor3 = WHITE, TextStrokeTransparency = 1, FontFace = TITLE, Max = 22, ZIndex = 50, Parent = gui,
 })
 
--- Popups
-local popups = {}
-local function popup(caption: string)
-	local frame, body = panel(caption, { Size = UDim2.new(0.42, 0, 0.7, 0), Position = UDim2.new(0.29, 0, 0.14, 0), Visible = false, ZIndex = 10, Parent = gui })
-	btn("ghost", { Size = UDim2.new(0, 70, 0, 22), Position = UDim2.new(1, -70, 0, -2), Text = "CLOSE", Max = 11, ZIndex = 11, Parent = frame }, function()
+---------------------------------------------------------------- Language toggle (top-left)
+local langFrame = panelFrame({ Size = UDim2.new(0, 112, 0, 44), Position = UDim2.new(0, 16, 0, 64), Parent = gui })
+local enButton, ruButton
+local render -- forward
+
+local function setLang(newLang: string)
+	lang = newLang
+	for _, entry in bound do
+		entry.inst.Text = t(entry.key)
+	end
+	enButton.BackgroundColor3 = if lang == "en" then BLUE else PANEL_2
+	enButton.TextColor3 = if lang == "en" then WHITE else MUTED
+	ruButton.BackgroundColor3 = if lang == "ru" then BLUE else PANEL_2
+	ruButton.TextColor3 = if lang == "ru" then WHITE else MUTED
+	if render then
+		render()
+	end
+end
+enButton = btn(BLUE, { Size = UDim2.new(0.48, 0, 1, 0), Text = "EN", Max = 16, Parent = langFrame }, function()
+	ActionEv:FireServer("SetLang", "en")
+	setLang("en")
+end)
+ruButton = btn(PANEL_2, { Size = UDim2.new(0.48, 0, 1, 0), Position = UDim2.new(0.52, 0, 0, 0), Text = "RU", Max = 16, Parent = langFrame }, function()
+	ActionEv:FireServer("SetLang", "ru")
+	setLang("ru")
+end)
+
+---------------------------------------------------------------- Telescope (left)
+local telescope = panelFrame({ Size = UDim2.new(0.17, 0, 0.42, 0), Position = UDim2.new(0, 16, 0.2, 0), Parent = gui })
+bind(text({ Size = UDim2.new(1, 0, 0.08, 0), TextColor3 = BLUE, FontFace = TITLE, Max = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = telescope }), "telescope")
+local resultName = bind(text({ Size = UDim2.new(1, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.1, 0), FontFace = TITLE, Max = 24, Parent = telescope }), "rollHint")
+local resultChance = text({ Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, 0.26, 0), Text = "", TextColor3 = MUTED, Max = 15, Parent = telescope })
+local rollButton, autoButton
+local rollsLine = text({ Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, 0.92, 0), Text = "", TextColor3 = MUTED, FontFace = BODY_SEMI, Max = 14, Parent = telescope })
+
+---------------------------------------------------------------- Windows
+local windows = {}
+local function window(titleKey: string, group: string, props)
+	props.Visible = false
+	props.ZIndex = 20
+	local frame = panelFrame(props)
+	bind(text({ Size = UDim2.new(1, -50, 0, 30), FontFace = TITLE, TextColor3 = BLUE, Max = 22, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21, Parent = frame }), titleKey)
+	btn(RED, { Size = UDim2.new(0, 34, 0, 34), Position = UDim2.new(1, -34, 0, -2), Text = "X", Max = 18, ZIndex = 22, Parent = frame }, function()
 		frame.Visible = false
 	end)
-	local list = make("ScrollingFrame", {
-		Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 10,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 3, ScrollBarImageColor3 = BRASS_DIM, Parent = body,
-	}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
-	table.insert(popups, frame)
-	return frame, list
+	local body = make("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -40), Position = UDim2.new(0, 0, 0, 40), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 21,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 5, ScrollBarImageColor3 = LINE, Parent = frame,
+	}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }), make("UIPadding", { PaddingRight = UDim.new(0, 8) }) })
+	local w = { frame = frame, body = body, group = group }
+	table.insert(windows, w)
+	return w
 end
 
-table.insert(popups, skyHolder)
-local oddsFrame, oddsList = popup("ODDS AT YOUR LUCK")
-local bookFrame, bookList = popup("CONSTELLATION BOOK")
-local holeFrame, holeList = popup("BLACK HOLE")
-
-local function open(frame: Frame)
-	local wasOpen = frame.Visible
-	for _, other in popups do
-		other.Visible = false
-	end
-	frame.Visible = not wasOpen
+local CENTER = { Size = UDim2.new(0.42, 0, 0.66, 0), Position = UDim2.new(0.29, 0, 0.16, 0) }
+local function centerProps()
+	return { Size = CENTER.Size, Position = CENTER.Position }
 end
 
----------------------------------------------------------------- Render: popups
-local function row(list: Instance, order: number, height: number)
-	return make("Frame", { Size = UDim2.new(1, -8, 0, height), BackgroundColor3 = INK_2, LayoutOrder = order, ZIndex = 10, Parent = list }, { corner() })
+local catalogueW = window("catalogue", "side", { Size = UDim2.new(0.25, 0, 0.66, 0), Position = UDim2.new(1, -16, 0.16, 0), AnchorPoint = Vector2.new(1, 0) })
+local skyW = window("mySky", "center", centerProps())
+local upgradesW = window("upgrades", "center", centerProps())
+local indexW = window("indexTitle", "center", centerProps())
+local bookW = window("bookTitle", "center", centerProps())
+local oddsW = window("oddsTitle", "center", centerProps())
+local pickerW = window("pickTitle", "center", centerProps())
+local forgeW = window("forgeTitle", "center", centerProps())
+local holeW = window("holeTitle", "center", centerProps())
+
+-- catalogue: list + sell bar at the bottom
+catalogueW.body.Size = UDim2.new(1, 0, 1, -124)
+local sellBar = make("Frame", { Size = UDim2.new(1, 0, 0, 52), Position = UDim2.new(0, 0, 1, -52), BackgroundTransparency = 1, ZIndex = 21, Visible = false, Parent = catalogueW.frame })
+local sellInfo = text({ Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, -80), Text = "", TextColor3 = MUTED, FontFace = BODY_SEMI, Max = 14, ZIndex = 21, Parent = catalogueW.frame })
+
+local renderers = {}
+local function isOpen(w): boolean
+	return w.frame.Visible
 end
-
-local function renderOdds()
-	clear(oddsList)
-	local luck = if state then state.luck else 1
-	local odds = Odds.exact(luck)
-	for i = #Stars.List, 1, -1 do
-		local star = Stars.List[i]
-		local r = row(oddsList, -i, 30)
-		dot(star.color, 0.5, { Position = UDim2.new(0, 8, 0.25, 0), ZIndex = 10, Parent = r })
-		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 30, 0, 0), Text = star.name, TextColor3 = star.color, TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 10, Parent = r })
-		text({ Size = UDim2.new(0.42, 0, 1, 0), Position = UDim2.new(0.56, 0, 0, 0), Text = "1 in " .. Format.number(star.chance) .. "   " .. Format.percent(odds[star.id]), TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 10, Parent = r })
-	end
-	text({ Size = UDim2.new(1, -8, 0, 26), LayoutOrder = 100, Text = "MUTATIONS", TextColor3 = BRASS, FontFace = TITLE, Max = 13, ZIndex = 10, Parent = oddsList })
-	local mutationOdds = Odds.exactMutations(luck)
-	for i, mutation in Mutations.List do
-		local r = row(oddsList, 100 + i, 30)
-		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 10, 0, 0), Text = mutation.name .. "  x" .. mutation.mult, TextColor3 = mutation.color, TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 10, Parent = r })
-		text({ Size = UDim2.new(0.42, 0, 1, 0), Position = UDim2.new(0.56, 0, 0, 0), Text = "1 in " .. Format.number(mutation.chance) .. "   " .. Format.percent(mutationOdds[mutation.id]), TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 10, Parent = r })
-	end
-end
-
-local function renderBook()
-	clear(bookList)
-	for order, pattern in Constellations.List do
-		local found = state and state.discovered[pattern.id]
-		local r = row(bookList, order, 72)
-		local maxX, maxY = 0, 0
-		for _, c in pattern.cells do
-			maxX = math.max(maxX, c[1])
-			maxY = math.max(maxY, c[2])
-		end
-		local box = make("Frame", { Size = UDim2.new(0, 60, 0, 60), Position = UDim2.new(0, 6, 0, 6), BackgroundTransparency = 1, ZIndex = 10, Parent = r })
-		local cell = 60 / math.max(maxX + 1, maxY + 1)
-		for _, c in pattern.cells do
-			dot(if found then BRASS else BRASS_DIM, 0, {
-				Size = UDim2.new(0, cell * 0.6, 0, cell * 0.6),
-				Position = UDim2.new(0, c[1] * cell + cell * 0.2, 0, c[2] * cell + cell * 0.2),
-				ZIndex = 10, Parent = box,
-			})
-		end
-		text({
-			Size = UDim2.new(1, -84, 0.5, 0), Position = UDim2.new(0, 76, 0.1, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
-			Text = if found then pattern.name else "Unknown", TextColor3 = if found then PARCH else MUTED, FontFace = TITLE, Max = 15, Parent = r,
-		})
-		text({
-			Size = UDim2.new(1, -84, 0.35, 0), Position = UDim2.new(0, 76, 0.55, 0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
-			Text = if found then "income x" .. pattern.mult else #pattern.cells .. " stars", TextColor3 = MUTED, Max = 14, Parent = r,
-		})
-	end
-	text({
-		Size = UDim2.new(1, -8, 0, 54), LayoutOrder = 999, ZIndex = 10, TextColor3 = MUTED, Max = 14, TextWrapped = true,
-		Text = "A group must be exactly this shape with no extra neighbours, diagonals included. All stars of one kind: another x" .. Constellations.PureBonus .. ".",
-		Parent = bookList,
-	})
-end
-
-local function renderHole()
-	clear(holeList)
-	if not state then
-		return
-	end
-	local cost = Config.RebirthCost(state.rebirths)
-	local progress = math.clamp(state.mass / cost, 0, 1)
-	text({ Size = UDim2.new(1, -8, 0, 30), LayoutOrder = 1, Text = Format.number(state.mass) .. " / " .. Format.number(cost) .. " mass", FontFace = TITLE, Max = 18, ZIndex = 10, Parent = holeList })
-	local bar = make("Frame", { Size = UDim2.new(1, -8, 0, 14), BackgroundColor3 = INK_2, LayoutOrder = 2, ZIndex = 10, Parent = holeList }, { corner(), stroke() })
-	make("Frame", { Size = UDim2.new(progress, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(255, 130, 50), BorderSizePixel = 0, ZIndex = 10, Parent = bar }, { corner() })
-	local lines = {
-		"Feed stars from your catalogue to grow its mass.",
-		string.format("Now: income x%s, luck +%s", 1 + state.rebirths * Config.RebirthIncomeBonus, state.rebirths * Config.RebirthLuckBonus),
-		string.format("After rebirth: income x%s, luck +%s", 1 + (state.rebirths + 1) * Config.RebirthIncomeBonus, (state.rebirths + 1) * Config.RebirthLuckBonus),
-		"Rebirth resets cash, stars, sky and upgrades. Discovered constellations stay.",
-	}
-	for i, line in lines do
-		text({ Size = UDim2.new(1, -8, 0, 36), LayoutOrder = 2 + i, Text = line, TextColor3 = if i == 1 then PARCH else MUTED, TextWrapped = true, Max = 15, ZIndex = 10, Parent = holeList })
-	end
-	local ready = progress >= 1
-	btn(if ready then "primary" else "ghost", { Size = UDim2.new(1, -8, 0, 44), LayoutOrder = 10, Text = if ready then "REBIRTH" else "NOT ENOUGH MASS", ZIndex = 10, Parent = holeList }, function()
-		if ready then
-			ActionEv:FireServer("Rebirth")
-		end
-	end)
-end
-
----------------------------------------------------------------- Render: main
-local function renderSky()
-	clear(sky)
-	local size = state.gridSize
-	local gap = 5
-	skyGrid.CellPadding = UDim2.new(0, gap, 0, gap)
-	skyGrid.CellSize = UDim2.new(1 / size, -gap, 1 / size, -gap)
-
-	local inGroup = {}
-	for _, group in state.groups do
-		for _, key in group.cells do
-			inGroup[key] = group
-		end
-	end
-
-	for y = 1, size do
-		for x = 1, size do
-			local key = Sky.key(x, y)
-			local cell = state.grid[key]
-			local star, mutation = Items.parse(cell and cell.id)
-			local group = inGroup[key]
-			local cellButton = make("TextButton", {
-				LayoutOrder = y * 100 + x, Text = "", AutoButtonColor = true,
-				BackgroundColor3 = if star then INK_2 else Color3.fromRGB(16, 18, 31),
-				Parent = sky,
-			}, { corner() })
-			if group then
-				stroke(if group.pure then SKY_BLUE else BRASS, 1.5).Parent = cellButton
+local function open(w, force: boolean?)
+	local willShow = force or not w.frame.Visible
+	if willShow and w.group == "center" then
+		for _, other in windows do
+			if other.group == "center" then
+				other.frame.Visible = false
 			end
-			if star then
-				local d = dot(star.color, math.min(0.28 + star.index * 0.05, 0.72), {
-					AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), Parent = cellButton,
-				})
-				if mutation.id ~= "normal" then
-					stroke(mutation.color, 2).Parent = d
-				end
-				-- evolution ticks
-				local level = Evolution.level(cell.age or 0)
-				local ticks = make("Frame", { Size = UDim2.new(0.6, 0, 0.07, 0), Position = UDim2.new(0.2, 0, 0.86, 0), BackgroundTransparency = 1, Parent = cellButton })
-				make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.04, 0), Parent = ticks })
-				for i = 1, Evolution.MaxLevel do
-					make("Frame", { Size = UDim2.new(0.16, 0, 1, 0), BorderSizePixel = 0, BackgroundColor3 = if i <= level then BRASS else BRASS_DIM, BackgroundTransparency = if i <= level then 0 else 0.6, Parent = ticks })
-				end
-			end
-			cellButton.Activated:Connect(function()
-				if selected and (state.inventory[selected] or 0) > 0 and not (cell and cell.id == selected) then
-					ActionEv:FireServer("Place", key, selected)
-				elseif cell then
-					ActionEv:FireServer("Remove", key)
-				end
-			end)
 		end
+	end
+	w.frame.Visible = willShow
+	if willShow and renderers[w] then
+		renderers[w]()
 	end
 end
 
-local function renderInventory()
-	clear(invList)
-	if selected and not state.inventory[selected] then
-		selected = nil
-	end
+---------------------------------------------------------------- Tip card (closable)
+local tip = panelFrame({ Size = UDim2.new(0.17, 0, 0.14, 0), Position = UDim2.new(0, 16, 0.64, 0), Parent = gui })
+bind(text({ Size = UDim2.new(1, -30, 1, 0), TextColor3 = TEXT, FontFace = BODY_SEMI, Max = 15, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Parent = tip }), "tip")
+btn(RED, { Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -24, 0, -2), Text = "X", Max = 14, Parent = tip }, function()
+	tip.Visible = false
+end)
+
+---------------------------------------------------------------- Row helpers
+local function row(parent: Instance, order: number, height: number, color: Color3?)
+	return make("Frame", { Size = UDim2.new(1, 0, 0, height), BackgroundColor3 = color or PANEL_2, LayoutOrder = order, ZIndex = 21, Parent = parent }, { corner(12), stroke(LINE, 1) })
+end
+
+local function sortedInventory(filter: ((string) -> boolean)?): { string }
 	local keys = {}
+	if not state then
+		return keys
+	end
 	for key in state.inventory do
-		if Items.parse(key) then
+		if Items.parse(key) and (not filter or filter(key)) then
 			table.insert(keys, key)
 		end
 	end
 	table.sort(keys, function(a, b)
 		return Items.rank(a) > Items.rank(b)
 	end)
+	return keys
+end
+
+-- one inventory row: icon, bold name, subtext, count. Returns the row (a TextButton).
+local function itemRow(parent: Instance, order: number, key: string, subText: string, highlighted: boolean?)
+	local star, mutation = Items.parse(key)
+	local r = make("TextButton", {
+		Size = UDim2.new(1, 0, 0, 58), LayoutOrder = order, Text = "", AutoButtonColor = true, ZIndex = 21,
+		BackgroundColor3 = if highlighted then Color3.fromRGB(220, 236, 255) else WHITE, Parent = parent,
+	}, { corner(12), stroke(if highlighted then BLUE else LINE, if highlighted then 2.5 else 1.5) })
+	starIcon(star, mutation, { Size = UDim2.new(0, 46, 0, 46), Position = UDim2.new(0, 6, 0, 6), ZIndex = 22, Parent = r })
+	text({ Size = UDim2.new(1, -120, 0, 26), Position = UDim2.new(0, 58, 0, 6), Text = Lang.item(lang, key), FontFace = TITLE, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
+	text({ Size = UDim2.new(1, -120, 0, 18), Position = UDim2.new(0, 58, 0, 33), Text = subText, FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = r })
+	text({ Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -60, 0, 0), Text = "x" .. (state.inventory[key] or 0), FontFace = TITLE, TextColor3 = if mutation.id ~= "normal" then shade(mutation.color, 0.2) else BLUE, Max = 20, ZIndex = 22, Parent = r })
+	return r
+end
+
+local function itemSubText(key: string): string
+	return t("perSecShort", Format.number(Items.income(key))) .. "   ·   " .. t("sellsFor", Format.number(Items.income(key) * Config.SellMultiplier))
+end
+
+---------------------------------------------------------------- Catalogue
+local sell1Button, sellAllButton
+renderers[catalogueW] = function()
+	local body = catalogueW.body
+	clear(body)
+	if selected and not state.inventory[selected] then
+		selected = nil
+	end
+	local keys = sortedInventory()
+	if #keys == 0 then
+		text({ Size = UDim2.new(1, 0, 0, 40), Text = t("emptyCatalogue"), TextColor3 = MUTED, Max = 16, ZIndex = 21, Parent = body })
+	end
 	for order, key in keys do
-		local star, mutation = Items.parse(key)
-		local isSelected = selected == key
-		local r = make("TextButton", {
-			Size = UDim2.new(1, -6, 0, 30), LayoutOrder = order, Text = "", AutoButtonColor = true,
-			BackgroundColor3 = if isSelected then Color3.fromRGB(48, 42, 30) else INK_2, Parent = invList,
-		}, { corner(), stroke(if isSelected then BRASS else Color3.fromRGB(34, 37, 56)) })
-		local d = dot(star.color, 0.5, { Position = UDim2.new(0, 8, 0.25, 0), Parent = r })
-		if mutation.id ~= "normal" then
-			stroke(mutation.color, 2).Parent = d
-		end
-		text({ Size = UDim2.new(0.7, -30, 1, 0), Position = UDim2.new(0, 30, 0, 0), Text = Items.name(key), TextColor3 = star.color, TextXAlignment = Enum.TextXAlignment.Left, Max = 15, Parent = r })
-		text({ Size = UDim2.new(0.3, -8, 1, 0), Position = UDim2.new(0.7, 0, 0, 0), Text = "x" .. state.inventory[key], TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Right, FontFace = TITLE, Max = 13, Parent = r })
-		r.Activated:Connect(function()
+		itemRow(body, order, key, itemSubText(key), selected == key).Activated:Connect(function()
 			selected = if selected == key then nil else key
-			if selected and not skyHolder.Visible then
-				open(skyHolder)
-			end
-			renderInventory()
+			renderers[catalogueW]()
 		end)
 	end
+	sellBar.Visible = selected ~= nil
+	sellInfo.Text = if selected then Lang.item(lang, selected) else ""
+	sell1Button.Text = t("sell1")
+	sellAllButton.Text = t("sellAll")
+end
+sell1Button = btn(GOLD, { Size = UDim2.new(0.48, 0, 1, 0), Text = "", ZIndex = 22, Parent = sellBar }, function()
+	if selected then
+		ActionEv:FireServer("Sell", selected, 1)
+	end
+end)
+sellAllButton = btn(RED, { Size = UDim2.new(0.48, 0, 1, 0), Position = UDim2.new(0.52, 0, 0, 0), Text = "", ZIndex = 22, Parent = sellBar }, function()
+	if selected and state then
+		ActionEv:FireServer("Sell", selected, state.inventory[selected] or 0)
+	end
+end)
 
-	actionsFrame.Visible = selected ~= nil
-	if not selected then
-		detail.Text = if #keys > 0 then "Nothing selected" else "Roll to find stars"
+---------------------------------------------------------------- My Sky (overview of the plot)
+renderers[skyW] = function()
+	local body = skyW.body
+	clear(body)
+	if not state.hasPlot then
+		text({ Size = UDim2.new(1, 0, 0, 50), Text = t("skyNoPlot"), TextColor3 = MUTED, TextWrapped = true, Max = 18, ZIndex = 21, Parent = body })
 		return
 	end
-	local star = Items.parse(selected)
-	detail.Text = string.format("+%s/s on the sky  ·  sells for %s", Format.number(Items.income(selected)), Format.number(Items.income(selected) * Config.SellMultiplier))
-	local nextStar = Stars.List[star.index + 1]
-	forgeButton.Text = if nextStar
-		then string.format("FORGE %d/%d", math.min(state.inventory[selected], Config.ForgeAmount), Config.ForgeAmount)
-		else "FORGE MAX"
-	feedButton.Text = "FEED ALL"
+	text({ Size = UDim2.new(1, 0, 0, 24), Text = t("skyHint"), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, LayoutOrder = 1, ZIndex = 21, Parent = body })
+	local holder = make("Frame", { Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 21, Parent = body })
+	local grid = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(150, 210, 140), ZIndex = 21, Parent = holder }, {
+		corner(14), stroke(Color3.fromRGB(120, 180, 110), 2), pad(8), make("UIAspectRatioConstraint", { AspectRatio = 1 }),
+	})
+	-- square that fits the window width
+	holder.Size = UDim2.new(1, 0, 0, math.max(200, body.AbsoluteSize.X - 16))
+	local size = state.gridSize
+	make("UIGridLayout", { CellSize = UDim2.new(1 / size, -6, 1 / size, -6), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+	local inGroup = {}
+	for _, group in state.groups do
+		for _, key in group.cells do
+			inGroup[key] = group
+		end
+	end
+	for y = 1, size do
+		for x = 1, size do
+			local key = Sky.key(x, y)
+			local cell = state.grid[key]
+			local cellFrame = make("Frame", { LayoutOrder = y * 100 + x, BackgroundColor3 = WHITE, BackgroundTransparency = 0.25, ZIndex = 22, Parent = grid }, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+			local group = inGroup[key]
+			if group then
+				stroke(if group.pure then BLUE else GOLD, 3).Parent = cellFrame
+			end
+			local star, mutation = Items.parse(cell and cell.id)
+			if star then
+				starIcon(star, mutation, { Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.05, 0), ZIndex = 23, Parent = cellFrame })
+				local level = Evolution.level(cell.age or 0)
+				text({ Size = UDim2.new(0.6, 0, 0.26, 0), Position = UDim2.new(0.2, 0, 0.74, 0), Text = "Lv" .. level, FontFace = TITLE, TextColor3 = TEXT, Max = 13, ZIndex = 24, Parent = cellFrame })
+			end
+		end
+	end
 end
 
-local function renderUpgrades()
-	luckUpgrade.Text = if state.luckLevel >= Config.MaxLuckLevel
-		then "LUCK  MAX"
-		else string.format("LUCK +%s   %s", Config.LuckPerLevel, Format.number(Config.LuckCost(state.luckLevel)))
-	gridUpgrade.Text = if state.gridSize >= Config.MaxGridSize
-		then "SKY  MAX"
-		else string.format("SKY %dx%d   %s", state.gridSize + 1, state.gridSize + 1, Format.number(Config.GridCost(state.gridSize)))
+---------------------------------------------------------------- Picker (from a pedestal)
+renderers[pickerW] = function()
+	local body = pickerW.body
+	clear(body)
+	local keys = sortedInventory()
+	if #keys == 0 then
+		text({ Size = UDim2.new(1, 0, 0, 40), Text = t("pickEmpty"), TextColor3 = MUTED, Max = 16, ZIndex = 21, Parent = body })
+	end
+	for order, key in keys do
+		itemRow(body, order, key, itemSubText(key)).Activated:Connect(function()
+			if pickerCell then
+				ActionEv:FireServer("Place", pickerCell, key)
+			end
+			pickerW.frame.Visible = false
+		end)
+	end
 end
 
+---------------------------------------------------------------- Upgrades
+renderers[upgradesW] = function()
+	local body = upgradesW.body
+	clear(body)
+	local function upgrade(order: number, nameKey: string, desc: string, maxed: boolean, cost: number, action: string, color: Color3)
+		local r = row(body, order, 70, WHITE)
+		text({ Size = UDim2.new(0.6, 0, 0, 28), Position = UDim2.new(0, 12, 0, 8), Text = t(nameKey), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.6, 0, 0, 20), Position = UDim2.new(0, 12, 0, 40), Text = desc, FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 15, ZIndex = 22, Parent = r })
+		btn(if maxed then GREY else color, {
+			Size = UDim2.new(0.36, 0, 0, 46), Position = UDim2.new(0.62, 0, 0, 12), ZIndex = 22, Max = 17,
+			Text = if maxed then t("upMax") else t("buy", Format.number(cost)), Parent = r,
+		}, function()
+			if not maxed then
+				ActionEv:FireServer(action)
+			end
+		end)
+	end
+	local luckNow = 1 + state.luckLevel * Config.LuckPerLevel
+	upgrade(1, "upLuck", t("upLuckDesc", luckNow, luckNow + Config.LuckPerLevel), state.luckLevel >= Config.MaxLuckLevel, Config.LuckCost(state.luckLevel), "BuyLuck", MINT)
+	local speedNow = math.floor(Config.RollCooldown(state.rollSpeedLevel) * 100) / 100
+	local speedNext = math.floor(Config.RollCooldown(state.rollSpeedLevel + 1) * 100) / 100
+	upgrade(2, "upSpeed", t("upSpeedDesc", speedNow, speedNext), state.rollSpeedLevel >= Config.MaxRollSpeedLevel, Config.RollSpeedCost(state.rollSpeedLevel), "BuySpeed", BLUE)
+	upgrade(3, "upMulti", t("upMultiDesc", 1 + state.multiRollLevel, 2 + state.multiRollLevel), state.multiRollLevel >= Config.MaxMultiRollLevel, Config.MultiRollCost(state.multiRollLevel), "BuyMulti", LILAC)
+	upgrade(4, "upSky", t("upSkyDesc", state.gridSize, state.gridSize, state.gridSize + 1, state.gridSize + 1), state.gridSize >= Config.MaxGridSize, Config.GridCost(state.gridSize), "BuyGrid", GOLD)
+end
+
+---------------------------------------------------------------- Star Index (+ roll rewards)
+local indexTab = "stars"
+renderers[indexW] = function()
+	local body = indexW.body
+	clear(body)
+	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
+	btn(if indexTab == "stars" then BLUE else GREY, { Size = UDim2.new(0.49, 0, 1, 0), Text = t("tabStars"), ZIndex = 22, Parent = tabs }, function()
+		indexTab = "stars"
+		renderers[indexW]()
+	end)
+	btn(if indexTab == "rolls" then BLUE else GREY, { Size = UDim2.new(0.49, 0, 1, 0), Position = UDim2.new(0.51, 0, 0, 0), Text = t("tabRolls"), ZIndex = 22, Parent = tabs }, function()
+		indexTab = "rolls"
+		renderers[indexW]()
+	end)
+
+	if indexTab == "stars" then
+		for order, mutation in Mutations.List do
+			local found = 0
+			for _, star in Stars.List do
+				if state.index[Items.key(star.id, mutation.id)] then
+					found += 1
+				end
+			end
+			local complete = found == #Stars.List
+			local claimed = state.indexClaims[mutation.id] == true
+			local r = row(body, order, 120, WHITE)
+			text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
+			text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
+			btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
+				if complete and not claimed then
+					ActionEv:FireServer("ClaimIndexRow", mutation.id)
+				end
+			end)
+			local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 56), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
+			make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), Parent = strip })
+			for _, star in Stars.List do
+				local key = Items.key(star.id, mutation.id)
+				if state.index[key] then
+					starIcon(star, mutation, { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), ZIndex = 23, Parent = strip })
+				else
+					local unknown = make("Frame", { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+					make("TextLabel", {
+						Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = PANEL_2, Text = "?", TextScaled = true,
+						FontFace = TITLE, TextColor3 = GREY, ZIndex = 24, Parent = unknown,
+					}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+				end
+			end
+		end
+	else
+		for i, milestone in Config.RollMilestones do
+			local claimed = state.milestones[tostring(i)] == true
+			local ready = state.totalRolls >= milestone.rolls
+			local r = row(body, i, 64, WHITE)
+			text({ Size = UDim2.new(0.6, 0, 0, 26), Position = UDim2.new(0, 12, 0, 6), Text = t("rollsReq", Format.number(milestone.rolls)), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
+			local reward = if milestone.cash then t("rewardCash", Format.number(milestone.cash)) else t("rewardLuck", milestone.luck)
+			text({ Size = UDim2.new(0.6, 0, 0, 20), Position = UDim2.new(0, 12, 0, 34), Text = reward .. "    " .. Format.number(math.min(state.totalRolls, milestone.rolls)) .. "/" .. Format.number(milestone.rolls), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = r })
+			btn(if claimed then GREY elseif ready then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 40), Position = UDim2.new(0.64, 0, 0, 12), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
+				if ready and not claimed then
+					ActionEv:FireServer("ClaimMilestone", i)
+				end
+			end)
+		end
+	end
+end
+
+---------------------------------------------------------------- Constellation book
+renderers[bookW] = function()
+	local body = bookW.body
+	clear(body)
+	for order, pattern in Constellations.List do
+		local found = state and state.discovered[pattern.id]
+		local r = row(body, order, 76, WHITE)
+		local maxX, maxY = 0, 0
+		for _, c in pattern.cells do
+			maxX = math.max(maxX, c[1])
+			maxY = math.max(maxY, c[2])
+		end
+		local box = make("Frame", { Size = UDim2.new(0, 62, 0, 62), Position = UDim2.new(0, 7, 0, 7), BackgroundColor3 = PANEL_2, ZIndex = 22, Parent = r }, { corner(10) })
+		local cell = 56 / math.max(maxX + 1, maxY + 1)
+		for _, c in pattern.cells do
+			make("Frame", {
+				Size = UDim2.new(0, cell * 0.6, 0, cell * 0.6), Position = UDim2.new(0, 3 + c[1] * cell + cell * 0.2, 0, 3 + c[2] * cell + cell * 0.2),
+				BackgroundColor3 = if found then GOLD else GREY, ZIndex = 23, Parent = box,
+			}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		end
+		text({ Size = UDim2.new(1, -90, 0, 28), Position = UDim2.new(0, 80, 0, 10), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22, FontFace = TITLE, Max = 19,
+			Text = if found then Lang.constellation(lang, pattern) else t("unknown"), TextColor3 = if found then TEXT else MUTED, Parent = r })
+		text({ Size = UDim2.new(1, -90, 0, 20), Position = UDim2.new(0, 80, 0, 42), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22, FontFace = BODY_SEMI, Max = 15,
+			Text = if found then t("incomeX", pattern.mult) else t("nStars", #pattern.cells), TextColor3 = MUTED, Parent = r })
+	end
+	text({ Size = UDim2.new(1, 0, 0, 60), LayoutOrder = 999, ZIndex = 21, TextColor3 = MUTED, FontFace = BODY_SEMI, Max = 14, TextWrapped = true, Text = t("bookHint", Constellations.PureBonus), Parent = body })
+end
+
+---------------------------------------------------------------- Odds
+renderers[oddsW] = function()
+	local body = oddsW.body
+	clear(body)
+	local luck = if state then state.luck else 1
+	local odds = Odds.exact(luck)
+	for i = #Stars.List, 1, -1 do
+		local star = Stars.List[i]
+		local r = row(body, -i, 40, WHITE)
+		starIcon(star, nil, { Size = UDim2.new(0, 32, 0, 32), Position = UDim2.new(0, 4, 0, 4), ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 44, 0, 0), Text = Lang.star(lang, star), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(star.chance)) .. "   " .. Format.percent(odds[star.id]), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+	end
+	text({ Size = UDim2.new(1, 0, 0, 28), LayoutOrder = 100, Text = t("mutations"), TextColor3 = BLUE, FontFace = TITLE, Max = 16, ZIndex = 21, Parent = body })
+	local mutationOdds = Odds.exactMutations(luck)
+	for i, mutation in Mutations.List do
+		local r = row(body, 100 + i, 40, WHITE)
+		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 12, 0, 0), Text = Lang.mutation(lang, mutation) .. "  x" .. mutation.mult, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(mutation.chance)) .. "   " .. Format.percent(mutationOdds[mutation.id]), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+	end
+end
+
+---------------------------------------------------------------- Forge (only at the forge table)
+renderers[forgeW] = function()
+	local body = forgeW.body
+	clear(body)
+	text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 0, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+	for order, key in sortedInventory() do
+		local star, mutation = Items.parse(key)
+		local nextStar = Stars.List[star.index + 1]
+		local have = state.inventory[key]
+		local sub = if nextStar
+			then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
+			else t("forgeMax")
+		local r = itemRow(body, order, key, sub)
+		if nextStar then
+			local ready = have >= Config.ForgeAmount
+			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 120, 0, 40), Position = UDim2.new(1, -184, 0, 9), ZIndex = 23, Max = 14,
+				Text = t("forgeBtn", Format.number(nextStar.income * Config.ForgeCostMult)), Parent = r }, function()
+				ActionEv:FireServer("Forge", key)
+			end)
+		end
+	end
+end
+
+---------------------------------------------------------------- Black Hole (only at the altar)
+renderers[holeW] = function()
+	local body = holeW.body
+	clear(body)
+	local cost = Config.RebirthCost(state.rebirths)
+	local progress = math.clamp(state.mass / cost, 0, 1)
+	text({ Size = UDim2.new(1, 0, 0, 30), LayoutOrder = 1, Text = t("mass", Format.number(state.mass), Format.number(cost)), FontFace = TITLE, Max = 20, ZIndex = 21, Parent = body })
+	local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = PANEL_2, LayoutOrder = 2, ZIndex = 21, Parent = body }, { corner(9), stroke(LINE, 1.5) })
+	make("Frame", { Size = UDim2.new(progress, 0, 1, 0), BackgroundColor3 = LILAC, BorderSizePixel = 0, ZIndex = 22, Parent = bar }, { corner(9) })
+	local lines = {
+		t("holeNow", 1 + state.rebirths * Config.RebirthIncomeBonus, state.rebirths * Config.RebirthLuckBonus),
+		t("holeNext", 1 + (state.rebirths + 1) * Config.RebirthIncomeBonus, (state.rebirths + 1) * Config.RebirthLuckBonus),
+		t("holeWarn"),
+	}
+	for i, line in lines do
+		text({ Size = UDim2.new(1, 0, 0, if i == 3 then 36 else 22), LayoutOrder = 2 + i, Text = line, TextColor3 = if i == 1 then TEXT else MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+	end
+	local ready = progress >= 1
+	btn(if ready then LILAC else GREY, { Size = UDim2.new(1, 0, 0, 48), LayoutOrder = 10, Text = if ready then t("rebirth") else t("notEnough"), ZIndex = 21, Max = 20, Parent = body }, function()
+		if ready then
+			ActionEv:FireServer("Rebirth")
+		end
+	end)
+	text({ Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 11, Text = t("holeFeed"), TextColor3 = MUTED, FontFace = BODY_SEMI, Max = 15, ZIndex = 21, Parent = body })
+	for order, key in sortedInventory() do
+		local mass = Items.income(key) * Config.SellMultiplier
+		local r = itemRow(body, 20 + order, key, "+" .. Format.number(mass))
+		btn(LILAC, { Size = UDim2.new(0, 70, 0, 40), Position = UDim2.new(1, -212, 0, 9), ZIndex = 23, Max = 12, Text = t("feed1"), Parent = r }, function()
+			ActionEv:FireServer("Feed", key, 1)
+		end)
+		btn(shade(LILAC, 0.15), { Size = UDim2.new(0, 70, 0, 40), Position = UDim2.new(1, -136, 0, 9), ZIndex = 23, Max = 12, Text = t("feedAll"), Parent = r }, function()
+			ActionEv:FireServer("Feed", key, state.inventory[key] or 0)
+		end)
+	end
+end
+
+---------------------------------------------------------------- Bottom dock
+local dock = make("Frame", { Size = UDim2.new(0.72, 0, 0, 52), Position = UDim2.new(0.14, 0, 1, -64), BackgroundTransparency = 1, Parent = gui })
+make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.01, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = dock })
+for order, entry in { { "catalogue", catalogueW, BLUE }, { "mySky", skyW, MINT }, { "upgrades", upgradesW, GOLD }, { "index", indexW, LILAC }, { "constellations", bookW, BLUE }, { "odds", oddsW, GREY } } do
+	bind(btn(entry[3], { Size = UDim2.new(0.158, 0, 1, 0), LayoutOrder = order, Max = 17, Parent = dock }, function()
+		open(entry[2])
+	end), entry[1])
+end
+
+---------------------------------------------------------------- Render
 local function canAutoRoll(): boolean
-	return Config.GamePasses.AutoRoll == 0 or (state ~= nil and state.passes.AutoRoll == true)
+	return state ~= nil and state.totalRolls >= Config.AutoRollUnlock
 end
 
-local function render()
+local function renderTelescope()
+	local multi = if state then 1 + state.multiRollLevel else 1
+	rollButton.Text = if multi > 1 then t("rollN", multi) else t("roll")
+	if not canAutoRoll() then
+		autoRoll = false
+		autoButton.Text = t("autoLocked", if state then math.min(state.totalRolls, Config.AutoRollUnlock) else 0, Config.AutoRollUnlock)
+		autoButton.BackgroundColor3 = GREY
+	else
+		autoButton.Text = if autoRoll then t("autoOn") else t("autoOff")
+		autoButton.BackgroundColor3 = if autoRoll then MINT else BLUE
+	end
+	rollsLine.Text = t("totalRolls", Format.number(if state then state.totalRolls else 0))
+	if lastResult then
+		local best = lastResult[1]
+		for _, key in lastResult do
+			if Items.chance(key) > Items.chance(best) then
+				best = key
+			end
+		end
+		local star = Items.parse(best)
+		resultName.Text = Lang.item(lang, best)
+		resultName.TextColor3 = shade(star.color, 0.25)
+		resultChance.Text = t("oneIn", Format.number(Items.chance(best))) .. (if #lastResult > 1 then "   " .. t("andMore", #lastResult - 1) else "")
+	end
+end
+
+render = function()
 	if not state then
 		return
 	end
 	incomeValue.Text = "+" .. Format.number(state.income)
 	luckValue.Text = "x" .. (math.floor(state.luck * 100 + 0.5) / 100)
+	rollsValue.Text = Format.number(state.totalRolls)
 	rebirthValue.Text = tostring(state.rebirths)
-	renderSky()
-	renderInventory()
-	renderUpgrades()
-	if oddsFrame.Visible then
-		renderOdds()
+	renderTelescope()
+	for _, w in windows do
+		if w.frame.Visible and renderers[w] then
+			renderers[w]()
+		end
 	end
-	if bookFrame.Visible then
-		renderBook()
-	end
-	if holeFrame.Visible then
-		renderHole()
-	end
-	autoButton.Text = if autoRoll then "AUTO  ON" else "AUTO  OFF"
 end
 
 ---------------------------------------------------------------- Roll
-local function showResult(key: string)
-	local star = Items.parse(key)
-	resultName.Text = Items.name(key)
-	resultName.TextColor3 = star.color
-	resultChance.Text = "1 in " .. Format.number(Items.chance(key))
-	resultName.Size = UDim2.new(1, 0, 0.17, 0)
-	TweenService:Create(resultName, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = UDim2.new(1, 0, 0.14, 0) }):Play()
-end
-
 local function doRoll()
 	if rolling then
 		return
 	end
 	rolling = true
 	local result = nil
+	local done = false
 	task.spawn(function()
 		result = RollFn:InvokeServer()
+		done = true
 	end)
 	local started = os.clock()
-	while (os.clock() - started < 0.6 or result == nil) and os.clock() - started < 5 do
+	while (os.clock() - started < 0.5 or not done) and os.clock() - started < 5 do
 		local fake = Stars.List[math.random(1, 6)]
-		resultName.Text = fake.name
-		resultName.TextColor3 = MUTED
+		resultName.Text = Lang.star(lang, fake)
+		resultName.TextColor3 = GREY
 		resultChance.Text = "..."
 		task.wait(0.06)
 	end
-	if result then
-		showResult(result)
+	if type(result) == "table" and #result > 0 then
+		lastResult = result
+		resultName.Size = UDim2.new(1, 0, 0.2, 0)
+		TweenService:Create(resultName, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = UDim2.new(1, 0, 0.16, 0) }):Play()
 	end
-	task.wait(math.max(0, Config.RollCooldown - (os.clock() - started)))
+	renderTelescope()
+	local cooldown = Config.RollCooldown(if state then state.rollSpeedLevel else 0)
+	task.wait(math.max(0, cooldown - (os.clock() - started)))
 	rolling = false
 end
 
----------------------------------------------------------------- Buttons
-rollButton = btn("primary", { Size = UDim2.new(1, 0, 0.17, 0), Position = UDim2.new(0, 0, 0.24, 0), Text = "ROLL", Max = 30, Parent = left }, doRoll)
-autoButton = btn("ghost", { Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.45, 0), Text = "AUTO  OFF", Parent = left }, function()
+rollButton = btn(BLUE, { Size = UDim2.new(1, 0, 0.24, 0), Position = UDim2.new(0, 0, 0.38, 0), Text = "", Max = 30, Parent = telescope }, doRoll)
+autoButton = btn(GREY, { Size = UDim2.new(1, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.66, 0), Text = "", Max = 18, Parent = telescope }, function()
 	if canAutoRoll() then
 		autoRoll = not autoRoll
-		render()
-	elseif Config.GamePasses.AutoRoll ~= 0 then
-		MarketplaceService:PromptGamePassPurchase(player, Config.GamePasses.AutoRoll)
+		renderTelescope()
 	end
-end)
-btn("ghost", { Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.59, 0), Text = "ODDS", Parent = left }, function()
-	open(oddsFrame)
-	renderOdds()
-end)
-btn("ghost", { Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.73, 0), Text = "CONSTELLATIONS", Parent = left }, function()
-	open(bookFrame)
-	renderBook()
-end)
-btn("ghost", { Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.87, 0), Text = "BLACK HOLE", Parent = left }, function()
-	open(holeFrame)
-	renderHole()
-end)
-
-sellOne = btn("ghost", { Size = UDim2.new(0.48, 0, 0.42, 0), Text = "SELL 1", Max = 14, Parent = actionsFrame }, function()
-	if selected then
-		ActionEv:FireServer("Sell", selected, 1)
-	end
-end)
-sellAll = btn("danger", { Size = UDim2.new(0.48, 0, 0.42, 0), Position = UDim2.new(0.52, 0, 0, 0), Text = "SELL ALL", Max = 14, Parent = actionsFrame }, function()
-	if selected and state then
-		ActionEv:FireServer("Sell", selected, state.inventory[selected] or 0)
-	end
-end)
-forgeButton = btn("primary", { Size = UDim2.new(0.48, 0, 0.42, 0), Position = UDim2.new(0, 0, 0.54, 0), Text = "FORGE", Max = 14, Parent = actionsFrame }, function()
-	if selected then
-		ActionEv:FireServer("Forge", selected)
-	end
-end)
-feedButton = btn("ghost", { Size = UDim2.new(0.48, 0, 0.42, 0), Position = UDim2.new(0.52, 0, 0.54, 0), Text = "FEED ALL", Max = 14, Parent = actionsFrame }, function()
-	if selected and state then
-		ActionEv:FireServer("Feed", selected, state.inventory[selected] or 0)
-	end
-end)
-
-local skyToggle = btn("primary", { Size = UDim2.new(0.24, 0, 1, 0), Text = "MY SKY", Max = 16, LayoutOrder = 0, Parent = bottom }, function()
-	open(skyHolder)
-end)
-local _ = skyToggle
-luckUpgrade = btn("good", { Size = UDim2.new(0.36, 0, 1, 0), Text = "", Max = 16, LayoutOrder = 1, Parent = bottom }, function()
-	ActionEv:FireServer("BuyLuck")
-end)
-gridUpgrade = btn("ghost", { Size = UDim2.new(0.36, 0, 1, 0), Text = "", Max = 16, LayoutOrder = 2, Parent = bottom }, function()
-	ActionEv:FireServer("BuyGrid")
 end)
 
 ---------------------------------------------------------------- Events
+local firstState = true
 StateEv.OnClientEvent:Connect(function(newState)
 	state = newState
-	render()
+	if firstState then
+		firstState = false
+		setLang(if state.lang == "en" or state.lang == "ru" then state.lang else autoLang)
+		tip.Visible = not state.hasPlot
+	else
+		render()
+	end
 end)
 
 local announceTween = nil
-local function showAnnounce(message: string, color: Color3?)
+AnnounceEv.OnClientEvent:Connect(function(key: string, args, color: Color3?)
 	if announceTween then
 		announceTween:Cancel()
 	end
-	announce.Text = message
-	announce.TextColor3 = color or PARCH
+	announce.Text = Lang.resolve(lang, key, args)
+	announce.TextColor3 = if color then shade(color, 0.2) else TEXT
 	announce.TextTransparency = 0
-	announce.TextStrokeTransparency = 0.35
-	announceTween = TweenService:Create(announce, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 4), {
+	announce.TextStrokeTransparency = 0
+	announceTween = TweenService:Create(announce, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 3.5), {
 		TextTransparency = 1, TextStrokeTransparency = 1,
 	})
 	announceTween:Play()
-end
-AnnounceEv.OnClientEvent:Connect(showAnnounce)
-
--- World prompts
-ProximityPromptService.PromptTriggered:Connect(function(prompt)
-	if prompt.Name == "BlackHolePrompt" then
-		open(holeFrame)
-		renderHole()
-	elseif prompt.Name == "ObservatoryPrompt" then
-		open(bookFrame)
-		renderBook()
-	elseif prompt.Name == "ForgePrompt" then
-		showAnnounce(string.format("Select a star in your catalogue and press FORGE: %d of the same make the next one", Config.ForgeAmount), BRASS)
-	end
 end)
 
--- Comets
-CometEv.OnClientEvent:Connect(function(lifetime: number)
-	local y = math.random(18, 55) / 100
-	local comet = make("TextButton", {
-		Size = UDim2.new(0, 120, 0, 40), Position = UDim2.new(1.02, 0, y, 0), AnchorPoint = Vector2.new(0, 0.5),
-		BackgroundTransparency = 1, Text = "", ZIndex = 20, Parent = gui,
-	})
-	local tail = make("Frame", { Size = UDim2.new(1, -20, 0, 6), Position = UDim2.new(0, 20, 0.5, -3), BackgroundColor3 = SKY_BLUE, BorderSizePixel = 0, ZIndex = 20, Parent = comet }, {
-		corner(3),
-		make("UIGradient", { Transparency = NumberSequence.new(0, 1) }),
-	})
-	dot(Color3.fromRGB(235, 248, 255), 0, { Size = UDim2.new(0, 26, 0, 26), Position = UDim2.new(0, 0, 0.5, -13), ZIndex = 21, Parent = comet })
-	local _ = tail
-	TweenService:Create(comet, TweenInfo.new(lifetime, Enum.EasingStyle.Linear), { Position = UDim2.new(-0.12, 0, y + 0.12, 0) }):Play()
-	comet.Activated:Connect(function()
-		ActionEv:FireServer("CatchComet")
-		comet:Destroy()
-	end)
-	task.delay(lifetime, function()
-		if comet.Parent then
-			comet:Destroy()
-		end
-	end)
+PickerEv.OnClientEvent:Connect(function(cellKey: string)
+	pickerCell = cellKey
+	open(pickerW, true)
+end)
+
+ProximityPromptService.PromptTriggered:Connect(function(prompt)
+	if prompt.Name == "ForgePrompt" then
+		open(forgeW, true)
+	elseif prompt.Name == "BlackHolePrompt" then
+		open(holeW, true)
+	end
 end)
 
 -- Cash readout
@@ -2029,15 +2994,94 @@ task.spawn(function()
 	update()
 end)
 
--- Star Shower timer + auto roll
+---------------------------------------------------------------- World text, prompts, location windows (2x a second)
+local function partAt(path: { string }): BasePart?
+	local node: Instance? = workspace
+	for _, name in path do
+		node = node and node:FindFirstChild(name)
+	end
+	return if node and node:IsA("BasePart") then node else nil
+end
+
+local function distanceTo(part: BasePart?): number
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root or not part then
+		return math.huge
+	end
+	return (root.Position - part.Position).Magnitude
+end
+
 task.spawn(function()
 	while true do
+		for _, label in CollectionService:GetTagged("WorldText") do
+			local owner = label:GetAttribute("Owner")
+			if owner ~= nil then
+				label.Text = if owner ~= "" then t("signPlot", owner, Format.number(label:GetAttribute("Income") or 0)) else t("signFree")
+			else
+				label.Text = t(label:GetAttribute("LangKey") or "")
+			end
+		end
+		for _, prompt in CollectionService:GetTagged("WorldPrompt") do
+			prompt.ActionText = t(prompt:GetAttribute("LangKey") or "")
+			local objKey = prompt:GetAttribute("ObjKey")
+			prompt.ObjectText = if objKey then t(objKey) else ""
+			local plotIndex = prompt:GetAttribute("Plot")
+			if plotIndex then
+				local plotFolder = prompt:FindFirstAncestor("Plot" .. plotIndex)
+				prompt.Enabled = plotFolder ~= nil and plotFolder:GetAttribute("OwnerId") == player.UserId
+			end
+		end
+		if isOpen(forgeW) and distanceTo(partAt({ "Map", "Forge", "ForgeTable" })) > Config.ForgeReach + 6 then
+			forgeW.frame.Visible = false
+		end
+		if isOpen(holeW) and distanceTo(partAt({ "Map", "BlackHoleIsland", "Altar" })) > Config.AltarReach + 6 then
+			holeW.frame.Visible = false
+		end
+
 		local remaining = (ReplicatedStorage:GetAttribute("ShowerEndsAt") or 0) - workspace:GetServerTimeNow()
-		showerBanner.Text = if remaining > 0 then "STAR SHOWER  x" .. Config.ShowerLuck .. " LUCK  " .. Format.time(remaining) else ""
+		showerBanner.Text = if remaining > 0 then t("shower", Config.ShowerLuck, Format.time(remaining)) else ""
+		task.wait(0.5)
+	end
+end)
+
+-- Auto roll
+task.spawn(function()
+	while true do
 		if autoRoll and canAutoRoll() and not rolling then
 			task.spawn(doRoll)
 		end
-		task.wait(0.2)
+		task.wait(0.1)
+	end
+end)
+
+---------------------------------------------------------------- Spinning star models on plots
+local starModels: { [Model]: { base: CFrame, spin: number, phase: number } } = {}
+local function trackModel(model: Instance)
+	if model:IsA("Model") then
+		starModels[model] = { base = model:GetPivot(), spin = math.rad(model:GetAttribute("Spin") or 30), phase = math.random() * 6 }
+	end
+end
+for _, model in CollectionService:GetTagged("StarModel") do
+	trackModel(model)
+end
+CollectionService:GetInstanceAddedSignal("StarModel"):Connect(trackModel)
+CollectionService:GetInstanceRemovedSignal("StarModel"):Connect(function(model)
+	starModels[model :: Model] = nil
+end)
+
+RunService.RenderStepped:Connect(function()
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return
+	end
+	local now = os.clock()
+	local eye = camera.CFrame.Position
+	for model, info in starModels do
+		if model.Parent and (info.base.Position - eye).Magnitude < 160 then
+			local bob = math.sin(now * 1.6 + info.phase) * 0.25
+			model:PivotTo(info.base * CFrame.Angles(0, now * info.spin, 0) + Vector3.new(0, bob, 0))
+		end
 	end
 end)
 ]]></ProtectedString></Properties></Item>
