@@ -34,6 +34,9 @@ local function default()
 		milestones = {}, -- ["1"] = true (string keys for DataStore)
 		lang = "", -- "" = auto
 		settings = { music = true, sfx = true },
+		slabs = {}, -- ["x_y"] = slab id (build mode)
+		freeSlabsGiven = false,
+		best = "", -- rarest item ever found (leaderboard)
 	}
 end
 

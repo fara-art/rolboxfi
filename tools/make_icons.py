@@ -303,6 +303,17 @@ def rebirth_arrow(d):
 img = shape(blank(), rebirth_arrow, (210, 160, 255), (120, 60, 220), outline=30)
 icons["ui_rebirth"] = save(sparkle(img, 512, 512, 90), "ui_rebirth")
 
+# build: hammer
+handle = blank("L")
+ImageDraw.Draw(handle).rounded_rectangle((462, 330, 562, 940), 40, fill=255)
+handle = handle.rotate(-35, resample=Image.BICUBIC, center=(C, C))
+headm = blank("L")
+ImageDraw.Draw(headm).rounded_rectangle((250, 170, 780, 400), 60, fill=255)
+headm = headm.rotate(-35, resample=Image.BICUBIC, center=(C, C))
+img = shape(blank(), lambda d: d.bitmap((0, 0), handle, fill=255), (215, 150, 90), (150, 90, 50), outline=28)
+img = shape(img, lambda d: d.bitmap((0, 0), headm, fill=255), (215, 225, 240), (120, 135, 165), outline=30)
+icons["ui_build"] = save(sparkle(img, 230, 760, 70), "ui_build")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

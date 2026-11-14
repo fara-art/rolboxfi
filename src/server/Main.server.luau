@@ -15,6 +15,7 @@ local Sky = require(Shared.Sky)
 local Format = require(Shared.Format)
 local DataService = require(script.Parent.DataService)
 local World = require(script.Parent.World)
+local Leaderboards = require(script.Parent.Leaderboards)
 
 -- Remotes
 local remotes = Instance.new("Folder")
@@ -75,7 +76,7 @@ local function isShower(): boolean
 end
 
 local function getLuck(player: Player, data): number
-	local luck = 1 + data.luckLevel * Config.LuckPerLevel + data.rebirths * Config.RebirthLuckBonus + data.bonusLuck
+	local luck = (1 + data.luckLevel * Config.LuckPerLevel + data.bonusLuck) * (1 + data.rebirths * Config.RebirthLuckMult)
 	if sessions[player].passes.Luck2x then
 		luck *= 2
 	end
@@ -96,7 +97,7 @@ end
 
 local function recompute(player: Player, data)
 	local session = sessions[player]
-	session.eval = Sky.evaluate(data.grid, data.gridSize)
+	session.eval = Sky.evaluate(data.grid, data.gridSize, data.slabs)
 	if World.plotOf(player) then
 		for _, group in session.eval.groups do
 			if not data.discovered[group.id] then
@@ -175,9 +176,32 @@ local function takeFromInventory(data, key: string, count: number): boolean
 end
 
 local function discover(player: Player, data, key: string)
+	if Items.chance(key) > Items.chance(data.best) then
+		data.best = key
+	end
 	if not data.index[key] then
 		data.index[key] = true
 		toast(player, "toastNewIndex", { { item = key } }, Items.parse(key).color)
+	end
+end
+
+-- free starter slabs in the middle of the plot (and under stars from older saves)
+local function giveFreeSlabs(data)
+	if data.freeSlabsGiven then
+		return
+	end
+	data.freeSlabsGiven = true
+	for key in data.grid do
+		data.slabs[key] = data.slabs[key] or "stone"
+	end
+	local c = math.floor(data.gridSize / 2)
+	local given = 0
+	for _, offset in { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } } do
+		local key = Sky.key(c + offset[1], c + offset[2])
+		if given < Config.FreeStoneSlabs and not data.slabs[key] then
+			data.slabs[key] = "stone"
+			given += 1
+		end
 	end
 end
 
@@ -250,6 +274,12 @@ Players.PlayerAdded:Connect(function(player)
 	for _, cell in data.grid do
 		data.index[cell.id] = true
 	end
+	for key in data.index do
+		if Items.chance(key) > Items.chance(data.best) then
+			data.best = key
+		end
+	end
+	giveFreeSlabs(data)
 
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
@@ -273,6 +303,10 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
+	local leaving = DataService.get(player)
+	if leaving then
+		task.spawn(Leaderboards.submit, player, leaving)
+	end
 	World.releasePlot(player)
 	DataService.release(player)
 	sessions[player] = nil
@@ -369,6 +403,9 @@ function actions.Place(player, data, cellKey, itemKey)
 	if not World.isNearPlot(player, index) then
 		return toast(player, "toastTooFar")
 	end
+	if not data.slabs[cellKey] then
+		return toast(player, "needSlab")
+	end
 	if not takeFromInventory(data, itemKey, 1) then
 		return
 	end
@@ -445,6 +482,9 @@ function actions.Rebirth(player, data)
 	data.luckLevel = 0
 	data.rollSpeedLevel = 0
 	data.multiRollLevel = 0
+	data.slabs = {}
+	data.freeSlabsGiven = false
+	giveFreeSlabs(data)
 	setCash(player, data, 0)
 	setStat(player, "Rebirths", data.rebirths)
 	recompute(player, data)
@@ -513,6 +553,44 @@ function actions.SetSetting(player, data, name, value)
 	if (name == "music" or name == "sfx") and type(value) == "boolean" then
 		data.settings[name] = value
 	end
+end
+
+---------------------------------------------------------------- build mode: slabs
+function actions.BuildSlab(player, data, cellKey, slabId)
+	local index = World.plotOf(player)
+	local slab = type(slabId) == "string" and Config.SlabsById[slabId]
+	if not index or not slab or not inBounds(data, cellKey) then
+		return
+	end
+	if not World.isNearPlot(player, index) then
+		return toast(player, "toastTooFar")
+	end
+	if data.slabs[cellKey] == slab.id then
+		return
+	end
+	if spend(player, data, slab.cost) then
+		data.slabs[cellKey] = slab.id
+		recompute(player, data)
+	end
+end
+
+function actions.RemoveSlab(player, data, cellKey)
+	local index = World.plotOf(player)
+	local slab = type(cellKey) == "string" and Config.SlabsById[data.slabs[cellKey]]
+	if not index or not slab then
+		return
+	end
+	if not World.isNearPlot(player, index) then
+		return toast(player, "toastTooFar")
+	end
+	local placed = data.grid[cellKey]
+	if placed then
+		data.grid[cellKey] = nil
+		addToInventory(player, data, placed.id, 1)
+	end
+	data.slabs[cellKey] = nil
+	setCash(player, data, data.cash + math.floor(slab.cost * Config.SlabRefund))
+	recompute(player, data)
 end
 
 ---------------------------------------------------------------- admin (checked on the server, see the handler below)
@@ -661,5 +739,29 @@ task.spawn(function()
 	while true do
 		task.wait(Config.ShowerInterval)
 		startShower()
+	end
+end)
+
+---------------------------------------------------------------- Leaderboards: submit + refresh every 2 minutes
+local function liveRows()
+	local rows = {}
+	for player in sessions do
+		local data = DataService.get(player)
+		if data then
+			table.insert(rows, { player = player, data = data })
+		end
+	end
+	return rows
+end
+
+task.spawn(function()
+	task.wait(8)
+	Leaderboards.refresh(liveRows())
+	while true do
+		task.wait(120)
+		for _, row in liveRows() do
+			Leaderboards.submit(row.player, row.data)
+		end
+		Leaderboards.refresh(liveRows())
 	end
 end)

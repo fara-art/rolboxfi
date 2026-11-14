@@ -5,6 +5,9 @@ local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 local LocalizationService = game:GetService("LocalizationService")
 local SoundService = game:GetService("SoundService")
+local ContextActionService = game:GetService("ContextActionService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -296,6 +299,20 @@ local announce = text({
 	Size = UDim2.new(0.6, 0, 0, 30), Position = UDim2.new(0.2, 0, 0, 94), Text = "", TextTransparency = 1,
 	TextStrokeColor3 = WHITE, TextStrokeTransparency = 1, FontFace = TITLE, Max = 22, ZIndex = 50, Parent = gui,
 })
+local announceTween = nil
+local function showToast(message: string, color: Color3?)
+	if announceTween then
+		announceTween:Cancel()
+	end
+	announce.Text = message
+	announce.TextColor3 = if color then shade(color, 0.2) else TEXT
+	announce.TextTransparency = 0
+	announce.TextStrokeTransparency = 0
+	announceTween = TweenService:Create(announce, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 3.5), {
+		TextTransparency = 1, TextStrokeTransparency = 1,
+	})
+	announceTween:Play()
+end
 
 ---------------------------------------------------------------- Language toggle (top-left)
 local langFrame = panelFrame({ Size = UDim2.new(0, 112, 0, 44), Position = UDim2.new(0, 16, 0, 64), Parent = gui })
@@ -449,7 +466,17 @@ local function itemRow(parent: Instance, order: number, key: string, subText: st
 end
 
 local function itemSubText(key: string): string
-	return t("perSecShort", Format.number(Items.income(key))) .. "   ·   " .. t("sellsFor", Format.number(Items.income(key) * Config.SellMultiplier))
+	local onPlot = 0
+	if state then
+		for _, cell in state.grid do
+			if cell.id == key then
+				onPlot += 1
+			end
+		end
+	end
+	return t("oneIn", Format.number(Items.chance(key))) .. "  ·  " .. t("perSecShort", Format.number(Items.income(key)))
+		.. "  ·  " .. t("sellsFor", Format.number(Items.income(key) * Config.SellMultiplier))
+		.. (if onPlot > 0 then "  ·  " .. t("onPlot", onPlot) else "")
 end
 
 ---------------------------------------------------------------- Catalogue
@@ -777,14 +804,14 @@ renderers[oddsW] = function()
 		local r = row(body, -i, 40, WHITE)
 		starIcon(star, nil, { Size = UDim2.new(0, 32, 0, 32), Position = UDim2.new(0, 4, 0, 4), ZIndex = 22, Parent = r })
 		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 44, 0, 0), Text = Lang.star(lang, star), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
-		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(star.chance)) .. "   " .. Format.percent(odds[star.id]), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if odds[star.id] > 0 then 1 / odds[star.id] else star.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
 	end
 	text({ Size = UDim2.new(1, 0, 0, 28), LayoutOrder = 100, Text = t("mutations"), TextColor3 = BLUE, FontFace = TITLE, Max = 16, ZIndex = 21, Parent = body })
 	local mutationOdds = Odds.exactMutations(luck)
 	for i, mutation in Mutations.List do
 		local r = row(body, 100 + i, 40, WHITE)
 		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 12, 0, 0), Text = Lang.mutation(lang, mutation) .. "  x" .. mutation.mult, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
-		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(mutation.chance)) .. "   " .. Format.percent(mutationOdds[mutation.id]), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if mutationOdds[mutation.id] > 0 then 1 / mutationOdds[mutation.id] else mutation.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
 	end
 end
 
@@ -821,8 +848,8 @@ renderers[holeW] = function()
 	local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = PANEL_2, LayoutOrder = 2, ZIndex = 21, Parent = body }, { corner(9), stroke(LINE, 1.5) })
 	make("Frame", { Size = UDim2.new(progress, 0, 1, 0), BackgroundColor3 = LILAC, BorderSizePixel = 0, ZIndex = 22, Parent = bar }, { corner(9) })
 	local lines = {
-		t("holeNow", 1 + state.rebirths * Config.RebirthIncomeBonus, state.rebirths * Config.RebirthLuckBonus),
-		t("holeNext", 1 + (state.rebirths + 1) * Config.RebirthIncomeBonus, (state.rebirths + 1) * Config.RebirthLuckBonus),
+		t("holeNow", 1 + state.rebirths * Config.RebirthIncomeBonus, 1 + state.rebirths * Config.RebirthLuckMult),
+		t("holeNext", 1 + (state.rebirths + 1) * Config.RebirthIncomeBonus, 1 + (state.rebirths + 1) * Config.RebirthLuckMult),
 		t("holeWarn"),
 	}
 	for i, line in lines do
@@ -1094,6 +1121,198 @@ local function globalCinematic(finder: string, key: string, chance: number)
 end
 GlobalRareEv.OnClientEvent:Connect(globalCinematic)
 
+---------------------------------------------------------------- Sprint: Shift on PC, a button on phones
+local sprinting = false
+local function applySpeed()
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = if sprinting then Config.SprintSpeed else Config.WalkSpeed
+	end
+end
+ContextActionService:BindAction("Sprint", function(_, inputState, input)
+	if input.UserInputType == Enum.UserInputType.Touch then
+		if inputState == Enum.UserInputState.Begin then
+			sprinting = not sprinting -- tap to toggle on touch screens
+		end
+	else
+		sprinting = inputState == Enum.UserInputState.Begin
+	end
+	applySpeed()
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift)
+ContextActionService:SetTitle("Sprint", "RUN")
+ContextActionService:SetPosition("Sprint", UDim2.new(1, -170, 1, -170))
+player.CharacterAdded:Connect(function()
+	task.wait(0.2)
+	applySpeed()
+end)
+
+---------------------------------------------------------------- Leaderboard tablets (scrollable top 100 drawn on the stone)
+local BOARD_TITLES = { rolls = "lbRolls", rebirths = "lbRebirths", cash = "lbCash", rarest = "lbRarest" }
+local boardGuis = {}
+
+local function renderBoard(board: string)
+	local entry = boardGuis[board]
+	local source = ReplicatedStorage:FindFirstChild("Leaderboards")
+	local value = source and source:FindFirstChild(board)
+	if not entry or not value then
+		return
+	end
+	entry.title.Text = t(BOARD_TITLES[board])
+	clear(entry.list)
+	local ok, rows = pcall(HttpService.JSONDecode, HttpService, value.Value)
+	if not ok or type(rows) ~= "table" or #rows == 0 then
+		text({ Size = UDim2.new(1, 0, 0, 50), Text = t("lbEmpty"), TextColor3 = Color3.fromRGB(70, 72, 84), FontFace = TITLE, Max = 34, Parent = entry.list })
+		return
+	end
+	local medal = { Color3.fromRGB(230, 170, 30), Color3.fromRGB(150, 160, 175), Color3.fromRGB(190, 110, 60) }
+	for rank, row in rows do
+		local line = make("Frame", { Size = UDim2.new(1, -12, 0, 54), LayoutOrder = rank, BackgroundColor3 = if rank % 2 == 0 then Color3.fromRGB(150, 152, 166) else Color3.fromRGB(160, 162, 176), BackgroundTransparency = 0.3, Parent = entry.list }, { corner(8) })
+		text({ Size = UDim2.new(0, 70, 1, 0), Text = "#" .. rank, FontFace = TITLE, TextColor3 = medal[rank] or WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, Max = 30, Parent = line })
+		text({ Size = UDim2.new(0.48, -70, 1, 0), Position = UDim2.new(0, 72, 0, 0), Text = tostring(row.name), FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, TextXAlignment = Enum.TextXAlignment.Left, Max = 28, Parent = line })
+		local shown
+		if board == "rarest" then
+			shown = if type(row.value) == "string" then Lang.item(lang, row.value) .. "  " .. t("oneIn", Format.number(Items.chance(row.value))) else "?"
+		else
+			shown = Format.number(tonumber(row.value) or 0)
+		end
+		text({ Size = UDim2.new(0.52, -8, 1, 0), Position = UDim2.new(0.48, 0, 0, 0), Text = shown, FontFace = TITLE, TextColor3 = Color3.fromRGB(255, 226, 130), TextStrokeColor3 = INK, TextStrokeTransparency = 0.2, TextXAlignment = Enum.TextXAlignment.Right, Max = 26, Parent = line })
+	end
+end
+
+task.spawn(function()
+	local boards = workspace:WaitForChild("Map"):WaitForChild("Hub"):WaitForChild("Leaderboards")
+	local source = ReplicatedStorage:WaitForChild("Leaderboards")
+	for board in BOARD_TITLES do
+		local part = boards:WaitForChild("Board_" .. board)
+		local surface = make("SurfaceGui", {
+			Name = "Board_" .. board, Adornee = part, Face = Enum.NormalId.Front, SizingMode = Enum.SurfaceGuiSizingMode.FixedSize,
+			CanvasSize = Vector2.new(600, 800), LightInfluence = 0, MaxDistance = 140, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+			ResetOnSpawn = false, Parent = player:WaitForChild("PlayerGui"),
+		})
+		local title = text({ Size = UDim2.new(1, 0, 0, 90), Position = UDim2.new(0, 0, 0, 10), Text = "", FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 64, Parent = surface })
+		make("Frame", { Size = UDim2.new(0.9, 0, 0, 4), Position = UDim2.new(0.05, 0, 0, 104), BackgroundColor3 = Color3.fromRGB(236, 196, 100), BorderSizePixel = 0, Parent = surface })
+		local list = make("ScrollingFrame", {
+			Size = UDim2.new(1, -20, 1, -130), Position = UDim2.new(0, 10, 0, 118), BackgroundTransparency = 1, BorderSizePixel = 0,
+			CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 12, ScrollBarImageColor3 = Color3.fromRGB(236, 196, 100),
+			ScrollingDirection = Enum.ScrollingDirection.Y, Parent = surface,
+		}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+		boardGuis[board] = { title = title, list = list }
+		local value = source:WaitForChild(board)
+		value.Changed:Connect(function()
+			renderBoard(board)
+		end)
+		renderBoard(board)
+	end
+end)
+
+---------------------------------------------------------------- Build mode: buy slabs and put them on your plot
+local buildMode = false
+local buildTool = Config.Slabs[1].id -- slab id or "remove"
+local setBuildMode -- defined below (the panel's EXIT button needs it)
+local buildPanel = panelFrame({ Size = UDim2.new(0, 640, 0, 150), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -100), Visible = false, ZIndex = 30, Parent = gui })
+
+local function myPlotFolder(): Instance?
+	local map = workspace:FindFirstChild("Map")
+	local plots = map and map:FindFirstChild("Plots")
+	if not plots then
+		return nil
+	end
+	for _, plot in plots:GetChildren() do
+		if plot:GetAttribute("OwnerId") == player.UserId then
+			return plot
+		end
+	end
+	return nil
+end
+
+local function refreshMarkers()
+	local plot = myPlotFolder()
+	local markers = plot and plot:FindFirstChild("Markers")
+	if not markers then
+		return
+	end
+	for _, marker in markers:GetChildren() do
+		if marker:IsA("BasePart") then
+			marker.Transparency = if buildMode then 0.55 else 1
+			marker.Color = if buildTool == "remove" then RED else MINT
+		end
+	end
+end
+
+local function renderBuildPanel()
+	clear(buildPanel)
+	text({ Size = UDim2.new(1, -110, 0, 26), Text = t("buildTitle") .. "   ·   " .. t("buildHint"), FontFace = TITLE, TextColor3 = BLUE, TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 31, Parent = buildPanel })
+	local row = make("Frame", { Size = UDim2.new(1, 0, 0, 92), Position = UDim2.new(0, 0, 0, 32), BackgroundTransparency = 1, ZIndex = 31, Parent = buildPanel })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = row })
+	for i, slab in Config.Slabs do
+		local selectedSlab = buildTool == slab.id
+		local card = make("TextButton", {
+			Size = UDim2.new(0, 112, 1, 0), LayoutOrder = i, Text = "", AutoButtonColor = true, ZIndex = 31, Parent = row,
+			BackgroundColor3 = if selectedSlab then Color3.fromRGB(220, 236, 255) else WHITE,
+		}, { corner(12), stroke(if selectedSlab then BLUE else INK, if selectedSlab then 3.5 else 2.5) })
+		make("Frame", { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0.5, -20, 0, 6), BackgroundColor3 = slab.color, ZIndex = 32, Parent = card }, { corner(6), stroke(INK, 2) })
+		text({ Size = UDim2.new(1, -6, 0, 18), Position = UDim2.new(0, 3, 0, 48), Text = t("slab_" .. slab.id), FontFace = TITLE, Max = 13, ZIndex = 32, Parent = card })
+		text({ Size = UDim2.new(1, -6, 0, 18), Position = UDim2.new(0, 3, 0, 68), Text = Format.number(slab.cost) .. "  ·  x" .. slab.mult, FontFace = BODY, TextColor3 = MUTED, Max = 13, ZIndex = 32, Parent = card })
+		card.Activated:Connect(function()
+			buildTool = slab.id
+			renderBuildPanel()
+			refreshMarkers()
+		end)
+	end
+	btn(if buildTool == "remove" then RED else GREY, { Size = UDim2.new(0, 84, 1, 0), LayoutOrder = 10, Text = t("removeTool"), Max = 14, ZIndex = 31, Parent = row }, function()
+		buildTool = "remove"
+		renderBuildPanel()
+		refreshMarkers()
+	end)
+	btn(BLUE, { Size = UDim2.new(0, 84, 1, 0), LayoutOrder = 11, Text = t("exitBuild"), Max = 14, ZIndex = 31, Parent = row }, function()
+		setBuildMode(false)
+	end)
+end
+
+setBuildMode = function(on: boolean)
+	if on and not (state and state.hasPlot) then
+		showToast(t("buildNoPlot"))
+		return
+	end
+	buildMode = on
+	buildPanel.Visible = on
+	if on then
+		renderBuildPanel()
+	end
+	refreshMarkers()
+end
+
+-- tap/click a marker on your plot while building
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not buildMode or processed then
+		return
+	end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+		return
+	end
+	local plot = myPlotFolder()
+	local markers = plot and plot:FindFirstChild("Markers")
+	local camera = workspace.CurrentCamera
+	if not markers or not camera then
+		return
+	end
+	local ray = camera:ViewportPointToRay(input.Position.X, input.Position.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { markers }
+	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	if hit and hit.Instance then
+		local key = hit.Instance.Name
+		if buildTool == "remove" then
+			ActionEv:FireServer("RemoveSlab", key)
+		else
+			ActionEv:FireServer("BuildSlab", key, buildTool)
+		end
+	end
+end)
+
 ---------------------------------------------------------------- Icon buttons: bottom row + right column
 local BUTTON = 72
 local GAP = 12
@@ -1114,18 +1333,23 @@ local dockButtons = {}
 local function addButtons(parent: Frame, entries)
 	for order, entry in entries do
 		local b = iconButton(entry[4], entry[1], entry[3], { Size = UDim2.new(0, BUTTON, 0, BUTTON), LayoutOrder = order, Parent = parent }, function()
-			open(entry[2])
+			if entry[2] == "build" then
+				setBuildMode(not buildMode)
+			else
+				open(entry[2])
+			end
 		end)
 		dockButtons[entry[1]] = b
 	end
 end
 
-local bottomRow = buttonGroup(4, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
+local bottomRow = buttonGroup(5, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
 addButtons(bottomRow, {
 	{ "mySky", skyW, MINT, "sky" },
 	{ "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
 	{ "rewards", rewardsW, RED, "rewards" },
 	{ "constellations", bookW, Color3.fromRGB(70, 90, 200), "constellations" },
+	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
 })
 local rightColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
 addButtons(rightColumn, {
@@ -1312,19 +1536,8 @@ StateEv.OnClientEvent:Connect(function(newState)
 	end
 end)
 
-local announceTween = nil
 AnnounceEv.OnClientEvent:Connect(function(key: string, args, color: Color3?)
-	if announceTween then
-		announceTween:Cancel()
-	end
-	announce.Text = Lang.resolve(lang, key, args)
-	announce.TextColor3 = if color then shade(color, 0.2) else TEXT
-	announce.TextTransparency = 0
-	announce.TextStrokeTransparency = 0
-	announceTween = TweenService:Create(announce, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 3.5), {
-		TextTransparency = 1, TextStrokeTransparency = 1,
-	})
-	announceTween:Play()
+	showToast(Lang.resolve(lang, key, args), color)
 end)
 
 PickerEv.OnClientEvent:Connect(function(cellKey: string)
@@ -1394,6 +1607,9 @@ task.spawn(function()
 				prompt.Enabled = plotFolder ~= nil and plotFolder:GetAttribute("OwnerId") == player.UserId
 			end
 		end
+		if buildMode then
+			refreshMarkers()
+		end
 		if isOpen(forgeW) and distanceTo(partAt({ "Map", "Forge", "ForgeTable" })) > Config.ForgeReach + 6 then
 			forgeW.frame.Visible = false
 		end
@@ -1421,7 +1637,7 @@ end)
 local starModels: { [Model]: { base: CFrame, spin: number, phase: number } } = {}
 local function trackModel(model: Instance)
 	if model:IsA("Model") then
-		starModels[model] = { base = model:GetPivot(), spin = math.rad(model:GetAttribute("Spin") or 30), phase = math.random() * 6 }
+		starModels[model] = { spin = math.rad(model:GetAttribute("Spin") or 30), phase = math.random() * 6 }
 	end
 end
 for _, model in CollectionService:GetTagged("StarModel") do
@@ -1440,7 +1656,9 @@ RunService.RenderStepped:Connect(function()
 	local now = os.clock()
 	local eye = camera.CFrame.Position
 	for model, info in starModels do
-		if model.Parent and (info.base.Position - eye).Magnitude < 160 then
+		local base = model:GetAttribute("Base")
+		if typeof(base) == "CFrame" and model.PrimaryPart and model.Parent and (base.Position - eye).Magnitude < 160 then
+			info.base = base
 			local bob = math.sin(now * 1.6 + info.phase) * 0.25
 			model:PivotTo(info.base * CFrame.Angles(0, now * info.spin, 0) + Vector3.new(0, bob, 0))
 		end

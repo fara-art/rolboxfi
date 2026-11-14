@@ -2,6 +2,7 @@
 -- grid[key] = { id = itemKey, age = seconds }
 local Items = require(script.Parent.Items)
 local Evolution = require(script.Parent.Evolution)
+local Config = require(script.Parent.Config)
 local Constellations = require(script.Parent.Constellations)
 
 local Sky = {}
@@ -59,7 +60,7 @@ end
 export type Group = { id: string, pure: boolean, mult: number, cells: { string } }
 export type Evaluation = { income: number, groups: { Group }, cellMult: { [string]: number } }
 
-function Sky.evaluate(grid: { [string]: any }, size: number): Evaluation
+function Sky.evaluate(grid: { [string]: any }, size: number, slabs: { [string]: string }?): Evaluation
 	local visited = {}
 	local groups = {}
 	local cellMult = {}
@@ -112,7 +113,8 @@ function Sky.evaluate(grid: { [string]: any }, size: number): Evaluation
 
 				for _, k in keys do
 					local cell = grid[k]
-					total += Items.income(cell.id) * Evolution.mult(cell.age or 0) * mult
+					local slab = slabs and Config.SlabsById[slabs[k]]
+					total += Items.income(cell.id) * Evolution.mult(cell.age or 0) * mult * (if slab then slab.mult else 1)
 					cellMult[k] = mult
 				end
 			end

@@ -20,10 +20,29 @@ Config.MaxGridSize = 8
 function Config.GridCost(size: number): number
 	return math.floor(1000 * 8 ^ (size - Config.StartGridSize))
 end
-Config.PlotReach = 52 -- how far from plot center you can place stars
+Config.PlotReach = 52 -- how far from plot center you can place stars / build
+
+-- Build mode: stars can only stand on slabs. Better slabs multiply the star's income.
+Config.Slabs = {
+	{ id = "stone", cost = 100, mult = 1, color = Color3.fromRGB(150, 152, 165), material = Enum.Material.Slate },
+	{ id = "gold", cost = 50000, mult = 1.5, color = Color3.fromRGB(245, 196, 80), material = Enum.Material.Foil },
+	{ id = "emerald", cost = 5000000, mult = 2.5, color = Color3.fromRGB(60, 210, 130), material = Enum.Material.Glass },
+	{ id = "marble", cost = 1000000000, mult = 4, color = Color3.fromRGB(246, 246, 252), material = Enum.Material.Marble },
+}
+Config.SlabsById = {}
+for index, slab in Config.Slabs do
+	slab.index = index
+	Config.SlabsById[slab.id] = slab
+end
+Config.FreeStoneSlabs = 4 -- new players start with these
+Config.SlabRefund = 0.5 -- removing a slab gives back this share of its price
+
+-- Movement
+Config.WalkSpeed = 16
+Config.SprintSpeed = 30
 
 -- Luck
-Config.LuckPerLevel = 0.25
+Config.LuckPerLevel = 0.5
 Config.MaxLuckLevel = 40
 function Config.LuckCost(level: number): number
 	return math.floor(150 * 1.6 ^ level)
@@ -40,8 +59,8 @@ Config.ForgeReach = 26
 function Config.RebirthCost(rebirths: number): number
 	return math.floor(100000 * 10 ^ rebirths)
 end
-Config.RebirthIncomeBonus = 1 -- income x(1 + rebirths * this)
-Config.RebirthLuckBonus = 0.5 -- luck + rebirths * this
+Config.RebirthIncomeBonus = 2 -- income x(1 + rebirths * this)
+Config.RebirthLuckMult = 0.5 -- luck x(1 + rebirths * this)
 Config.AltarReach = 30
 
 -- Star Index: complete a mutation row (all stars) -> claim permanent luck
@@ -119,6 +138,7 @@ Config.UiIcons = {
 	coins = "129002927140322", -- ui_coins.png (header cash)
 	income = "128510907463165", -- ui_income.png (header per second)
 	rebirth = "73756458949010", -- ui_rebirth.png
+	build = "", -- ui_build.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

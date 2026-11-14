@@ -300,7 +300,8 @@ end
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")
 	model.Name = star.id
-	local scale = 1 + (level - 1) * 0.08
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- arrives on clients in one piece
+	local scale = 1.3 + (level - 1) * 0.1
 	local cf = CFrame.new(position)
 	local builder = builders[star.id] or builders.dwarf
 	local core = builder(model, cf, star.color)
@@ -326,6 +327,7 @@ function StarModels.create(star, mutation, level: number, position: Vector3, par
 		model:ScaleTo(scale)
 	end
 	model:SetAttribute("Spin", 20 + star.index * 6)
+	model:SetAttribute("Base", CFrame.new(position)) -- the client spins around this (never trust a half-loaded pivot)
 	model.Parent = parent
 	CollectionService:AddTag(model, "StarModel")
 	return model

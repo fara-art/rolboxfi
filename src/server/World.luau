@@ -25,7 +25,7 @@ local RING = 150 -- distance from hub center to satellite islands
 local HUB_RADIUS = 50
 local PLOT_SIZE = 64
 local SPACING = 7
-local STAR_HEIGHT = 4.5
+local STAR_HEIGHT = 4.2
 
 local MARBLE = Color3.fromRGB(246, 246, 250)
 local MARBLE_WARM = Color3.fromRGB(238, 232, 220)
@@ -317,10 +317,22 @@ local function buildHub(folder: Folder)
 	-- trees
 	local leaves = { Color3.fromRGB(255, 205, 225), Color3.fromRGB(190, 240, 205), Color3.fromRGB(255, 230, 190), Color3.fromRGB(215, 205, 255) }
 	for i = 1, 4 do
-		local a = (i - 0.5) / 4 * math.pi * 2 + 0.3
+		local a = math.rad(22.5 + (i - 1) * 45)
 		local base = Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31)
 		tree(base, folder, leaves[i])
 		flowers(base, 5, 10, folder)
+	end
+
+	-- stone leaderboard tablets (the client draws the scrollable lists on them)
+	local boards = make("Folder", { Name = "Leaderboards", Parent = folder })
+	for i, board in { "rolls", "rebirths", "cash", "rarest" } do
+		local a = math.rad(202.5 + (i - 1) * 45)
+		local pos = Vector3.new(math.cos(a) * 32, 0, math.sin(a) * 32)
+		local cf = CFrame.lookAt(pos, Vector3.zero)
+		make("Part", { Name = "Step", Size = Vector3.new(14, 1.4, 5), CFrame = cf * CFrame.new(0, 0.7, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(118, 120, 132), Parent = folder })
+		make("Part", { Name = "Board_" .. board, Size = Vector3.new(12, 16, 1.4), CFrame = cf * CFrame.new(0, 9.4, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(172, 174, 186), Parent = boards })
+		make("Part", { Name = "Cap", Size = Vector3.new(13.2, 1, 2.4), CFrame = cf * CFrame.new(0, 17.9, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
+		crystal((cf * CFrame.new(0, 20, 0)).Position, 1.6, Color3.fromRGB(255, 220, 120), folder)
 	end
 
 	-- the spawn plate stays but invisible
@@ -439,25 +451,47 @@ local function buildBlackHole(folder: Folder, slot: number)
 end
 
 ---------------------------------------------------------------- plots
-local function buildPedestals(plot, size: number)
+-- Plot cells: invisible build markers on every cell, slabs (with prompts) where the owner built them
+local function buildCells(plot, size: number, slabs, grid)
 	plot.pedestals:ClearAllChildren()
+	plot.markers:ClearAllChildren()
 	plot.cells = {}
-	plot.builtSize = size
 	local half = (size + 1) / 2
 	for y = 1, size do
 		for x = 1, size do
 			local key = Sky.key(x, y)
 			local cf = plot.cf * CFrame.new((x - half) * SPACING, 0, (y - half) * SPACING)
-			local base = cylinder(cf * CFrame.new(0, 0.75, 0), 1.5, 3.6, { Name = key, Material = Enum.Material.Marble, Color = MARBLE, Parent = plot.pedestals })
-			cylinder(cf * CFrame.new(0, 1.55, 0), 0.25, 3.9, { Name = "Rim", Material = Enum.Material.SmoothPlastic, Color = GOLD, CanCollide = false, Parent = base })
-			local p = prompt(base, "PedestalPrompt", "promptPlace", "pedestal", 5)
-			p:SetAttribute("Plot", plot.index)
-			p.Triggered:Connect(function(who)
-				if World.onPedestal then
-					World.onPedestal(who, plot.index, key)
+			plot.cells[key] = { cf = cf }
+			make("Part", {
+				Name = key, Size = Vector3.new(6, 0.3, 6), CFrame = cf * CFrame.new(0, 0.2, 0), Transparency = 1,
+				CanCollide = false, CanTouch = false, CastShadow = false, Material = Enum.Material.Neon, Color = Color3.fromRGB(120, 230, 140), Parent = plot.markers,
+			})
+			local slab = Config.SlabsById[slabs[key]]
+			if slab then
+				local base = make("Part", {
+					Name = key, Size = Vector3.new(6, 0.9, 6), CFrame = cf * CFrame.new(0, 0.45, 0), Material = slab.material, Color = slab.color,
+					Reflectance = if slab.id == "gold" then 0.15 else 0, Transparency = if slab.id == "emerald" then 0.12 else 0, Parent = plot.pedestals,
+				})
+				make("Part", {
+					Name = "Top", Size = Vector3.new(5.1, 0.25, 5.1), CFrame = cf * CFrame.new(0, 1.0, 0), Material = slab.material,
+					Color = slab.color:Lerp(Color3.new(1, 1, 1), 0.25), CanCollide = false, Parent = base,
+				})
+				if slab.id ~= "stone" then
+					for _, c in { { -2.7, -2.7 }, { 2.7, -2.7 }, { -2.7, 2.7 }, { 2.7, 2.7 } } do
+						ball((cf * CFrame.new(c[1], 1, c[2])).Position, 0.6, { Name = "Stud", Material = Enum.Material.Neon, Color = if slab.id == "marble" then GOLD else slab.color, CanCollide = false, Parent = base })
+					end
 				end
-			end)
-			plot.cells[key] = { cf = cf, prompt = p }
+				if slab.id == "emerald" or slab.id == "marble" then
+					make("PointLight", { Color = slab.color, Range = 8, Brightness = 0.8, Parent = base })
+				end
+				local p = prompt(base, "PedestalPrompt", if grid[key] then "promptRemove" else "promptPlace", "slab_" .. slab.id, 6)
+				p:SetAttribute("Plot", plot.index)
+				p.Triggered:Connect(function(who)
+					if World.onPedestal then
+						World.onPedestal(who, plot.index, key)
+					end
+				end)
+			end
 		end
 	end
 end
@@ -494,13 +528,14 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 		folder = plotFolder,
 		pedestals = make("Folder", { Name = "Pedestals", Parent = plotFolder }),
 		stars = make("Folder", { Name = "Stars", Parent = plotFolder }),
+		markers = make("Folder", { Name = "Markers", Parent = plotFolder }),
 		label = label,
 		owner = nil,
 		cells = {},
 		builtSize = 0,
 	}
 	plots[index] = plot
-	buildPedestals(plot, Config.StartGridSize)
+	buildCells(plot, Config.StartGridSize, {}, {})
 
 	local cooldown = {}
 	floor.Touched:Connect(function(hit)
@@ -643,7 +678,7 @@ function World.releasePlot(player: Player)
 	plot.label:SetAttribute("Owner", "")
 	plot.label:SetAttribute("Income", 0)
 	plot.stars:ClearAllChildren()
-	buildPedestals(plot, Config.StartGridSize)
+	buildCells(plot, Config.StartGridSize, {}, {})
 	playerPlot[player] = nil
 end
 
@@ -713,22 +748,13 @@ function World.renderPlot(player: Player, data, evaluation, income: number)
 		return
 	end
 	local plot = plots[index]
-	if plot.builtSize ~= data.gridSize then
-		buildPedestals(plot, data.gridSize)
-	end
+	buildCells(plot, data.gridSize, data.slabs, data.grid)
 	plot.stars:ClearAllChildren()
 	plot.label:SetAttribute("Income", income)
 
 	local function starPosition(key: string): Vector3?
 		local cell = plot.cells[key]
 		return cell and (cell.cf * CFrame.new(0, STAR_HEIGHT, 0)).Position
-	end
-
-	for key, cell in plot.cells do
-		local placed = data.grid[key]
-		local langKey = if placed then "promptRemove" else "promptPlace"
-		cell.prompt:SetAttribute("LangKey", langKey)
-		cell.prompt.ActionText = langKey
 	end
 
 	for key, cell in data.grid do
