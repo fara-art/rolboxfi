@@ -653,7 +653,7 @@ function actions.ClaimMilestone(player, data, number)
 end
 
 function actions.SetSetting(player, data, name, value)
-	if (name == "music" or name == "sfx") and type(value) == "boolean" then
+	if (name == "music" or name == "sfx" or name == "night") and type(value) == "boolean" then
 		data.settings[name] = value
 	elseif name == "rareAlert" and type(value) == "number" and value == value and value >= 0 and value <= 1e15 then
 		data.settings.rareAlert = value

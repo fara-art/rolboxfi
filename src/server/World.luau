@@ -296,7 +296,49 @@ local function buildHub(folder: Folder)
 		Acceleration = Vector3.new(0, -8, 0), Size = NumberSequence.new(0.5, 0), Transparency = NumberSequence.new(0.2, 1),
 		Parent = orb,
 	})
-	worldText(orb, "signHub", 6, 22, 4)
+	worldText(orb, "signHub", 9, 30, 6)
+
+	-- ================= spawn plaza (players appear here, looking at the fountain)
+	local S = Vector3.new(-22, 0, 0)
+	cylinder(CFrame.new(S + Vector3.new(0, 0.12, 0)), 0.24, 16, { Name = "PlazaRing", Material = Enum.Material.Neon, Color = GOLD, CanCollide = false, Parent = folder })
+	cylinder(CFrame.new(S + Vector3.new(0, 0.16, 0)), 0.26, 15, { Name = "Plaza", Material = Enum.Material.Marble, Color = Color3.fromRGB(250, 248, 240), CanCollide = false, Parent = folder })
+	for k = 0, 4 do -- golden star mosaic
+		local a = k / 5 * math.pi * 2
+		make("Part", {
+			Name = "Mosaic", Size = Vector3.new(0.5, 0.3, 11), CFrame = CFrame.new(S + Vector3.new(0, 0.2, 0)) * CFrame.Angles(0, a, 0),
+			Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 214, 120), CanCollide = false, Parent = folder,
+		})
+	end
+	for _, side in { -10, 10 } do
+		local base = S + Vector3.new(0, 0, side)
+		cylinder(CFrame.new(base + Vector3.new(0, 1.5, 0)), 3, 4.4, { Name = "StatueBase", Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
+		cylinder(CFrame.new(base + Vector3.new(0, 3.1, 0)), 0.3, 4.8, { Name = "StatueTrim", Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
+		-- an 8-point star: two cubes turned 45 degrees
+		local starCf = CFrame.new(base + Vector3.new(0, 6.5, 0))
+		local a = make("Part", { Name = "StarStatue", Size = Vector3.new(3, 3, 0.8), CFrame = starCf, Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 215, 110), CanCollide = false, Parent = folder })
+		make("Part", { Name = "StarStatue", Size = Vector3.new(3, 3, 0.8), CFrame = starCf * CFrame.Angles(0, 0, math.rad(45)), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 240, 190), CanCollide = false, Parent = folder })
+		make("PointLight", { Color = Color3.fromRGB(255, 220, 150), Range = 14, Brightness = 0.8, Parent = a })
+		make("Sparkles", { SparkleColor = Color3.fromRGB(255, 230, 160), Parent = a })
+		flowers(base, 4.5, 12, folder)
+	end
+	for _, side in { -6, 6 } do -- lanterns at the plaza
+		local base = S + Vector3.new(4, 0, side)
+		make("Part", { Name = "LampPost", Size = Vector3.new(0.6, 8, 0.6), CFrame = CFrame.new(base + Vector3.new(0, 4, 0)), Material = Enum.Material.Metal, Color = GOLD, Parent = folder })
+		local lamp = ball(base + Vector3.new(0, 8.6, 0), 1.6, { Name = "Lantern", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 225, 170), CanCollide = false, Parent = folder })
+		make("PointLight", { Color = Color3.fromRGB(255, 210, 150), Range = 16, Brightness = 0.9, Parent = lamp })
+	end
+	-- butterflies over the flowers
+	local wings = make("Part", { Name = "Butterflies", Size = Vector3.new(14, 2, 26), CFrame = CFrame.new(S + Vector3.new(0, 2.5, 0)), Transparency = 1, CanCollide = false, CanQuery = false, Parent = folder })
+	make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 180, 220), Color3.fromRGB(180, 220, 255)),
+		LightEmission = 0.4, Rate = 5, Lifetime = NumberRange.new(4, 7), Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 60),
+		Size = NumberSequence.new(0.35), Parent = wings,
+	})
+	-- floating crystal ring around the fountain
+	for k = 0, 7 do
+		local a = k / 8 * math.pi * 2
+		crystal(Vector3.new(math.cos(a) * 17, 8 + (k % 2) * 1.5, math.sin(a) * 17), 1.4, if k % 2 == 0 then Color3.fromRGB(255, 220, 150) else Color3.fromRGB(170, 220, 255), folder)
+	end
 
 	-- pillars with floating crystals between the bridges
 	for i = 0, 7 do
@@ -345,7 +387,7 @@ local function buildHub(folder: Folder)
 	if spawn then
 		spawn.Transparency = 1
 		spawn.CanCollide = false
-		spawn.CFrame = CFrame.new(0, 0.5, 20)
+		spawn.CFrame = CFrame.new(-22, 0.5, 0)
 		for _, child in spawn:GetChildren() do
 			if child:IsA("Decal") then
 				child:Destroy()
@@ -397,6 +439,39 @@ local function buildForgeHouse(folder: Folder)
 		end
 	end)
 	World.ForgePosition = tableBase.Position
+
+	-- ===== details: anvil horn + hammer, rune circle, lava trough, bellows, coal, barrels, crates, tool rack, lantern
+	make("WedgePart", { Name = "AnvilHorn", Size = Vector3.new(2.2, 1, 2), CFrame = cf * CFrame.new(-3.6, 3.7, -3) * CFrame.Angles(0, math.rad(90), 0), Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 84, 96), Parent = folder })
+	make("Part", { Name = "HammerHandle", Size = Vector3.new(0.3, 0.3, 3), CFrame = cf * CFrame.new(1, 4.55, -3) * CFrame.Angles(0, math.rad(30), 0), Material = Enum.Material.Wood, Color = Color3.fromRGB(130, 85, 50), CanCollide = false, Parent = folder })
+	make("Part", { Name = "HammerHead", Size = Vector3.new(1.2, 0.7, 0.7), CFrame = cf * CFrame.new(1.75, 4.6, -1.7) * CFrame.Angles(0, math.rad(30), 0), Material = Enum.Material.Metal, Color = Color3.fromRGB(110, 110, 120), CanCollide = false, Parent = folder })
+	cylinder(cf * CFrame.new(0, 0.42, -3), 0.05, 9, { Name = "RuneCircle", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 170, 70), Transparency = 0.4, CanCollide = false, Parent = folder })
+	cylinder(cf * CFrame.new(0, 0.43, -3), 0.05, 8, { Name = "RuneInner", Material = Enum.Material.Marble, Color = MARBLE_WARM, CanCollide = false, Parent = folder })
+	make("Part", { Name = "LavaTrough", Size = Vector3.new(9, 0.4, 1.4), CFrame = cf * CFrame.new(0, 0.6, 3.1), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 110, 30), CanCollide = false, Parent = folder })
+	make("Part", { Name = "BellowsBox", Size = Vector3.new(2.4, 1.2, 1.6), CFrame = cf * CFrame.new(5.2, 1, 4.5), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 100, 60), Parent = folder })
+	make("WedgePart", { Name = "Bellows", Size = Vector3.new(2.2, 1, 2.4), CFrame = cf * CFrame.new(5.2, 2.1, 4.5) * CFrame.Angles(0, math.rad(90), 0), Material = Enum.Material.Fabric, Color = Color3.fromRGB(110, 60, 40), Parent = folder })
+	for k = 1, 9 do
+		ball((cf * CFrame.new(-5 + (k % 3) * 0.7, 0.6 + math.floor(k / 4) * 0.5, 4 + (k % 2) * 0.6)).Position, 0.9, { Name = "Coal", Material = Enum.Material.Slate, Color = Color3.fromRGB(35, 32, 36), Parent = folder })
+	end
+	for _, b in { { 6.3, -5.5 }, { 6.3, -3 } } do
+		local barrel = cylinder(cf * CFrame.new(b[1], 1.4, b[2]), 2.8, 2.2, { Name = "Barrel", Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(140, 95, 55), Parent = folder })
+		for _, h in { -0.9, 0.9 } do
+			cylinder(cf * CFrame.new(b[1], 1.4 + h, b[2]), 0.2, 2.35, { Name = "Band", Material = Enum.Material.Metal, Color = Color3.fromRGB(90, 90, 100), CanCollide = false, Parent = barrel })
+		end
+	end
+	make("Part", { Name = "Crate", Size = Vector3.new(2.4, 2.4, 2.4), CFrame = cf * CFrame.new(-6.2, 1.6, -5.4) * CFrame.Angles(0, math.rad(12), 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(170, 120, 70), Parent = folder })
+	make("Part", { Name = "Crate", Size = Vector3.new(1.8, 1.8, 1.8), CFrame = cf * CFrame.new(-6.1, 3.7, -5.3) * CFrame.Angles(0, math.rad(-20), 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(160, 110, 65), Parent = folder })
+	make("Part", { Name = "ToolRack", Size = Vector3.new(0.4, 3, 6), CFrame = cf * CFrame.new(-7.3, 5, 1), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(120, 80, 50), Parent = folder })
+	for k = -1, 1 do
+		make("Part", { Name = "Tool", Size = Vector3.new(0.25, 2.6, 0.25), CFrame = cf * CFrame.new(-7, 4.8, 1 + k * 1.8), Material = Enum.Material.Wood, Color = Color3.fromRGB(130, 85, 50), CanCollide = false, Parent = folder })
+		make("Part", { Name = "ToolHead", Size = Vector3.new(0.5, 0.6, 1.1), CFrame = cf * CFrame.new(-7, 6.2, 1 + k * 1.8), Material = Enum.Material.Metal, Color = Color3.fromRGB(120, 120, 130), CanCollide = false, Parent = folder })
+	end
+	make("Part", { Name = "Chain", Size = Vector3.new(0.15, 3, 0.15), CFrame = cf * CFrame.new(0, 8.6, -3), Material = Enum.Material.Metal, Color = Color3.fromRGB(70, 70, 80), CanCollide = false, Parent = folder })
+	local lantern = make("Part", { Name = "Lantern", Size = Vector3.new(1.2, 1.4, 1.2), CFrame = cf * CFrame.new(0, 6.6, -3), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 200, 120), CanCollide = false, Parent = folder })
+	make("PointLight", { Color = Color3.fromRGB(255, 190, 110), Range = 18, Brightness = 1.2, Parent = lantern })
+	make("ParticleEmitter", {
+		Color = ColorSequence.new(Color3.fromRGB(255, 200, 100), Color3.fromRGB(255, 90, 30)), LightEmission = 1, Rate = 8, Lifetime = NumberRange.new(1, 2),
+		Speed = NumberRange.new(3, 6), SpreadAngle = Vector2.new(15, 15), Size = NumberSequence.new(0.3, 0), Parent = chimney,
+	})
 
 	-- banner over the entrance
 	local banner = make("Part", { Name = "Banner", Size = Vector3.new(12, 2.4, 0.4), CFrame = cf * CFrame.new(0, 9, -8.3), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
@@ -774,6 +849,13 @@ local function buildScenery(folder: Folder)
 		end
 	end
 
+	-- huge clouds drifting around the islands
+	for i = 1, 14 do
+		local a = i / 14 * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+		local r = rng:NextNumber(260, 420)
+		cloudPuff(Vector3.new(math.cos(a) * r, rng:NextNumber(30, 110), math.sin(a) * r), rng:NextNumber(40, 70), folder, 6)
+	end
+
 	-- little floating islets with a tree or a crystal
 	for i = 1, 10 do
 		local a = (i + rng:NextNumber(-0.3, 0.3)) / 10 * math.pi * 2
@@ -883,7 +965,7 @@ end
 function World.spawnCFrame(player: Player): CFrame
 	local index = playerPlot[player]
 	if not index then
-		return CFrame.new(0, 4, 20)
+		return CFrame.lookAt(Vector3.new(-22, 4, 0), Vector3.new(0, 4, 0))
 	end
 	local cf = plots[index].cf
 	local position = (cf * CFrame.new(0, 4, -(PLOT_SIZE / 2 - 1.5))).Position -- just outside the museum door

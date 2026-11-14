@@ -943,6 +943,60 @@ music.Ended:Connect(function()
 	end
 end)
 
+-- Day / night is a personal setting: only this player's lighting changes
+local Lighting = game:GetService("Lighting")
+local dayLook = nil
+local function applyDayNight()
+	local night = state and state.settings and state.settings.night == true
+	local sky = Lighting:FindFirstChildOfClass("Sky")
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+	local clouds = workspace.Terrain:FindFirstChildOfClass("Clouds")
+	if not dayLook then
+		dayLook = {
+			clock = Lighting.ClockTime, brightness = Lighting.Brightness, ambient = Lighting.Ambient, outdoor = Lighting.OutdoorAmbient,
+			stars = sky and sky.StarCount, density = atmosphere and atmosphere.Density, atmoColor = atmosphere and atmosphere.Color,
+			decay = atmosphere and atmosphere.Decay, haze = atmosphere and atmosphere.Haze, cloudColor = clouds and clouds.Color,
+		}
+	end
+	if night then
+		Lighting.ClockTime = 0
+		Lighting.Brightness = 1.4
+		Lighting.Ambient = Color3.fromRGB(70, 70, 110)
+		Lighting.OutdoorAmbient = Color3.fromRGB(70, 75, 115)
+		if sky then
+			sky.StarCount = 6000
+			sky.MoonAngularSize = 16
+			sky.CelestialBodiesShown = true
+		end
+		if atmosphere then
+			atmosphere.Density = 0.25
+			atmosphere.Color = Color3.fromRGB(40, 45, 85)
+			atmosphere.Decay = Color3.fromRGB(20, 20, 50)
+			atmosphere.Haze = 0.6
+		end
+		if clouds then
+			clouds.Color = Color3.fromRGB(90, 95, 130)
+		end
+	else
+		Lighting.ClockTime = dayLook.clock
+		Lighting.Brightness = dayLook.brightness
+		Lighting.Ambient = dayLook.ambient
+		Lighting.OutdoorAmbient = dayLook.outdoor
+		if sky and dayLook.stars then
+			sky.StarCount = dayLook.stars
+		end
+		if atmosphere and dayLook.density then
+			atmosphere.Density = dayLook.density
+			atmosphere.Color = dayLook.atmoColor
+			atmosphere.Decay = dayLook.decay
+			atmosphere.Haze = dayLook.haze
+		end
+		if clouds and dayLook.cloudColor then
+			clouds.Color = dayLook.cloudColor
+		end
+	end
+end
+
 local function settingOn(name: string): boolean
 	return not state or not state.settings or state.settings[name] ~= false
 end
@@ -995,8 +1049,26 @@ renderers[settingsW] = function()
 			end
 		end)
 	end
+	local skyRow = row(body, 3, 60, WHITE)
+	text({ Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), Text = t("skyMode"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = skyRow })
+	local isNight = state and state.settings and state.settings.night == true
+	for i, mode in { "day", "night" } do
+		local selected = (mode == "night") == isNight
+		btn(if selected then (if mode == "night" then Color3.fromRGB(60, 60, 130) else GOLD) else GREY, {
+			Size = UDim2.new(0.27, 0, 0, 42), Position = UDim2.new(0.4 + (i - 1) * 0.29, 0, 0, 9), Text = t(mode), Max = 18, ZIndex = 22, Parent = skyRow,
+		}, function()
+			if state then
+				state.settings = state.settings or {}
+				state.settings.night = mode == "night"
+				ActionEv:FireServer("SetSetting", "night", mode == "night")
+				applyDayNight()
+				renderers[settingsW]()
+			end
+		end)
+	end
+
 	-- from which odds the big reveal / announcements show up
-	local alertRow = row(body, 3, 160, WHITE)
+	local alertRow = row(body, 4, 160, WHITE)
 	text({ Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 14, 0, 6), Text = t("rareAlert"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = alertRow })
 	local options = make("Frame", { Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 0, 46), BackgroundTransparency = 1, ZIndex = 22, Parent = alertRow })
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = options })
@@ -1857,6 +1929,9 @@ StateEv.OnClientEvent:Connect(function(newState)
 	end
 	if firstState or (previous and previous.settings and newState.settings and previous.settings.music ~= newState.settings.music) then
 		applyMusic()
+	end
+	if firstState then
+		task.defer(applyDayNight) -- the world's lighting is set by the server first
 	end
 	if firstState then
 		firstState = false
