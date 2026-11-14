@@ -2854,6 +2854,145 @@ KIND_BUILDERS = {
 	magnetar = "magnetar", nebula = "nebula", remnant = "supernova", galaxy = "galaxy", lens = "whitehole", quasar = "quasar",
 }
 
+-- ================================================================ decoration layer (on top of every builder)
+local PURPLE = Color3.fromRGB(170, 90, 255)
+local TEAL = Color3.fromRGB(60, 255, 190)
+local PINK = Color3.fromRGB(255, 110, 220)
+local BLACK = Color3.new(0, 0, 0)
+
+-- A glowing orbit: two curved beams make a full circle (no parts, colour gradient along the ring).
+-- scale = the model's final scale, because beam curves don't scale with the model.
+local function orbitRing(core: BasePart, tilt: CFrame, radius: number, scale: number, c0: Color3, c1: Color3, width: number, transparency: number)
+	local function attachment(x: number, yaw: number)
+		local a = Instance.new("Attachment")
+		a.CFrame = tilt * CFrame.new(x, 0, 0) * CFrame.Angles(0, yaw, 0)
+		a.Parent = core
+		return a
+	end
+	local curve = radius * scale * 4 / 3
+	local half = math.pi / 2
+	for _, pair in { { attachment(radius, -half), attachment(-radius, half), c0, c1 }, { attachment(radius, half), attachment(-radius, -half), c0, c1 } } do
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = pair[1]
+		beam.Attachment1 = pair[2]
+		beam.CurveSize0 = curve
+		beam.CurveSize1 = curve
+		beam.Segments = 16
+		beam.FaceCamera = true
+		beam.Width0 = width
+		beam.Width1 = width
+		beam.LightEmission = 0.7
+		beam.LightInfluence = 0
+		beam.Color = ColorSequence.new(pair[3], pair[4])
+		beam.Transparency = NumberSequence.new(transparency)
+		beam.Parent = core
+	end
+end
+
+local function gradientParticles(core: BasePart, c0: Color3, c1: Color3, c2: Color3, rate: number)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c0), ColorSequenceKeypoint.new(0.5, c1), ColorSequenceKeypoint.new(1, c2) })
+	e.LightEmission = 0.6
+	e.LightInfluence = 0
+	e.Rate = rate
+	e.Lifetime = NumberRange.new(1.5, 3)
+	e.Speed = NumberRange.new(0.8, 2)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 1.5
+	e.RotSpeed = NumberRange.new(-120, 120)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.3), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	e.Parent = core
+end
+
+local DARK_IDS = { eventhorizon = true, darkmatter = true }
+
+local function tierOf(star): number
+	local i = star.index
+	return if i <= 9 then 1 elseif i <= 20 then 2 elseif i <= 40 then 3 elseif i <= 60 then 4 elseif i <= 70 then 5 else 6
+end
+
+local function dress(model: Model, core: BasePart, cf: CFrame, star, mutation, scale: number, parent: Instance, position: Vector3)
+	local tier = tierOf(star)
+	local color = star.color
+	-- every star gets its own two accent colours: purple / teal / pink mixes
+	local accentA = color:Lerp(if star.index % 2 == 0 then PURPLE else TEAL, 0.65)
+	local accentB = color:Lerp(if star.index % 3 == 0 then PINK else PURPLE, 0.65)
+	local dark = DARK_IDS[star.id] or star.kind == "blackhole" or mutation.id == "void"
+
+	if dark then
+		-- black star: a lightless core wrapped in bright orbits
+		local size = math.max(core.Size.X * 1.25, 1.4)
+		part(model, { Name = "DarkCore", Shape = Enum.PartType.Ball, Size = Vector3.one * size, CFrame = cf, Material = Enum.Material.SmoothPlastic, Color = BLACK })
+		orbitRing(core, CFrame.Angles(math.rad(8), 0, 0), size * 0.62, scale, Color3.new(1, 1, 1), accentA, 0.16, 0)
+	end
+
+	-- soft colour-gradient shells
+	orb(model, cf, 2.8, accentA, 0.9)
+	orb(model, cf, 3.6, accentB, 0.94)
+
+	-- orbits: more of them for rarer stars
+	local rings = if tier >= 5 then 3 elseif tier >= 4 then 2 elseif tier >= 2 or dark then 1 else 0
+	local tilts = { CFrame.Angles(math.rad(22), 0, math.rad(8)), CFrame.Angles(math.rad(-38), 0, math.rad(-20)), CFrame.Angles(math.rad(70), 0, math.rad(30)) }
+	for r = 1, rings do
+		local radius = 2 + r * 0.55
+		local c0 = if r == 1 then color elseif r == 2 then accentA else accentB
+		local c1 = if r == 1 then accentA elseif r == 2 then accentB else color
+		orbitRing(core, tilts[r], radius, scale, c0, c1, 0.1 + tier * 0.012, 0.15)
+		if tier >= 3 then
+			-- a little moon riding the orbit
+			orb(model, cf * tilts[r] * CFrame.new(radius, 0, 0), 0.32 + tier * 0.03, if dark then Color3.new(1, 1, 1) else c1, 0)
+			if tier >= 5 then
+				orb(model, cf * tilts[r] * CFrame.new(-radius, 0, 0), 0.26, c0, 0)
+			end
+		end
+	end
+
+	gradientParticles(core, color, accentA, accentB, 4 + tier * 3)
+
+	-- mutation styling
+	if mutation.id == "shiny" then
+		orbitRing(core, CFrame.Angles(math.rad(90), 0, 0), 1.7, scale, mutation.color, Color3.new(1, 1, 1), 0.08, 0.2)
+	elseif mutation.id == "golden" then
+		orbitRing(core, CFrame.Angles(math.rad(12), 0, 0), 2.3, scale, mutation.color, Color3.fromRGB(255, 240, 170), 0.2, 0.05)
+		for k = 0, 2 do
+			orb(model, cf * CFrame.Angles(math.rad(12), 0, 0) * CFrame.Angles(0, k * math.pi * 2 / 3, 0) * CFrame.new(2.3, 0, 0), 0.35, mutation.color, 0)
+		end
+	elseif mutation.id == "void" then
+		orbitRing(core, CFrame.Angles(math.rad(55), 0, math.rad(15)), 2.5, scale, PURPLE, PINK, 0.16, 0.1)
+		orbitRing(core, CFrame.Angles(math.rad(-55), 0, math.rad(-15)), 2.5, scale, PINK, PURPLE, 0.16, 0.1)
+	elseif mutation.id == "celestial" then
+		orbitRing(core, CFrame.Angles(math.rad(20), 0, 0), 2.7, scale, mutation.color, Color3.new(1, 1, 1), 0.18, 0.05)
+		orbitRing(core, CFrame.Angles(math.rad(-20), 0, 0), 3.1, scale, Color3.new(1, 1, 1), TEAL, 0.14, 0.1)
+		for k = 0, 5 do -- crown of light points
+			orb(model, cf * CFrame.Angles(0, k * math.pi / 3, 0) * CFrame.new(1.2, 2.2, 0), 0.22, mutation.color, 0)
+		end
+	end
+	if mutation.id ~= "normal" then
+		gradientParticles(core, mutation.color, Color3.new(1, 1, 1), mutation.color, 6 + mutation.index * 4)
+	end
+
+	-- the rarest ones stand in a faint pillar of light with a rune ring on the stand (static, outside the model)
+	if tier >= 5 then
+		part(parent :: any, {
+			Name = "Pillar", Size = Vector3.new(0.5, 16, 0.5), CFrame = CFrame.new(position + Vector3.new(0, 6, 0)),
+			Material = Enum.Material.Neon, Color = accentA, Transparency = 0.82,
+		})
+		part(parent :: any, {
+			Name = "PillarGlow", Size = Vector3.new(1.4, 16, 1.4), CFrame = CFrame.new(position + Vector3.new(0, 6, 0)),
+			Material = Enum.Material.Neon, Color = accentB, Transparency = 0.94,
+		})
+	end
+	if tier >= 3 then
+		part(parent :: any, {
+			Name = "Halo2", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.06, 4.4, 4.4),
+			CFrame = CFrame.new(position - Vector3.new(0, 2.92, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Neon, Color = accentA, Transparency = 0.8,
+		})
+	end
+end
+
 -- star, mutation, level -> Model at position
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")
@@ -2872,14 +3011,7 @@ function StarModels.create(star, mutation, level: number, position: Vector3, par
 		Material = Enum.Material.Neon, Color = star.color, Transparency = 0.55,
 	})
 
-	if mutation.id ~= "normal" then
-		particles(core, {
-			Color = mutation.color, Rate = 6 + mutation.index * 4, Texture = SPARKLE,
-			Speed = NumberRange.new(1, 2), Lifetime = NumberRange.new(1, 2),
-			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0) }),
-		})
-		orb(model, cf, 3 + mutation.index * 0.3, mutation.color, 0.88)
-	end
+	dress(model, core, cf, star, mutation, scale, parent, position)
 
 	if scale ~= 1 then
 		model:ScaleTo(scale)
@@ -3030,6 +3162,28 @@ local function roundIsland(center: Vector3, radius: number, parent: Instance, to
 	cylinder(CFrame.new(center + Vector3.new(0, -2, 0)), 4, radius * 2, { Name = "Floor", Material = topMaterial or Enum.Material.Marble, Color = topColor or MARBLE, Parent = parent })
 	cylinder(CFrame.new(center + Vector3.new(0, -2.4, 0)), 3.6, radius * 2 + 2, { Name = "Rim", Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = parent })
 	cylinder(CFrame.new(center + Vector3.new(0, -7, 0)), 6, radius * 1.7, { Name = "Base", Material = Enum.Material.Marble, Color = MARBLE_WARM, Parent = parent })
+	-- tapered rock underside, like a real floating island
+	local darkIsland = topColor ~= nil and (topColor.R + topColor.G + topColor.B) < 1
+	local rock = if darkIsland then Color3.fromRGB(34, 28, 44) else Color3.fromRGB(176, 160, 142)
+	local depth = -10
+	for step, k in { 1.35, 1.0, 0.68, 0.4, 0.18 } do
+		local h = 5 + step * 1.5
+		cylinder(CFrame.new(center + Vector3.new(rng:NextNumber(-1.5, 1.5), depth - h / 2, rng:NextNumber(-1.5, 1.5))), h, radius * k, {
+			Name = "Rock", Material = Enum.Material.Slate, Color = rock:Lerp(Color3.new(0, 0, 0), step * 0.06), CanCollide = false, Parent = parent,
+		})
+		depth -= h - 0.5
+	end
+	for _ = 1, math.floor(radius / 5) do -- stalactites with glowing crystal tips
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(radius * 0.25, radius * 0.75)
+		local len = rng:NextNumber(4, 9)
+		local tip = center + Vector3.new(math.cos(a) * r, -11 - len, math.sin(a) * r)
+		cylinder(CFrame.new(tip + Vector3.new(0, len / 2, 0)), len, 1.6, { Name = "Stalactite", Material = Enum.Material.Slate, Color = rock, CanCollide = false, Parent = parent })
+		make("Part", {
+			Name = "TipCrystal", Size = Vector3.new(1, 1.8, 1), CFrame = CFrame.new(tip) * CFrame.Angles(0, math.rad(45), math.rad(45)),
+			Material = Enum.Material.Neon, Color = if darkIsland then Color3.fromRGB(176, 110, 255) else Color3.fromRGB(150, 225, 255), Transparency = 0.2, CanCollide = false, Parent = parent,
+		})
+	end
 	for _ = 1, math.floor(radius / 4) do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local r = rng:NextNumber(0, radius * 0.8)
@@ -3487,13 +3641,37 @@ local function buildBlackHole(folder: Folder, slot: number)
 			make("Smoke", { Color = Color3.fromRGB(60, 40, 70), Opacity = 0.25, RiseVelocity = 5, Size = 3, Parent = rock })
 		end
 	end
-	for i = 0, 3 do
-		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local base = center + Vector3.new(math.cos(a) * 10, 0, math.sin(a) * 10)
-		cylinder(CFrame.new(base + Vector3.new(0, 2, 0)), 4, 1.4, { Name = "BrazierStand", Material = Enum.Material.Metal, Color = Color3.fromRGB(60, 50, 70), Parent = folder })
-		local bowl = cylinder(CFrame.new(base + Vector3.new(0, 4.3, 0)), 0.8, 3.2, { Name = "Brazier", Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 60, 90), Parent = folder })
-		make("Fire", { Heat = 9, Size = 4, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 160, 230), Parent = bowl })
-		make("PointLight", { Color = VIOLET, Range = 14, Brightness = 1.5, Parent = bowl })
+	-- ritual torches: tripod, gold-rimmed bowl, glowing coals, layered violet flame with embers
+	for i = 0, 5 do
+		local a = i / 6 * math.pi * 2 + math.pi / 6
+		local base = center + Vector3.new(math.cos(a) * 11, 0, math.sin(a) * 11)
+		local IRON = Color3.fromRGB(48, 40, 58)
+		cylinder(CFrame.new(base + Vector3.new(0, 0.3, 0)), 0.6, 3.4, { Name = "TorchFoot", Material = Enum.Material.Basalt, Color = IRON, Parent = folder })
+		for leg = 0, 2 do
+			local la = leg / 3 * math.pi * 2
+			make("Part", {
+				Name = "TorchLeg", Size = Vector3.new(0.35, 5.4, 0.35),
+				CFrame = CFrame.new(base + Vector3.new(math.cos(la) * 0.7, 2.9, math.sin(la) * 0.7)) * CFrame.Angles(math.sin(la) * 0.26, 0, -math.cos(la) * 0.26),
+				Material = Enum.Material.Metal, Color = IRON, Parent = folder,
+			})
+		end
+		cylinder(CFrame.new(base + Vector3.new(0, 3, 0)), 0.3, 1.6, { Name = "TorchRing", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = folder })
+		local bowl = cylinder(CFrame.new(base + Vector3.new(0, 5.6, 0)), 1, 3.4, { Name = "TorchBowl", Material = Enum.Material.Metal, Color = IRON, Parent = folder })
+		cylinder(CFrame.new(base + Vector3.new(0, 6.15, 0)), 0.25, 3.8, { Name = "TorchRim", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = folder })
+		local coals = cylinder(CFrame.new(base + Vector3.new(0, 6.2, 0)), 0.2, 2.8, { Name = "Coals", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 200), CanCollide = false, Parent = folder })
+		make("Fire", { Heat = 12, Size = 5, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 160, 230), Parent = coals })
+		make("ParticleEmitter", { -- tall soft flame
+			Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 220, 255)), ColorSequenceKeypoint.new(0.4, VIOLET), ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 20, 120)) }),
+			LightEmission = 0.9, Rate = 30, Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(4, 7), SpreadAngle = Vector2.new(8, 8),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.6), NumberSequenceKeypoint.new(1, 0) }),
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }), Parent = coals,
+		})
+		make("ParticleEmitter", { -- embers
+			Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 200, 255), FIRE), LightEmission = 1,
+			Rate = 8, Lifetime = NumberRange.new(1.5, 3), Speed = NumberRange.new(3, 8), SpreadAngle = Vector2.new(25, 25), Acceleration = Vector3.new(0, 3, 0),
+			Size = NumberSequence.new(0.3, 0), Parent = coals,
+		})
+		make("PointLight", { Color = VIOLET, Range = 18, Brightness = 1.6, Parent = bowl })
 	end
 	-- lightning-like arcs from the hole down to big crystals
 	for i = 0, 3 do
@@ -3691,6 +3869,15 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 
 	local floor = make("Part", { Name = "Floor", Size = Vector3.new(PLOT_SIZE, 4, PLOT_SIZE), CFrame = cf * CFrame.new(0, -2, 0), Material = Enum.Material.Grass, Color = GRASS, Parent = plotFolder })
 	make("Part", { Name = "Border", Size = Vector3.new(PLOT_SIZE + 3, 3.6, PLOT_SIZE + 3), CFrame = cf * CFrame.new(0, -2.3, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = plotFolder })
+	local under = -4.5
+	for step, k in { 0.9, 0.68, 0.45, 0.22 } do
+		local h = 5 + step
+		make("Part", {
+			Name = "Rock", Size = Vector3.new(PLOT_SIZE * k, h, PLOT_SIZE * k), CFrame = cf * CFrame.new(0, under - h / 2, 0) * CFrame.Angles(0, math.rad(step * 9), 0),
+			Material = Enum.Material.Slate, Color = Color3.fromRGB(176, 160, 142):Lerp(Color3.new(0, 0, 0), step * 0.07), CanCollide = false, Parent = plotFolder,
+		})
+		under -= h - 0.5
+	end
 	make("Part", { Name = "Trim", Size = Vector3.new(PLOT_SIZE + 4, 1, PLOT_SIZE + 4), CFrame = cf * CFrame.new(0, -4.2, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
 	for _ = 1, 10 do
 		cloudPuff((cf * CFrame.new(rng:NextNumber(-26, 26), -9, rng:NextNumber(-26, 26))).Position, rng:NextNumber(12, 18), plotFolder, 2)

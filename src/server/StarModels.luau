@@ -443,6 +443,145 @@ KIND_BUILDERS = {
 	magnetar = "magnetar", nebula = "nebula", remnant = "supernova", galaxy = "galaxy", lens = "whitehole", quasar = "quasar",
 }
 
+-- ================================================================ decoration layer (on top of every builder)
+local PURPLE = Color3.fromRGB(170, 90, 255)
+local TEAL = Color3.fromRGB(60, 255, 190)
+local PINK = Color3.fromRGB(255, 110, 220)
+local BLACK = Color3.new(0, 0, 0)
+
+-- A glowing orbit: two curved beams make a full circle (no parts, colour gradient along the ring).
+-- scale = the model's final scale, because beam curves don't scale with the model.
+local function orbitRing(core: BasePart, tilt: CFrame, radius: number, scale: number, c0: Color3, c1: Color3, width: number, transparency: number)
+	local function attachment(x: number, yaw: number)
+		local a = Instance.new("Attachment")
+		a.CFrame = tilt * CFrame.new(x, 0, 0) * CFrame.Angles(0, yaw, 0)
+		a.Parent = core
+		return a
+	end
+	local curve = radius * scale * 4 / 3
+	local half = math.pi / 2
+	for _, pair in { { attachment(radius, -half), attachment(-radius, half), c0, c1 }, { attachment(radius, half), attachment(-radius, -half), c0, c1 } } do
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = pair[1]
+		beam.Attachment1 = pair[2]
+		beam.CurveSize0 = curve
+		beam.CurveSize1 = curve
+		beam.Segments = 16
+		beam.FaceCamera = true
+		beam.Width0 = width
+		beam.Width1 = width
+		beam.LightEmission = 0.7
+		beam.LightInfluence = 0
+		beam.Color = ColorSequence.new(pair[3], pair[4])
+		beam.Transparency = NumberSequence.new(transparency)
+		beam.Parent = core
+	end
+end
+
+local function gradientParticles(core: BasePart, c0: Color3, c1: Color3, c2: Color3, rate: number)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, c0), ColorSequenceKeypoint.new(0.5, c1), ColorSequenceKeypoint.new(1, c2) })
+	e.LightEmission = 0.6
+	e.LightInfluence = 0
+	e.Rate = rate
+	e.Lifetime = NumberRange.new(1.5, 3)
+	e.Speed = NumberRange.new(0.8, 2)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 1.5
+	e.RotSpeed = NumberRange.new(-120, 120)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.3), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	e.Parent = core
+end
+
+local DARK_IDS = { eventhorizon = true, darkmatter = true }
+
+local function tierOf(star): number
+	local i = star.index
+	return if i <= 9 then 1 elseif i <= 20 then 2 elseif i <= 40 then 3 elseif i <= 60 then 4 elseif i <= 70 then 5 else 6
+end
+
+local function dress(model: Model, core: BasePart, cf: CFrame, star, mutation, scale: number, parent: Instance, position: Vector3)
+	local tier = tierOf(star)
+	local color = star.color
+	-- every star gets its own two accent colours: purple / teal / pink mixes
+	local accentA = color:Lerp(if star.index % 2 == 0 then PURPLE else TEAL, 0.65)
+	local accentB = color:Lerp(if star.index % 3 == 0 then PINK else PURPLE, 0.65)
+	local dark = DARK_IDS[star.id] or star.kind == "blackhole" or mutation.id == "void"
+
+	if dark then
+		-- black star: a lightless core wrapped in bright orbits
+		local size = math.max(core.Size.X * 1.25, 1.4)
+		part(model, { Name = "DarkCore", Shape = Enum.PartType.Ball, Size = Vector3.one * size, CFrame = cf, Material = Enum.Material.SmoothPlastic, Color = BLACK })
+		orbitRing(core, CFrame.Angles(math.rad(8), 0, 0), size * 0.62, scale, Color3.new(1, 1, 1), accentA, 0.16, 0)
+	end
+
+	-- soft colour-gradient shells
+	orb(model, cf, 2.8, accentA, 0.9)
+	orb(model, cf, 3.6, accentB, 0.94)
+
+	-- orbits: more of them for rarer stars
+	local rings = if tier >= 5 then 3 elseif tier >= 4 then 2 elseif tier >= 2 or dark then 1 else 0
+	local tilts = { CFrame.Angles(math.rad(22), 0, math.rad(8)), CFrame.Angles(math.rad(-38), 0, math.rad(-20)), CFrame.Angles(math.rad(70), 0, math.rad(30)) }
+	for r = 1, rings do
+		local radius = 2 + r * 0.55
+		local c0 = if r == 1 then color elseif r == 2 then accentA else accentB
+		local c1 = if r == 1 then accentA elseif r == 2 then accentB else color
+		orbitRing(core, tilts[r], radius, scale, c0, c1, 0.1 + tier * 0.012, 0.15)
+		if tier >= 3 then
+			-- a little moon riding the orbit
+			orb(model, cf * tilts[r] * CFrame.new(radius, 0, 0), 0.32 + tier * 0.03, if dark then Color3.new(1, 1, 1) else c1, 0)
+			if tier >= 5 then
+				orb(model, cf * tilts[r] * CFrame.new(-radius, 0, 0), 0.26, c0, 0)
+			end
+		end
+	end
+
+	gradientParticles(core, color, accentA, accentB, 4 + tier * 3)
+
+	-- mutation styling
+	if mutation.id == "shiny" then
+		orbitRing(core, CFrame.Angles(math.rad(90), 0, 0), 1.7, scale, mutation.color, Color3.new(1, 1, 1), 0.08, 0.2)
+	elseif mutation.id == "golden" then
+		orbitRing(core, CFrame.Angles(math.rad(12), 0, 0), 2.3, scale, mutation.color, Color3.fromRGB(255, 240, 170), 0.2, 0.05)
+		for k = 0, 2 do
+			orb(model, cf * CFrame.Angles(math.rad(12), 0, 0) * CFrame.Angles(0, k * math.pi * 2 / 3, 0) * CFrame.new(2.3, 0, 0), 0.35, mutation.color, 0)
+		end
+	elseif mutation.id == "void" then
+		orbitRing(core, CFrame.Angles(math.rad(55), 0, math.rad(15)), 2.5, scale, PURPLE, PINK, 0.16, 0.1)
+		orbitRing(core, CFrame.Angles(math.rad(-55), 0, math.rad(-15)), 2.5, scale, PINK, PURPLE, 0.16, 0.1)
+	elseif mutation.id == "celestial" then
+		orbitRing(core, CFrame.Angles(math.rad(20), 0, 0), 2.7, scale, mutation.color, Color3.new(1, 1, 1), 0.18, 0.05)
+		orbitRing(core, CFrame.Angles(math.rad(-20), 0, 0), 3.1, scale, Color3.new(1, 1, 1), TEAL, 0.14, 0.1)
+		for k = 0, 5 do -- crown of light points
+			orb(model, cf * CFrame.Angles(0, k * math.pi / 3, 0) * CFrame.new(1.2, 2.2, 0), 0.22, mutation.color, 0)
+		end
+	end
+	if mutation.id ~= "normal" then
+		gradientParticles(core, mutation.color, Color3.new(1, 1, 1), mutation.color, 6 + mutation.index * 4)
+	end
+
+	-- the rarest ones stand in a faint pillar of light with a rune ring on the stand (static, outside the model)
+	if tier >= 5 then
+		part(parent :: any, {
+			Name = "Pillar", Size = Vector3.new(0.5, 16, 0.5), CFrame = CFrame.new(position + Vector3.new(0, 6, 0)),
+			Material = Enum.Material.Neon, Color = accentA, Transparency = 0.82,
+		})
+		part(parent :: any, {
+			Name = "PillarGlow", Size = Vector3.new(1.4, 16, 1.4), CFrame = CFrame.new(position + Vector3.new(0, 6, 0)),
+			Material = Enum.Material.Neon, Color = accentB, Transparency = 0.94,
+		})
+	end
+	if tier >= 3 then
+		part(parent :: any, {
+			Name = "Halo2", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.06, 4.4, 4.4),
+			CFrame = CFrame.new(position - Vector3.new(0, 2.92, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Material = Enum.Material.Neon, Color = accentA, Transparency = 0.8,
+		})
+	end
+end
+
 -- star, mutation, level -> Model at position
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")
@@ -461,14 +600,7 @@ function StarModels.create(star, mutation, level: number, position: Vector3, par
 		Material = Enum.Material.Neon, Color = star.color, Transparency = 0.55,
 	})
 
-	if mutation.id ~= "normal" then
-		particles(core, {
-			Color = mutation.color, Rate = 6 + mutation.index * 4, Texture = SPARKLE,
-			Speed = NumberRange.new(1, 2), Lifetime = NumberRange.new(1, 2),
-			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0) }),
-		})
-		orb(model, cf, 3 + mutation.index * 0.3, mutation.color, 0.88)
-	end
+	dress(model, core, cf, star, mutation, scale, parent, position)
 
 	if scale ~= 1 then
 		model:ScaleTo(scale)

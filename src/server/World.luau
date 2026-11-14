@@ -135,6 +135,28 @@ local function roundIsland(center: Vector3, radius: number, parent: Instance, to
 	cylinder(CFrame.new(center + Vector3.new(0, -2, 0)), 4, radius * 2, { Name = "Floor", Material = topMaterial or Enum.Material.Marble, Color = topColor or MARBLE, Parent = parent })
 	cylinder(CFrame.new(center + Vector3.new(0, -2.4, 0)), 3.6, radius * 2 + 2, { Name = "Rim", Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = parent })
 	cylinder(CFrame.new(center + Vector3.new(0, -7, 0)), 6, radius * 1.7, { Name = "Base", Material = Enum.Material.Marble, Color = MARBLE_WARM, Parent = parent })
+	-- tapered rock underside, like a real floating island
+	local darkIsland = topColor ~= nil and (topColor.R + topColor.G + topColor.B) < 1
+	local rock = if darkIsland then Color3.fromRGB(34, 28, 44) else Color3.fromRGB(176, 160, 142)
+	local depth = -10
+	for step, k in { 1.35, 1.0, 0.68, 0.4, 0.18 } do
+		local h = 5 + step * 1.5
+		cylinder(CFrame.new(center + Vector3.new(rng:NextNumber(-1.5, 1.5), depth - h / 2, rng:NextNumber(-1.5, 1.5))), h, radius * k, {
+			Name = "Rock", Material = Enum.Material.Slate, Color = rock:Lerp(Color3.new(0, 0, 0), step * 0.06), CanCollide = false, Parent = parent,
+		})
+		depth -= h - 0.5
+	end
+	for _ = 1, math.floor(radius / 5) do -- stalactites with glowing crystal tips
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(radius * 0.25, radius * 0.75)
+		local len = rng:NextNumber(4, 9)
+		local tip = center + Vector3.new(math.cos(a) * r, -11 - len, math.sin(a) * r)
+		cylinder(CFrame.new(tip + Vector3.new(0, len / 2, 0)), len, 1.6, { Name = "Stalactite", Material = Enum.Material.Slate, Color = rock, CanCollide = false, Parent = parent })
+		make("Part", {
+			Name = "TipCrystal", Size = Vector3.new(1, 1.8, 1), CFrame = CFrame.new(tip) * CFrame.Angles(0, math.rad(45), math.rad(45)),
+			Material = Enum.Material.Neon, Color = if darkIsland then Color3.fromRGB(176, 110, 255) else Color3.fromRGB(150, 225, 255), Transparency = 0.2, CanCollide = false, Parent = parent,
+		})
+	end
 	for _ = 1, math.floor(radius / 4) do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local r = rng:NextNumber(0, radius * 0.8)
@@ -592,13 +614,37 @@ local function buildBlackHole(folder: Folder, slot: number)
 			make("Smoke", { Color = Color3.fromRGB(60, 40, 70), Opacity = 0.25, RiseVelocity = 5, Size = 3, Parent = rock })
 		end
 	end
-	for i = 0, 3 do
-		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local base = center + Vector3.new(math.cos(a) * 10, 0, math.sin(a) * 10)
-		cylinder(CFrame.new(base + Vector3.new(0, 2, 0)), 4, 1.4, { Name = "BrazierStand", Material = Enum.Material.Metal, Color = Color3.fromRGB(60, 50, 70), Parent = folder })
-		local bowl = cylinder(CFrame.new(base + Vector3.new(0, 4.3, 0)), 0.8, 3.2, { Name = "Brazier", Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 60, 90), Parent = folder })
-		make("Fire", { Heat = 9, Size = 4, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 160, 230), Parent = bowl })
-		make("PointLight", { Color = VIOLET, Range = 14, Brightness = 1.5, Parent = bowl })
+	-- ritual torches: tripod, gold-rimmed bowl, glowing coals, layered violet flame with embers
+	for i = 0, 5 do
+		local a = i / 6 * math.pi * 2 + math.pi / 6
+		local base = center + Vector3.new(math.cos(a) * 11, 0, math.sin(a) * 11)
+		local IRON = Color3.fromRGB(48, 40, 58)
+		cylinder(CFrame.new(base + Vector3.new(0, 0.3, 0)), 0.6, 3.4, { Name = "TorchFoot", Material = Enum.Material.Basalt, Color = IRON, Parent = folder })
+		for leg = 0, 2 do
+			local la = leg / 3 * math.pi * 2
+			make("Part", {
+				Name = "TorchLeg", Size = Vector3.new(0.35, 5.4, 0.35),
+				CFrame = CFrame.new(base + Vector3.new(math.cos(la) * 0.7, 2.9, math.sin(la) * 0.7)) * CFrame.Angles(math.sin(la) * 0.26, 0, -math.cos(la) * 0.26),
+				Material = Enum.Material.Metal, Color = IRON, Parent = folder,
+			})
+		end
+		cylinder(CFrame.new(base + Vector3.new(0, 3, 0)), 0.3, 1.6, { Name = "TorchRing", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = folder })
+		local bowl = cylinder(CFrame.new(base + Vector3.new(0, 5.6, 0)), 1, 3.4, { Name = "TorchBowl", Material = Enum.Material.Metal, Color = IRON, Parent = folder })
+		cylinder(CFrame.new(base + Vector3.new(0, 6.15, 0)), 0.25, 3.8, { Name = "TorchRim", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = folder })
+		local coals = cylinder(CFrame.new(base + Vector3.new(0, 6.2, 0)), 0.2, 2.8, { Name = "Coals", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 120, 200), CanCollide = false, Parent = folder })
+		make("Fire", { Heat = 12, Size = 5, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 160, 230), Parent = coals })
+		make("ParticleEmitter", { -- tall soft flame
+			Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 220, 255)), ColorSequenceKeypoint.new(0.4, VIOLET), ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 20, 120)) }),
+			LightEmission = 0.9, Rate = 30, Lifetime = NumberRange.new(0.8, 1.4), Speed = NumberRange.new(4, 7), SpreadAngle = Vector2.new(8, 8),
+			Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.6), NumberSequenceKeypoint.new(1, 0) }),
+			Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) }), Parent = coals,
+		})
+		make("ParticleEmitter", { -- embers
+			Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 200, 255), FIRE), LightEmission = 1,
+			Rate = 8, Lifetime = NumberRange.new(1.5, 3), Speed = NumberRange.new(3, 8), SpreadAngle = Vector2.new(25, 25), Acceleration = Vector3.new(0, 3, 0),
+			Size = NumberSequence.new(0.3, 0), Parent = coals,
+		})
+		make("PointLight", { Color = VIOLET, Range = 18, Brightness = 1.6, Parent = bowl })
 	end
 	-- lightning-like arcs from the hole down to big crystals
 	for i = 0, 3 do
@@ -796,6 +842,15 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 
 	local floor = make("Part", { Name = "Floor", Size = Vector3.new(PLOT_SIZE, 4, PLOT_SIZE), CFrame = cf * CFrame.new(0, -2, 0), Material = Enum.Material.Grass, Color = GRASS, Parent = plotFolder })
 	make("Part", { Name = "Border", Size = Vector3.new(PLOT_SIZE + 3, 3.6, PLOT_SIZE + 3), CFrame = cf * CFrame.new(0, -2.3, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = plotFolder })
+	local under = -4.5
+	for step, k in { 0.9, 0.68, 0.45, 0.22 } do
+		local h = 5 + step
+		make("Part", {
+			Name = "Rock", Size = Vector3.new(PLOT_SIZE * k, h, PLOT_SIZE * k), CFrame = cf * CFrame.new(0, under - h / 2, 0) * CFrame.Angles(0, math.rad(step * 9), 0),
+			Material = Enum.Material.Slate, Color = Color3.fromRGB(176, 160, 142):Lerp(Color3.new(0, 0, 0), step * 0.07), CanCollide = false, Parent = plotFolder,
+		})
+		under -= h - 0.5
+	end
 	make("Part", { Name = "Trim", Size = Vector3.new(PLOT_SIZE + 4, 1, PLOT_SIZE + 4), CFrame = cf * CFrame.new(0, -4.2, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
 	for _ = 1, 10 do
 		cloudPuff((cf * CFrame.new(rng:NextNumber(-26, 26), -9, rng:NextNumber(-26, 26))).Position, rng:NextNumber(12, 18), plotFolder, 2)
