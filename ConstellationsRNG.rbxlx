@@ -114,9 +114,9 @@ Config.UiIcons = {
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
 -- Music can hold several tracks; they play one after another.
 Config.Sounds = {
-	Music = { "" },
+	Music = { "70905224258341" },
 	MusicVolume = 0.3,
-	Rebirth = "",
+	Rebirth = "73693601629586",
 	RebirthVolume = 0.8,
 }
 
