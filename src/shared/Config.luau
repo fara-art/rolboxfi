@@ -113,13 +113,13 @@ Config.StarIcons = {
 	neutron = "101194309009316",
 	quasar = "74183692232117",
 	supernova = "113026952245040",
-	magnetar = "",
-	nebula = "",
-	whitehole = "",
-	galaxy = "",
-	cosmic = "",
-	bigbang = "",
-	infinity = "",
+	magnetar = "116706091240889",
+	nebula = "112722285239629",
+	whitehole = "101827475394899",
+	galaxy = "107395453752166",
+	cosmic = "117932676104830",
+	bigbang = "113793732641956",
+	infinity = "91772650758251",
 }
 
 -- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
@@ -138,7 +138,7 @@ Config.UiIcons = {
 	coins = "129002927140322", -- ui_coins.png (header cash)
 	income = "128510907463165", -- ui_income.png (header per second)
 	rebirth = "73756458949010", -- ui_rebirth.png
-	build = "", -- ui_build.png
+	build = "81422090060014", -- ui_build.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
