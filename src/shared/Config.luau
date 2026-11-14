@@ -130,6 +130,23 @@ Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
 Config.GlobalRareChance = 1000000000 -- 1 in a billion and rarer: cinematic for the whole server
 Config.UltraRevealChance = 500000 -- 1 in 500K and rarer: the long black-screen ultra reveal
 
+-- ================= Daily chest (7-day streak). Cash grows with the player's income.
+Config.DailyRewards = {
+	{ cash = 2000 },
+	{ boost = "luck", minutes = 15 },
+	{ item = "redgiant", count = 3 },
+	{ cash = 50000 },
+	{ boost = "speed", minutes = 30 },
+	{ item = "pulsar|shiny", count = 1 },
+	{ item = "neutron|golden", count = 1, boost = "luck", minutes = 60 },
+}
+Config.DailyCooldown = 20 * 3600 -- a new reward every 20 hours
+Config.DailyStreakLoss = 48 * 3600 -- miss more than 48 hours -> back to day 1
+Config.DailyReach = 14
+function Config.DailyCash(base: number, income: number): number
+	return math.max(base, math.floor(income * 120))
+end
+
 -- every N rolls the next roll gets x2 luck (progress bar under the header)
 Config.LuckyRoll = { every = 50, mult = 2 }
 
@@ -285,6 +302,7 @@ Config.UiIcons = {
 	income = "128510907463165", -- ui_income.png (header per second)
 	rebirth = "73756458949010", -- ui_rebirth.png
 	build = "81422090060014", -- ui_build.png
+	codes = "", -- ui_codes.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

@@ -68,6 +68,9 @@ end
 
 function Format.time(seconds: number): string
 	seconds = math.max(0, math.floor(seconds))
+	if seconds >= 3600 then
+		return string.format("%d:%02d:%02d", seconds // 3600, (seconds % 3600) // 60, seconds % 60)
+	end
 	return string.format("%d:%02d", seconds // 60, seconds % 60)
 end
 

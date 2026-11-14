@@ -45,6 +45,9 @@ local function default()
 		boostLuckUntil = 0, -- server time when the x2 luck boost ends
 		boostSpeedUntil = 0,
 		receipts = {}, -- processed purchase ids (never grant twice)
+		daily = { day = 0, last = 0 }, -- last claimed day of the 7-day cycle + when
+		codes = {}, -- redeemed codes
+		tutorialDone = false,
 		theme = "sky",
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}

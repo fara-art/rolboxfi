@@ -401,7 +401,10 @@ local holeW = window("holeTitle", "center", centerProps())
 local elevatorW = window("elevatorTitle", "center", { Size = UDim2.new(0.26, 0, 0.5, 0), Position = UDim2.new(0.37, 0, 0.22, 0) })
 local shopW = window("shop", "center", { Size = UDim2.new(0.62, 0, 0.78, 0), Position = UDim2.new(0.19, 0, 0.12, 0) })
 local crateW = window("crateGot", "center", { Size = UDim2.new(0.4, 0, 0.5, 0), Position = UDim2.new(0.3, 0, 0.24, 0) })
+local dailyW = window("dailyTitle", "center", { Size = UDim2.new(0.66, 0, 0.5, 0), Position = UDim2.new(0.17, 0, 0.22, 0) })
+local codesW = window("codes", "center", { Size = UDim2.new(0.34, 0, 0.32, 0), Position = UDim2.new(0.33, 0, 0.3, 0) })
 local lastCrate = {}
+local dailyInZone = false
 local elevatorInfo = { plot = 0, floor = 1, floors = 1 }
 local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
 local settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.56, 0), Position = UDim2.new(0.31, 0, 0.18, 0) })
@@ -439,11 +442,26 @@ local function open(w, force: boolean?)
 	end
 end
 
----------------------------------------------------------------- Tip card (closable)
-local tip = panelFrame({ Size = UDim2.new(0.17, 0, 0.14, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -80), Parent = gui }) -- just above the dock
-bind(text({ Size = UDim2.new(1, -30, 1, 0), TextColor3 = TEXT, FontFace = BODY_SEMI, Max = 15, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Parent = tip }), "tip")
-btn(RED, { Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -24, 0, -2), Text = "X", Max = 14, Parent = tip }, function()
-	tip.Visible = false
+---------------------------------------------------------------- Tutorial card (first visit only, closable)
+local tutorialCard = panelFrame({ Size = UDim2.new(0, 330, 0, 150), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -100), Visible = false, ZIndex = 40, Parent = gui })
+local tutorialTitle = text({ Size = UDim2.new(1, -40, 0, 24), Text = "", FontFace = TITLE, TextColor3 = BLUE, TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 41, Parent = tutorialCard })
+local tutorialText = text({ Size = UDim2.new(1, 0, 0, 62), Position = UDim2.new(0, 0, 0, 28), Text = "", FontFace = BODY, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 41, Parent = tutorialCard })
+local tutorialNext -- button, created below
+local tutorialStep = 1
+local tutorialClosed = false
+local TUTORIAL_STEPS = 5
+local function finishTutorial()
+	tutorialClosed = true
+	tutorialCard.Visible = false
+	ActionEv:FireServer("TutorialDone")
+end
+btn(RED, { Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(1, -30, 0, -4), Text = "X", Max = 16, ZIndex = 42, Parent = tutorialCard }, finishTutorial)
+tutorialNext = btn(MINT, { Size = UDim2.new(0, 130, 0, 36), Position = UDim2.new(1, -130, 1, -36), Text = "", Max = 16, ZIndex = 42, Parent = tutorialCard }, function()
+	if tutorialStep >= TUTORIAL_STEPS then
+		finishTutorial()
+	else
+		tutorialStep += 1
+	end
 end)
 
 ---------------------------------------------------------------- Row helpers
@@ -1769,11 +1787,12 @@ addButtons(bottomRow, {
 	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
 	{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
 })
-local rightColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
+local rightColumn = buttonGroup(4, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
 addButtons(rightColumn, {
 	{ "catalogue", catalogueW, BLUE, "catalogue" },
 	{ "index", indexW, LILAC, "index" },
 	{ "odds", oddsW, GOLD, "odds" },
+	{ "codes", codesW, Color3.fromRGB(80, 170, 240), "codes" },
 })
 local rewardsBadge = badge(dockButtons.rewards)
 local indexBadge = badge(dockButtons.index)
@@ -1936,7 +1955,7 @@ StateEv.OnClientEvent:Connect(function(newState)
 	if firstState then
 		firstState = false
 		setLang(if state.lang == "en" or state.lang == "ru" then state.lang else autoLang)
-		tip.Visible = not state.hasPlot
+		tutorialClosed = state.tutorialDone == true
 	else
 		render()
 	end
@@ -1955,6 +1974,196 @@ PickerEv.OnClientEvent:Connect(function(cellKey: string)
 end)
 
 -- Forge / Black Hole windows are opened by the server when you use their prompts
+---------------------------------------------------------------- Daily chest
+local dailyButton: TextButton? = nil
+local function dailyNext(now: number): (number, boolean)
+	local daily = state.daily or { day = 0, last = 0 }
+	local lost = daily.last > 0 and now - daily.last > Config.DailyStreakLoss
+	local nextDay = if daily.day >= #Config.DailyRewards or lost then 1 else daily.day + 1
+	return nextDay, now - daily.last >= Config.DailyCooldown
+end
+
+local function rewardText(reward): string
+	local parts = {}
+	if reward.cash then
+		table.insert(parts, "+" .. Format.number(Config.DailyCash(reward.cash, state.income or 0)))
+	end
+	if reward.item then
+		table.insert(parts, Lang.item(lang, reward.item) .. " x" .. (reward.count or 1))
+	end
+	if reward.boost then
+		table.insert(parts, t("rewardBoost", t(if reward.boost == "luck" then "luckWord2" else "speedWord2"), reward.minutes))
+	end
+	return table.concat(parts, "\n")
+end
+
+renderers[dailyW] = function()
+	local body = dailyW.body
+	clear(body)
+	local now = workspace:GetServerTimeNow()
+	local daily = state.daily or { day = 0, last = 0 }
+	local nextDay, ready = dailyNext(now)
+	-- days of the current streak that were already claimed are revealed; the rest stay black
+	local revealed = if nextDay == 1 and ready then 0 else daily.day
+	text({ Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 1, Text = t("dailyHint"), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+	local grid = make("Frame", { Size = UDim2.new(1, 0, 0, 170), LayoutOrder = 2, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+	make("UIGridLayout", { CellSize = UDim2.new(1 / #Config.DailyRewards, -8, 1, 0), CellPadding = UDim2.new(0, 8, 0, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+	for day, reward in Config.DailyRewards do
+		local shown = day <= revealed
+		local isNext = day == nextDay
+		local card = make("Frame", {
+			LayoutOrder = day, ZIndex = 22, Parent = grid,
+			BackgroundColor3 = if shown then WHITE else Color3.fromRGB(18, 18, 28),
+		}, { corner(12), stroke(if isNext then GOLD else INK, if isNext then 4 else 2.5) })
+		text({ Size = UDim2.new(1, 0, 0, 26), Position = UDim2.new(0, 0, 0, 6), Text = t("dayN", day), FontFace = TITLE, TextColor3 = if shown then BLUE else WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = if shown then 1 else 0.3, Max = 18, ZIndex = 23, Parent = card })
+		if shown then
+			if reward.item then
+				local star, mutation = Items.parse(reward.item)
+				if star then
+					starIcon(star, mutation, { Size = UDim2.new(0, 56, 0, 56), Position = UDim2.new(0.5, -28, 0, 36), ZIndex = 23, Parent = card })
+				end
+			else
+				uiIcon(if reward.cash then "coins" else (if reward.boost == "luck" then "luck" else "rolls"), { Size = UDim2.new(0, 56, 0, 56), Position = UDim2.new(0.5, -28, 0, 36), ZIndex = 23, Parent = card })
+			end
+			text({ Size = UDim2.new(1, -8, 0, 54), Position = UDim2.new(0, 4, 0, 96), Text = rewardText(reward), FontFace = BODY, TextWrapped = true, Max = 14, ZIndex = 23, Parent = card })
+		else
+			text({ Size = UDim2.new(1, 0, 0, 80), Position = UDim2.new(0, 0, 0, 40), Text = "?", FontFace = TITLE, TextColor3 = Color3.fromRGB(90, 90, 120), Max = 60, ZIndex = 23, Parent = card })
+		end
+	end
+	dailyButton = btn(if ready then MINT else GREY, {
+		Size = UDim2.new(1, 0, 0, 50), LayoutOrder = 3, ZIndex = 21, Max = 20,
+		Text = if ready then t("dailyClaim", nextDay) else t("dailyWait", Format.time(Config.DailyCooldown - (now - daily.last))), Parent = body,
+	}, function()
+		local _, canClaim = dailyNext(workspace:GetServerTimeNow())
+		if canClaim then
+			ActionEv:FireServer("ClaimDaily")
+		end
+	end)
+end
+
+-- the chest lid swings open while you stand near it
+local lidParts = nil
+local function setLid(openLid: boolean)
+	local chest = CollectionService:GetTagged("DailyChest")[1]
+	local lid = chest and chest:FindFirstChild("Lid")
+	if not lid then
+		return
+	end
+	if not lidParts then
+		lidParts = {}
+		for _, part in { lid, lid:FindFirstChild("LidBand") } do
+			if part then
+				table.insert(lidParts, { part = part, base = part.CFrame })
+			end
+		end
+		lidParts.hinge = lid.CFrame * CFrame.new(0, -lid.Size.Y / 2, lid.Size.Z / 2)
+	end
+	local opened = lidParts.hinge * CFrame.Angles(math.rad(75), 0, 0) * lidParts.hinge:Inverse()
+	for _, info in ipairs(lidParts) do
+		TweenService:Create(info.part, TweenInfo.new(0.5, Enum.EasingStyle.Back), { CFrame = if openLid then opened * info.base else info.base }):Play()
+	end
+end
+
+---------------------------------------------------------------- Codes
+renderers[codesW] = function()
+	local body = codesW.body
+	clear(body)
+	local box = make("TextBox", {
+		Size = UDim2.new(1, 0, 0, 50), LayoutOrder = 1, BackgroundColor3 = WHITE, PlaceholderText = t("codeHint"), Text = "",
+		TextColor3 = TEXT, FontFace = TITLE, TextScaled = true, ClearTextOnFocus = false, ZIndex = 22, Parent = body,
+	}, { corner(10), stroke(INK, 2.5), pad(8), make("UITextSizeConstraint", { MaxTextSize = 22 }) })
+	btn(MINT, { Size = UDim2.new(1, 0, 0, 50), LayoutOrder = 2, Text = t("redeem"), Max = 20, ZIndex = 22, Parent = body }, function()
+		if box.Text ~= "" then
+			ActionEv:FireServer("RedeemCode", box.Text)
+			box.Text = ""
+		end
+	end)
+end
+
+---------------------------------------------------------------- Tutorial guidance (a light beam towards the goal)
+local guideBeam: Beam? = nil
+local guideTarget: Attachment? = nil
+local function setGuide(target: BasePart?)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not target or not root then
+		if guideBeam then
+			guideBeam:Destroy()
+			guideBeam = nil
+		end
+		if guideTarget then
+			guideTarget:Destroy()
+			guideTarget = nil
+		end
+		return
+	end
+	if not guideBeam or not guideBeam.Attachment0 or guideBeam.Attachment0.Parent ~= root then
+		if guideBeam then
+			guideBeam:Destroy()
+		end
+		local from = Instance.new("Attachment")
+		from.Parent = root
+		guideBeam = make("Beam", {
+			Attachment0 = from, Color = ColorSequence.new(Color3.fromRGB(255, 220, 120)), LightEmission = 1, Width0 = 1.2, Width1 = 1.2,
+			FaceCamera = true, Transparency = NumberSequence.new(0.2, 0.6), Segments = 10, Parent = root,
+		})
+	end
+	if not guideTarget or guideTarget.Parent ~= target then
+		if guideTarget then
+			guideTarget:Destroy()
+		end
+		guideTarget = Instance.new("Attachment")
+		guideTarget.Parent = target
+		guideBeam.Attachment1 = guideTarget
+	end
+end
+
+local function updateTutorial()
+	if not state or tutorialClosed then
+		tutorialCard.Visible = false
+		setGuide(nil)
+		return
+	end
+	-- automatic steps advance by themselves
+	if tutorialStep == 1 and state.totalRolls >= 3 then
+		tutorialStep = 2
+	end
+	if tutorialStep == 2 and state.hasPlot then
+		tutorialStep = 3
+	end
+	if tutorialStep == 3 and next(state.grid) ~= nil then
+		tutorialStep = 4
+	end
+	tutorialCard.Visible = true
+	tutorialTitle.Text = t("tutTitle", tutorialStep, TUTORIAL_STEPS)
+	tutorialText.Text = t("tut" .. tutorialStep)
+	tutorialNext.Visible = tutorialStep >= 4
+	tutorialNext.Text = if tutorialStep >= TUTORIAL_STEPS then t("tutDone") else t("tutNext")
+	-- guide beam
+	local target = nil
+	local plots = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Plots")
+	if tutorialStep == 2 and plots then
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		local best = math.huge
+		for _, plot in plots:GetChildren() do
+			local post = plot:FindFirstChild("SignPost")
+			if plot:GetAttribute("OwnerId") == 0 and post and root then
+				local d = (post.Position - root.Position).Magnitude
+				if d < best then
+					best = d
+					target = post
+				end
+			end
+		end
+	elseif tutorialStep == 3 then
+		local mine = myPlotFolder()
+		local pedestals = mine and mine:FindFirstChild("Pedestals")
+		local first = pedestals and pedestals:FindFirstChildWhichIsA("Model")
+		target = first and first.PrimaryPart
+	end
+	setGuide(target)
+end
+
 renderers[elevatorW] = function()
 	local body = elevatorW.body
 	clear(body)
@@ -2152,6 +2361,32 @@ task.spawn(function()
 				prompt.Enabled = plotFolder ~= nil and plotFolder:GetAttribute("OwnerId") == player.UserId
 			end
 		end
+		-- daily chest zone
+		local chest = CollectionService:GetTagged("DailyChest")[1]
+		local chestBody = chest and chest:FindFirstChild("Body")
+		if chestBody then
+			local d = distanceTo(chestBody)
+			if d < 10 and not dailyInZone then
+				dailyInZone = true
+				setLid(true)
+				if state then
+					open(dailyW, true)
+				end
+			elseif d > 16 and dailyInZone then
+				dailyInZone = false
+				setLid(false)
+				dailyW.frame.Visible = false
+			end
+		end
+		if dailyW.frame.Visible and dailyButton and state then
+			local now = workspace:GetServerTimeNow()
+			local _, ready = dailyNext(now)
+			if not ready then
+				dailyButton.Text = t("dailyWait", Format.time(Config.DailyCooldown - (now - (state.daily and state.daily.last or 0))))
+			end
+		end
+		updateTutorial()
+
 		if buildMode then
 			if not nearMyPlot() then
 				setBuildMode(false)

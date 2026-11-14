@@ -16,6 +16,7 @@ local Format = require(Shared.Format)
 local DataService = require(script.Parent.DataService)
 local World = require(script.Parent.World)
 local Leaderboards = require(script.Parent.Leaderboards)
+local Codes = require(script.Parent.Codes)
 
 -- Remotes
 local remotes = Instance.new("Folder")
@@ -162,6 +163,8 @@ local function pushState(player: Player)
 		robuxMulti = data.robuxMulti,
 		boostLuckUntil = data.boostLuckUntil,
 		boostSpeedUntil = data.boostSpeedUntil,
+		daily = data.daily,
+		tutorialDone = data.tutorialDone,
 		floors = data.floors,
 		theme = data.theme,
 		rebirths = data.rebirths,
@@ -853,6 +856,60 @@ task.spawn(function()
 		startShower()
 	end
 end)
+
+---------------------------------------------------------------- daily chest, codes, tutorial
+local function grantReward(player: Player, data, reward)
+	if reward.cash then
+		setCash(player, data, data.cash + Config.DailyCash(reward.cash, incomePerSecond(player, data)))
+	end
+	if reward.item and Items.parse(reward.item) then
+		addToInventory(player, data, reward.item, reward.count or 1)
+	end
+	local now = workspace:GetServerTimeNow()
+	if reward.boost == "luck" or reward.boostLuck then
+		data.boostLuckUntil = math.max(now, data.boostLuckUntil) + (reward.minutes or reward.boostLuck) * 60
+	end
+	if reward.boost == "speed" or reward.boostSpeed then
+		data.boostSpeedUntil = math.max(now, data.boostSpeedUntil) + (reward.minutes or reward.boostSpeed) * 60
+	end
+end
+
+function actions.ClaimDaily(player, data)
+	if World.distanceTo(player, World.DailyPosition) > Config.DailyReach then
+		return toast(player, "toastTooFar")
+	end
+	local now = workspace:GetServerTimeNow()
+	local daily = data.daily
+	if now - daily.last < Config.DailyCooldown then
+		return
+	end
+	local day = if daily.day >= #Config.DailyRewards or now - daily.last > Config.DailyStreakLoss then 1 else daily.day + 1
+	daily.day = day
+	daily.last = now
+	grantReward(player, data, Config.DailyRewards[day])
+	toast(player, "dayN", { day }, Color3.fromRGB(255, 196, 70))
+end
+
+function actions.RedeemCode(player, data, text)
+	if type(text) ~= "string" or #text > 40 then
+		return
+	end
+	local code = string.upper((text:gsub("%s", "")))
+	local reward = Codes[code]
+	if not reward or (reward.expires and os.time() > reward.expires) then
+		return toast(player, "codeBad", {}, Color3.fromRGB(240, 102, 102))
+	end
+	if data.codes[code] then
+		return toast(player, "codeUsed", {}, Color3.fromRGB(240, 102, 102))
+	end
+	data.codes[code] = true
+	grantReward(player, data, reward)
+	toast(player, "codeOk", {}, Color3.fromRGB(60, 200, 120))
+end
+
+function actions.TutorialDone(player, data)
+	data.tutorialDone = true
+end
 
 ---------------------------------------------------------------- Robux shop
 -- product id -> what it gives

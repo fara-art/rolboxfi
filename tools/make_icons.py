@@ -314,6 +314,16 @@ img = shape(blank(), lambda d: d.bitmap((0, 0), handle, fill=255), (215, 150, 90
 img = shape(img, lambda d: d.bitmap((0, 0), headm, fill=255), (215, 225, 240), (120, 135, 165), outline=30)
 icons["ui_build"] = save(sparkle(img, 230, 760, 70), "ui_build")
 
+# codes: little blue bird
+img = shape(blank(), lambda d: d.ellipse((190, 330, 760, 820), fill=255), (120, 200, 255), (40, 120, 230), outline=30)
+img = shape(img, lambda d: d.ellipse((520, 210, 830, 520), fill=255), (130, 210, 255), (50, 130, 235), outline=28, shadow=False)
+img = shape(img, lambda d: d.polygon([(810, 340), (960, 380), (810, 420)], fill=255), (255, 200, 80), (240, 150, 30), outline=20, shadow=False, gloss=False)
+img = shape(img, lambda d: d.ellipse((250, 470, 560, 690), fill=255), (90, 170, 245), (30, 100, 210), outline=22, shadow=False)
+img = shape(img, lambda d: d.polygon([(200, 560), (60, 470), (110, 640)], fill=255), (90, 170, 245), (30, 100, 210), outline=20, shadow=False, gloss=False)
+img = shape(img, lambda d: d.ellipse((650, 300, 730, 380), fill=255), (255, 255, 255), (230, 235, 245), outline=12, shadow=False, gloss=False)
+img = shape(img, lambda d: d.ellipse((675, 320, 715, 360), fill=255), (30, 30, 50), (20, 20, 40), outline=4, shadow=False, gloss=False)
+icons["ui_codes"] = save(img, "ui_codes")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

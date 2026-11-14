@@ -39,6 +39,7 @@ local rng = Random.new(20261114)
 local plots = {}
 local playerPlot: { [Player]: number } = {}
 World.ForgePosition = Vector3.zero
+World.DailyPosition = Vector3.zero
 World.AltarPosition = Vector3.zero
 
 ---------------------------------------------------------------- helpers
@@ -334,6 +335,28 @@ local function buildHub(folder: Folder)
 		LightEmission = 0.4, Rate = 5, Lifetime = NumberRange.new(4, 7), Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 60),
 		Size = NumberSequence.new(0.35), Parent = wings,
 	})
+	-- ================= daily reward chest (the client opens its lid and the window when you walk up)
+	local C = Vector3.new(-10, 0, -18)
+	local chestCf = CFrame.lookAt(C, Vector3.new(-22, 0, 0)) -- faces the spawn plaza
+	cylinder(CFrame.new(C + Vector3.new(0, 0.1, 0)), 0.2, 16, { Name = "DailyZone", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 200, 90), Transparency = 0.55, CanCollide = false, Parent = folder })
+	local chest = make("Model", { Name = "DailyChest", Parent = folder })
+	local body = make("Part", { Name = "Body", Size = Vector3.new(5, 2.6, 3.4), CFrame = chestCf * CFrame.new(0, 1.5, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 90, 45), Parent = chest })
+	for _, x in { -1.6, 1.6 } do
+		make("Part", { Name = "Band", Size = Vector3.new(0.4, 2.7, 3.5), CFrame = chestCf * CFrame.new(x, 1.5, 0), Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = chest })
+	end
+	local lid = make("Part", { Name = "Lid", Size = Vector3.new(5, 1.2, 3.4), CFrame = chestCf * CFrame.new(0, 3.4, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(170, 105, 55), Parent = chest })
+	make("Part", { Name = "LidBand", Size = Vector3.new(5.1, 0.3, 3.5), CFrame = chestCf * CFrame.new(0, 3.95, 0), Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = lid })
+	make("Part", { Name = "Lock", Size = Vector3.new(0.8, 0.9, 0.3), CFrame = chestCf * CFrame.new(0, 2.8, -1.85), Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = chest })
+	local glow = make("Part", { Name = "Glow", Size = Vector3.new(4, 0.2, 2.6), CFrame = chestCf * CFrame.new(0, 2.85, 0), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 220, 120), CanCollide = false, Parent = chest })
+	make("PointLight", { Color = Color3.fromRGB(255, 210, 120), Range = 14, Brightness = 1.2, Parent = glow })
+	make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 230, 150)), LightEmission = 0.8,
+		Rate = 10, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(2, 4), SpreadAngle = Vector2.new(30, 30), Size = NumberSequence.new(0.4, 0), Parent = glow,
+	})
+	worldText(body, "signDaily", 5.5, 16, 2.6)
+	CollectionService:AddTag(chest, "DailyChest")
+	World.DailyPosition = C
+
 	-- floating crystal ring around the fountain
 	for k = 0, 7 do
 		local a = k / 8 * math.pi * 2
