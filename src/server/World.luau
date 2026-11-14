@@ -49,11 +49,12 @@ local function cylinder(cf: CFrame, height: number, diameter: number, props)
 	return make("Part", props)
 end
 
+-- width is in pixels-at-design; converted to studs so signs shrink with distance
 local function sign(adornee: BasePart, text: string, offset: number, width: number)
 	local gui = make("BillboardGui", {
-		Size = UDim2.new(0, width, 0, 50),
+		Size = UDim2.new(width / 20, 0, 2.5, 0),
 		StudsOffset = Vector3.new(0, offset, 0),
-		MaxDistance = 220,
+		MaxDistance = 150,
 		LightInfluence = 0,
 		Parent = adornee,
 	})

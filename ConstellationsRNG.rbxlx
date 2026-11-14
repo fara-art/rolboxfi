@@ -1078,11 +1078,12 @@ local function cylinder(cf: CFrame, height: number, diameter: number, props)
 	return make("Part", props)
 end
 
+-- width is in pixels-at-design; converted to studs so signs shrink with distance
 local function sign(adornee: BasePart, text: string, offset: number, width: number)
 	local gui = make("BillboardGui", {
-		Size = UDim2.new(0, width, 0, 50),
+		Size = UDim2.new(width / 20, 0, 2.5, 0),
 		StudsOffset = Vector3.new(0, offset, 0),
-		MaxDistance = 220,
+		MaxDistance = 150,
 		LightInfluence = 0,
 		Parent = adornee,
 	})
@@ -1581,20 +1582,20 @@ local rollButton
 local autoButton
 
 -- Center: the sky grid
-local skyHolder = make("Frame", { Size = UDim2.new(0.5, 0, 0.66, 0), Position = UDim2.new(0.25, 0, 0.14, 0), BackgroundTransparency = 1, Parent = gui })
+local skyHolder = make("Frame", { Size = UDim2.new(0.5, 0, 0.66, 0), Position = UDim2.new(0.25, 0, 0.14, 0), BackgroundTransparency = 1, Visible = false, Parent = gui })
 local sky = make("Frame", {
 	Size = UDim2.new(1, 0, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
 	BackgroundColor3 = INK, BackgroundTransparency = 0.15, Parent = skyHolder,
 }, { corner(), stroke(BRASS, 1.5), pad(10), make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
 local skyGrid = make("UIGridLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = sky })
 text({
-	Size = UDim2.new(0.5, 0, 0.03, 0), Position = UDim2.new(0.25, 0, 0.81, 0),
+	Size = UDim2.new(1, 0, 0.05, 0), Position = UDim2.new(0, 0, 1.01, 0),
 	Text = "Select a star, then tap a cell. Tap a placed star to take it back.",
-	TextColor3 = PARCH, TextStrokeTransparency = 0.3, Max = 15, Parent = gui,
+	TextColor3 = PARCH, TextStrokeTransparency = 0.3, Max = 15, Parent = skyHolder,
 })
 
 -- Right: inventory
-local _, right = panel("STAR CATALOGUE", { Size = UDim2.new(0.21, 0, 0.64, 0), Position = UDim2.new(0.78, 0, 0.13, 0), Parent = gui })
+local _, right = panel("STAR CATALOGUE", { Size = UDim2.new(0.21, 0, 0.58, 0), Position = UDim2.new(0.78, 0, 0.28, 0), Parent = gui })
 local invList = make("ScrollingFrame", {
 	Size = UDim2.new(1, 0, 0.6, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
 	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 3, ScrollBarImageColor3 = BRASS_DIM, Parent = right,
@@ -1605,7 +1606,7 @@ local sellOne, sellAll, forgeButton, feedButton
 
 -- Bottom: upgrades
 local bottom = make("Frame", { Size = UDim2.new(0.5, 0, 0.07, 0), Position = UDim2.new(0.25, 0, 0.9, 0), BackgroundTransparency = 1, Parent = gui })
-make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), Parent = bottom })
+make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = bottom })
 local luckUpgrade, gridUpgrade
 
 -- Announcements
@@ -1629,6 +1630,7 @@ local function popup(caption: string)
 	return frame, list
 end
 
+table.insert(popups, skyHolder)
 local oddsFrame, oddsList = popup("ODDS AT YOUR LUCK")
 local bookFrame, bookList = popup("CONSTELLATION BOOK")
 local holeFrame, holeList = popup("BLACK HOLE")
@@ -1812,6 +1814,9 @@ local function renderInventory()
 		text({ Size = UDim2.new(0.3, -8, 1, 0), Position = UDim2.new(0.7, 0, 0, 0), Text = "x" .. state.inventory[key], TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Right, FontFace = TITLE, Max = 13, Parent = r })
 		r.Activated:Connect(function()
 			selected = if selected == key then nil else key
+			if selected and not skyHolder.Visible then
+				open(skyHolder)
+			end
 			renderInventory()
 		end)
 	end
@@ -1943,10 +1948,14 @@ feedButton = btn("ghost", { Size = UDim2.new(0.48, 0, 0.42, 0), Position = UDim2
 	end
 end)
 
-luckUpgrade = btn("good", { Size = UDim2.new(0.49, 0, 1, 0), Text = "", Max = 16, Parent = bottom }, function()
+local skyToggle = btn("primary", { Size = UDim2.new(0.24, 0, 1, 0), Text = "MY SKY", Max = 16, LayoutOrder = 0, Parent = bottom }, function()
+	open(skyHolder)
+end)
+local _ = skyToggle
+luckUpgrade = btn("good", { Size = UDim2.new(0.36, 0, 1, 0), Text = "", Max = 16, LayoutOrder = 1, Parent = bottom }, function()
 	ActionEv:FireServer("BuyLuck")
 end)
-gridUpgrade = btn("ghost", { Size = UDim2.new(0.49, 0, 1, 0), Text = "", Max = 16, Parent = bottom }, function()
+gridUpgrade = btn("ghost", { Size = UDim2.new(0.36, 0, 1, 0), Text = "", Max = 16, LayoutOrder = 2, Parent = bottom }, function()
 	ActionEv:FireServer("BuyGrid")
 end)
 
