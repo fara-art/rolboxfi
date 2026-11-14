@@ -109,9 +109,9 @@ Config.UiIcons = {
 	luck = "137487992289485",
 	rolls = "97966246674669",
 	settings = "104579262501708",
-	coins = "", -- ui_coins.png (header cash)
-	income = "", -- ui_income.png (header per second)
-	rebirth = "", -- ui_rebirth.png
+	coins = "129002927140322", -- ui_coins.png (header cash)
+	income = "128510907463165", -- ui_income.png (header per second)
+	rebirth = "73756458949010", -- ui_rebirth.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
