@@ -24,15 +24,15 @@ def part(cls, name, y, size):
 
 shared = "".join(item("ModuleScript", p.stem, source=src(p.relative_to(root)))
                  for p in sorted((root / "src/shared").glob("*.luau")))
-server = (item("Script", "Main", source=src("src/server/Main.server.luau"))
-          + item("ModuleScript", "DataService", source=src("src/server/DataService.luau")))
+server = item("Script", "Main", source=src("src/server/Main.server.luau")) + "".join(
+    item("ModuleScript", p.stem, source=src(p.relative_to(root)))
+    for p in sorted((root / "src/server").glob("*.luau")) if not p.name.endswith(".server.luau"))
 client = item("LocalScript", "Main", source=src("src/client/Main.client.luau"))
 
 xml = ('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
        'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">\n'
-       + item("Workspace", "Workspace", part("Part", "Baseplate", -8, (512, 16, 512))
-              + part("SpawnLocation", "SpawnLocation", 0.5, (12, 1, 12)))
+       + item("Workspace", "Workspace", part("SpawnLocation", "SpawnLocation", 0.5, (12, 1, 12)))
        + item("Lighting", "Lighting", extra='<float name="ClockTime">0</float><float name="Brightness">1</float>')
        + item("ReplicatedStorage", "ReplicatedStorage", item("Folder", "Shared", shared))
        + item("ServerScriptService", "ServerScriptService", item("Folder", "Server", server))

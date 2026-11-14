@@ -1,4 +1,4 @@
--- Сохранение прогресса игроков в DataStore
+-- Player progress saving (DataStore)
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -18,12 +18,14 @@ local cache: { [Player]: any } = {}
 local function default()
 	return {
 		cash = 0,
-		inventory = {}, -- [starId] = count
-		grid = {}, -- ["x_y"] = starId
+		inventory = {}, -- [itemKey] = count
+		grid = {}, -- ["x_y"] = { id = itemKey, age = seconds }
 		gridSize = Config.StartGridSize,
 		luckLevel = 0,
 		discovered = {}, -- [constellationId] = true
 		totalRolls = 0,
+		rebirths = 0,
+		mass = 0, -- Black Hole progress
 	}
 end
 
@@ -31,6 +33,12 @@ local function reconcile(data)
 	for key, value in default() do
 		if data[key] == nil then
 			data[key] = value
+		end
+	end
+	-- v1 saves stored grid cells as plain star ids
+	for key, cell in data.grid do
+		if type(cell) == "string" then
+			data.grid[key] = { id = cell, age = 0 }
 		end
 	end
 	return data

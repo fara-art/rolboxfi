@@ -1,9 +1,9 @@
--- Созвездие = отдельная группа звёзд (соседи считаются и по диагонали),
--- форма которой совпадает с шаблоном (с учётом поворотов и отражений).
--- Если к группе прилипла лишняя звезда, созвездие ломается: в этом вся головоломка.
+-- A constellation = an isolated group of stars (diagonal neighbors count)
+-- whose shape matches a pattern (rotations and mirrors allowed).
+-- An extra neighbor breaks it: that's the puzzle.
 local Constellations = {}
 
--- Все звёзды в созвездии одного типа -> множитель ещё умножается на это
+-- All stars of the same type -> extra multiplier
 Constellations.PureBonus = 1.5
 
 Constellations.List = {

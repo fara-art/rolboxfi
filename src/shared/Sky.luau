@@ -1,5 +1,7 @@
--- Логика неба: поиск групп звёзд, распознавание созвездий, доход
-local Stars = require(script.Parent.Stars)
+-- Sky logic: find star groups, match constellations, compute income
+-- grid[key] = { id = itemKey, age = seconds }
+local Items = require(script.Parent.Items)
+local Evolution = require(script.Parent.Evolution)
 local Constellations = require(script.Parent.Constellations)
 
 local Sky = {}
@@ -30,7 +32,7 @@ local function shapeKey(cells): string
 	return table.concat(parts, ",")
 end
 
--- 4 поворота * 2 отражения
+-- 4 rotations * 2 mirrors
 local transforms = {
 	function(x, y) return x, y end,
 	function(x, y) return -y, x end,
@@ -57,7 +59,7 @@ end
 export type Group = { id: string, pure: boolean, mult: number, cells: { string } }
 export type Evaluation = { income: number, groups: { Group }, cellMult: { [string]: number } }
 
-function Sky.evaluate(grid: { [string]: string }, size: number): Evaluation
+function Sky.evaluate(grid: { [string]: any }, size: number): Evaluation
 	local visited = {}
 	local groups = {}
 	local cellMult = {}
@@ -67,7 +69,7 @@ function Sky.evaluate(grid: { [string]: string }, size: number): Evaluation
 		for x = 1, size do
 			local startKey = Sky.key(x, y)
 			if grid[startKey] and not visited[startKey] then
-				-- собираем группу (8 соседей)
+				-- flood fill the group (8 neighbors)
 				visited[startKey] = true
 				local stack = { { x, y } }
 				local cells = {}
@@ -96,10 +98,10 @@ function Sky.evaluate(grid: { [string]: string }, size: number): Evaluation
 				local mult = 1
 				local pattern = lookup[shapeKey(cells)]
 				if pattern then
-					local first = grid[keys[1]]
+					local first = Items.parse(grid[keys[1]].id)
 					local pure = true
 					for _, k in keys do
-						if grid[k] ~= first then
+						if Items.parse(grid[k].id) ~= first then
 							pure = false
 							break
 						end
@@ -109,10 +111,8 @@ function Sky.evaluate(grid: { [string]: string }, size: number): Evaluation
 				end
 
 				for _, k in keys do
-					local star = Stars.ById[grid[k]]
-					if star then
-						total += star.income * mult
-					end
+					local cell = grid[k]
+					total += Items.income(cell.id) * Evolution.mult(cell.age or 0) * mult
 					cellMult[k] = mult
 				end
 			end
