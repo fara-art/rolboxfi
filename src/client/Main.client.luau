@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
 local LocalizationService = game:GetService("LocalizationService")
+local SoundService = game:GetService("SoundService")
 
 local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -262,6 +263,8 @@ ruButton = btn(PANEL_2, { Size = UDim2.new(0.48, 0, 1, 0), Position = UDim2.new(
 	setLang("ru")
 end)
 
+local settingsButton -- created after windows exist
+
 ---------------------------------------------------------------- Telescope (left)
 local telescope = panelFrame({ Size = UDim2.new(0.17, 0, 0.42, 0), Position = UDim2.new(0, 16, 0.2, 0), Parent = gui })
 bind(text({ Size = UDim2.new(1, 0, 0.08, 0), TextColor3 = BLUE, FontFace = TITLE, Max = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = telescope }), "telescope")
@@ -308,6 +311,7 @@ local pickerW = window("pickTitle", "center", centerProps())
 local forgeW = window("forgeTitle", "center", centerProps())
 local holeW = window("holeTitle", "center", centerProps())
 local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
+local settingsW = window("settings", "center", { Size = UDim2.new(0.3, 0, 0.32, 0), Position = UDim2.new(0.35, 0, 0.28, 0) })
 
 -- catalogue: list + sell bar at the bottom
 catalogueW.body.Size = UDim2.new(1, 0, 1, -124)
@@ -774,6 +778,115 @@ renderers[holeW] = function()
 	end
 end
 
+---------------------------------------------------------------- Settings + audio
+local function soundId(id: string?): string?
+	if not id or id == "" then
+		return nil
+	end
+	return if string.find(id, "://") then id else "rbxassetid://" .. id
+end
+
+local music = make("Sound", { Name = "Music", Volume = Config.Sounds.MusicVolume, Parent = SoundService })
+local musicTracks = {}
+for _, id in Config.Sounds.Music do
+	local resolved = soundId(id)
+	if resolved then
+		table.insert(musicTracks, resolved)
+	end
+end
+local trackIndex = 1
+music.Looped = #musicTracks == 1
+music.Ended:Connect(function()
+	if #musicTracks > 1 then
+		trackIndex = trackIndex % #musicTracks + 1
+		music.SoundId = musicTracks[trackIndex]
+		music:Play()
+	end
+end)
+
+local function settingOn(name: string): boolean
+	return not state or not state.settings or state.settings[name] ~= false
+end
+
+local function applyMusic()
+	if #musicTracks == 0 then
+		return
+	end
+	if settingOn("music") then
+		if not music.IsPlaying then
+			music.SoundId = musicTracks[trackIndex]
+			music:Play()
+		end
+	else
+		music:Stop()
+	end
+end
+
+local function playSfx(id: string?, volume: number)
+	local resolved = soundId(id)
+	if not resolved or not settingOn("sfx") then
+		return
+	end
+	local s = make("Sound", { SoundId = resolved, Volume = volume, Parent = SoundService })
+	s:Play()
+	s.Ended:Connect(function()
+		s:Destroy()
+	end)
+	task.delay(15, function()
+		if s.Parent then
+			s:Destroy()
+		end
+	end)
+end
+
+renderers[settingsW] = function()
+	local body = settingsW.body
+	clear(body)
+	for order, name in { "music", "sfx" } do
+		local r = row(body, order, 60, WHITE)
+		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), Text = t(name), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = r })
+		local on = settingOn(name)
+		btn(if on then MINT else GREY, { Size = UDim2.new(0.38, 0, 0, 42), Position = UDim2.new(0.58, 0, 0, 9), Text = if on then t("on") else t("off"), Max = 20, ZIndex = 22, Parent = r }, function()
+			if state then
+				state.settings = state.settings or {}
+				state.settings[name] = not on
+				ActionEv:FireServer("SetSetting", name, not on)
+				applyMusic()
+				renderers[settingsW]()
+			end
+		end)
+	end
+end
+
+settingsButton = bind(btn(Color3.fromRGB(120, 130, 160), { Size = UDim2.new(0, 112, 0, 38), Position = UDim2.new(0, 16, 0, 114), Max = 15, Parent = gui }, function()
+	open(settingsW)
+end, "settings"), "settings")
+
+-- Rebirth celebration: sound, white flash, big title, camera punch
+local function celebrateRebirth()
+	playSfx(Config.Sounds.Rebirth, Config.Sounds.RebirthVolume)
+	local flash = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0, ZIndex = 100, Parent = gui })
+	TweenService:Create(flash, TweenInfo.new(1.6, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
+	local title = text({
+		Size = UDim2.new(0.2, 0, 0.06, 0), Position = UDim2.new(0.5, 0, 0.42, 0), AnchorPoint = Vector2.new(0.5, 0.5),
+		Text = t("rebirthBig"), FontFace = TITLE, TextColor3 = LILAC, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 96, ZIndex = 101, Parent = gui,
+	})
+	TweenService:Create(title, TweenInfo.new(0.6, Enum.EasingStyle.Back), { Size = UDim2.new(0.7, 0, 0.2, 0) }):Play()
+	task.delay(2.4, function()
+		TweenService:Create(title, TweenInfo.new(0.8), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	end)
+	task.delay(3.4, function()
+		flash:Destroy()
+		title:Destroy()
+	end)
+	local camera = workspace.CurrentCamera
+	if camera then
+		local fov = camera.FieldOfView
+		local punch = TweenService:Create(camera, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = fov + 18 })
+		punch:Play()
+	end
+end
+
 ---------------------------------------------------------------- Bottom dock
 local dock = make("Frame", { Size = UDim2.new(0.84, 0, 0, 54), Position = UDim2.new(0.08, 0, 1, -66), BackgroundTransparency = 1, Parent = gui })
 make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.012, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = dock })
@@ -902,7 +1015,14 @@ end)
 ---------------------------------------------------------------- Events
 local firstState = true
 StateEv.OnClientEvent:Connect(function(newState)
+	local previous = state
 	state = newState
+	if previous and newState.rebirths > previous.rebirths then
+		celebrateRebirth()
+	end
+	if firstState or (previous and previous.settings and newState.settings and previous.settings.music ~= newState.settings.music) then
+		applyMusic()
+	end
 	if firstState then
 		firstState = false
 		setLang(if state.lang == "en" or state.lang == "ru" then state.lang else autoLang)

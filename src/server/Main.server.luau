@@ -143,6 +143,7 @@ local function pushState(player: Player)
 		indexClaims = data.indexClaims,
 		milestones = data.milestones,
 		lang = data.lang,
+		settings = data.settings,
 		hasPlot = World.plotOf(player) ~= nil,
 		passes = session.passes,
 	})
@@ -476,6 +477,12 @@ function actions.ClaimMilestone(player, data, number)
 	if milestone.item and Items.parse(milestone.item) then
 		addToInventory(player, data, milestone.item, milestone.count or 1)
 		toast(player, "toastReward", { { item = milestone.item } }, Items.parse(milestone.item).color)
+	end
+end
+
+function actions.SetSetting(player, data, name, value)
+	if (name == "music" or name == "sfx") and type(value) == "boolean" then
+		data.settings[name] = value
 	end
 end
 

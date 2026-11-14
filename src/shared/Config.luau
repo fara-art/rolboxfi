@@ -104,6 +104,16 @@ Config.UiIcons = {
 	cash = "",
 	luck = "",
 	rolls = "",
+	settings = "",
+}
+
+-- Audio (assets/audio/*.ogg): upload and paste the IDs.
+-- Music can hold several tracks; they play one after another.
+Config.Sounds = {
+	Music = { "" },
+	MusicVolume = 0.3,
+	Rebirth = "",
+	RebirthVolume = 0.8,
 }
 
 return Config

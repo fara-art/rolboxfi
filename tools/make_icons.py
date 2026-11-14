@@ -196,6 +196,11 @@ tube = tube.rotate(30, resample=Image.BICUBIC, center=(C, C))
 img = shape(img, lambda d: d.bitmap((0, 0), tube, fill=255), (130, 200, 255), (50, 110, 220), outline=30)
 icons["ui_rolls"] = save(sparkle(img, 800, 200, 80), "ui_rolls")
 
+# settings: gear
+img = shape(blank(), lambda d: d.polygon(star_points(C, C, 430, 330, 8, 0), fill=255) or d.ellipse((182, 182, 842, 842), fill=255), (215, 225, 240), (140, 155, 185), outline=30)
+img = shape(img, lambda d: d.ellipse((372, 372, 652, 652), fill=255), (90, 110, 150), (50, 60, 90), outline=20, gloss=False, shadow=False)
+icons["ui_settings"] = save(img, "ui_settings")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

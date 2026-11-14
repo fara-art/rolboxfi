@@ -33,6 +33,7 @@ local function default()
 		indexClaims = {}, -- [mutationId] = true
 		milestones = {}, -- ["1"] = true (string keys for DataStore)
 		lang = "", -- "" = auto
+		settings = { music = true, sfx = true },
 	}
 end
 
