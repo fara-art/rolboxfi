@@ -21,7 +21,11 @@ src/client   -> StarterPlayerScripts.Client (интерфейс)
 ```
 Баланс правится в `src/shared/Config.luau`, `Stars.luau`, `Constellations.luau`.
 
-## Запуск
+## Быстрый запуск (без Rojo)
+Открыть `ConstellationsRNG.rbxlx` в Roblox Studio → Play.
+После правок в `src/` пересобрать: `python3 tools/build_place.py`.
+
+## Запуск через Rojo
 1. Поставить [Rokit](https://github.com/rojo-rbx/rokit), в папке проекта: `rokit install`
 2. В Roblox Studio поставить плагин Rojo
 3. `rojo serve`, в Studio: плагин Rojo → Connect

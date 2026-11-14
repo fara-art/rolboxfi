@@ -1,0 +1,1160 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+<Item class="Workspace" referent="RBX12"><Properties><string name="Name">Workspace</string></Properties><Item class="Part" referent="RBX10"><Properties><string name="Name">Baseplate</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>-8</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>512</X><Y>16</Y><Z>512</Z></Vector3></Properties></Item>
+<Item class="SpawnLocation" referent="RBX11"><Properties><string name="Name">SpawnLocation</string><bool name="Anchored">true</bool><CoordinateFrame name="CFrame"><X>0</X><Y>0.5</Y><Z>0</Z><R00>1</R00><R01>0</R01><R02>0</R02><R10>0</R10><R11>1</R11><R12>0</R12><R20>0</R20><R21>0</R21><R22>1</R22></CoordinateFrame><Vector3 name="size"><X>12</X><Y>1</Y><Z>12</Z></Vector3></Properties></Item>
+</Item>
+<Item class="ReplicatedStorage" referent="RBX14"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX13"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX1"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[local Config = {}
+
+Config.RollCooldown = 1 -- секунд между крутками
+
+Config.StartGridSize = 4
+Config.MaxGridSize = 8
+-- цена расширения неба с size до size + 1
+function Config.GridCost(size: number): number
+	return math.floor(1000 * 8 ^ (size - Config.StartGridSize))
+end
+
+Config.LuckPerLevel = 0.25
+Config.MaxLuckLevel = 40
+function Config.LuckCost(level: number): number
+	return math.floor(150 * 1.6 ^ level)
+end
+
+Config.SellMultiplier = 20 -- продажа звезды = доход/с * это
+
+-- Звездопад: событие на весь сервер
+Config.ShowerInterval = 600
+Config.ShowerDuration = 180
+Config.ShowerLuck = 2
+
+Config.AnnounceChance = 10000 -- объявлять на сервер звёзды от 1 к N
+
+Config.AutosaveInterval = 120
+Config.DataStoreName = "ConstellationsRNG_v1"
+
+-- ID геймпассов. 0 = ещё не создан (AutoRoll при 0 доступен всем, для тестов)
+Config.GamePasses = {
+	Luck2x = 0,
+	Cash2x = 0,
+	AutoRoll = 0,
+}
+
+return Config
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX2"><Properties><string name="Name">Constellations</string><ProtectedString name="Source"><![CDATA[-- Созвездие = отдельная группа звёзд (соседи считаются и по диагонали),
+-- форма которой совпадает с шаблоном (с учётом поворотов и отражений).
+-- Если к группе прилипла лишняя звезда, созвездие ломается: в этом вся головоломка.
+local Constellations = {}
+
+-- Все звёзды в созвездии одного типа -> множитель ещё умножается на это
+Constellations.PureBonus = 1.5
+
+Constellations.List = {
+	{ id = "pair", name = "Двойная звезда", mult = 1.2,
+		cells = { {0,0}, {1,0} } },
+	{ id = "triangle", name = "Летний треугольник", mult = 1.4,
+		cells = { {0,0}, {1,0}, {0,1} } },
+	{ id = "belt", name = "Пояс Ориона", mult = 1.5,
+		cells = { {0,0}, {1,0}, {2,0} } },
+	{ id = "pegasus", name = "Квадрат Пегаса", mult = 2,
+		cells = { {0,0}, {1,0}, {0,1}, {1,1} } },
+	{ id = "rhombus", name = "Ромб Дельфина", mult = 2.5,
+		cells = { {1,0}, {0,1}, {2,1}, {1,2} } },
+	{ id = "cross", name = "Южный Крест", mult = 3,
+		cells = { {1,0}, {0,1}, {1,1}, {2,1}, {1,2} } },
+	{ id = "cassiopeia", name = "Кассиопея", mult = 3.5,
+		cells = { {0,0}, {1,1}, {2,0}, {3,1}, {4,0} } },
+	{ id = "dipper", name = "Большая Медведица", mult = 5,
+		cells = { {0,0}, {1,0}, {2,0}, {3,0}, {4,0}, {3,1}, {4,1} } },
+	{ id = "ring", name = "Кольцо Галактики", mult = 8,
+		cells = { {0,0}, {1,0}, {2,0}, {0,1}, {2,1}, {0,2}, {1,2}, {2,2} } },
+}
+
+Constellations.ById = {}
+for _, pattern in Constellations.List do
+	Constellations.ById[pattern.id] = pattern
+end
+
+return Constellations
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX3"><Properties><string name="Name">Format</string><ProtectedString name="Source"><![CDATA[local Format = {}
+
+local suffixes = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc" }
+
+function Format.number(n: number): string
+	if n < 1000 then
+		return tostring(math.floor(n * 10 + 0.5) / 10)
+	end
+	local i = 1
+	while n >= 1000 and i < #suffixes do
+		n /= 1000
+		i += 1
+	end
+	return string.format("%.2f", n):gsub("%.?0+$", "") .. suffixes[i]
+end
+
+function Format.percent(p: number): string
+	if p >= 0.01 then
+		return string.format("%.2f%%", p * 100)
+	end
+	return (string.format("%.6f%%", p * 100):gsub("0+%%$", "%%"))
+end
+
+function Format.time(seconds: number): string
+	seconds = math.max(0, math.floor(seconds))
+	return string.format("%d:%02d", seconds // 60, seconds % 60)
+end
+
+return Format
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX4"><Properties><string name="Name">Odds</string><ProtectedString name="Source"><![CDATA[local Stars = require(script.Parent.Stars)
+
+local Odds = {}
+
+-- Идём от самой редкой: шанс luck/N, иначе дальше. Пыль, если ничего не выпало.
+function Odds.roll(luck: number, rng: Random)
+	for i = #Stars.List, 2, -1 do
+		local star = Stars.List[i]
+		if rng:NextNumber() < math.min(1, luck / star.chance) then
+			return star
+		end
+	end
+	return Stars.List[1]
+end
+
+-- Точные вероятности при текущей удаче (показываем игрокам честно)
+function Odds.exact(luck: number): { [string]: number }
+	local result = {}
+	local remaining = 1
+	for i = #Stars.List, 2, -1 do
+		local star = Stars.List[i]
+		local p = math.min(1, luck / star.chance)
+		result[star.id] = remaining * p
+		remaining *= 1 - p
+	end
+	result[Stars.List[1].id] = remaining
+	return result
+end
+
+return Odds
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX5"><Properties><string name="Name">Sky</string><ProtectedString name="Source"><![CDATA[-- Логика неба: поиск групп звёзд, распознавание созвездий, доход
+local Stars = require(script.Parent.Stars)
+local Constellations = require(script.Parent.Constellations)
+
+local Sky = {}
+
+function Sky.key(x: number, y: number): string
+	return x .. "_" .. y
+end
+
+function Sky.parse(key: any): (number?, number?)
+	if type(key) ~= "string" then
+		return nil, nil
+	end
+	local x, y = string.match(key, "^(%d+)_(%d+)$")
+	return tonumber(x), tonumber(y)
+end
+
+local function shapeKey(cells): string
+	local minX, minY = math.huge, math.huge
+	for _, c in cells do
+		minX = math.min(minX, c[1])
+		minY = math.min(minY, c[2])
+	end
+	local parts = table.create(#cells)
+	for i, c in cells do
+		parts[i] = (c[1] - minX) .. ":" .. (c[2] - minY)
+	end
+	table.sort(parts)
+	return table.concat(parts, ",")
+end
+
+-- 4 поворота * 2 отражения
+local transforms = {
+	function(x, y) return x, y end,
+	function(x, y) return -y, x end,
+	function(x, y) return -x, -y end,
+	function(x, y) return y, -x end,
+	function(x, y) return -x, y end,
+	function(x, y) return x, -y end,
+	function(x, y) return y, x end,
+	function(x, y) return -y, -x end,
+}
+
+local lookup = {}
+for _, pattern in Constellations.List do
+	for _, t in transforms do
+		local moved = {}
+		for i, c in pattern.cells do
+			local x, y = t(c[1], c[2])
+			moved[i] = { x, y }
+		end
+		lookup[shapeKey(moved)] = pattern
+	end
+end
+
+export type Group = { id: string, pure: boolean, mult: number, cells: { string } }
+export type Evaluation = { income: number, groups: { Group }, cellMult: { [string]: number } }
+
+function Sky.evaluate(grid: { [string]: string }, size: number): Evaluation
+	local visited = {}
+	local groups = {}
+	local cellMult = {}
+	local total = 0
+
+	for y = 1, size do
+		for x = 1, size do
+			local startKey = Sky.key(x, y)
+			if grid[startKey] and not visited[startKey] then
+				-- собираем группу (8 соседей)
+				visited[startKey] = true
+				local stack = { { x, y } }
+				local cells = {}
+				while #stack > 0 do
+					local c = table.remove(stack)
+					table.insert(cells, c)
+					for dx = -1, 1 do
+						for dy = -1, 1 do
+							local nx, ny = c[1] + dx, c[2] + dy
+							if (dx ~= 0 or dy ~= 0) and nx >= 1 and ny >= 1 and nx <= size and ny <= size then
+								local nk = Sky.key(nx, ny)
+								if grid[nk] and not visited[nk] then
+									visited[nk] = true
+									table.insert(stack, { nx, ny })
+								end
+							end
+						end
+					end
+				end
+
+				local keys = table.create(#cells)
+				for i, c in cells do
+					keys[i] = Sky.key(c[1], c[2])
+				end
+
+				local mult = 1
+				local pattern = lookup[shapeKey(cells)]
+				if pattern then
+					local first = grid[keys[1]]
+					local pure = true
+					for _, k in keys do
+						if grid[k] ~= first then
+							pure = false
+							break
+						end
+					end
+					mult = pattern.mult * (if pure then Constellations.PureBonus else 1)
+					table.insert(groups, { id = pattern.id, pure = pure, mult = mult, cells = keys })
+				end
+
+				for _, k in keys do
+					local star = Stars.ById[grid[k]]
+					if star then
+						total += star.income * mult
+					end
+					cellMult[k] = mult
+				end
+			end
+		end
+	end
+
+	return { income = total, groups = groups, cellMult = cellMult }
+end
+
+return Sky
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX6"><Properties><string name="Name">Stars</string><ProtectedString name="Source"><![CDATA[-- Звёзды: chance = "1 к N", income = доход в секунду, когда звезда стоит на небе
+local Stars = {}
+
+Stars.List = {
+	{ id = "dust", name = "Звёздная пыль", chance = 2, income = 1, color = Color3.fromRGB(170, 170, 190) },
+	{ id = "spark", name = "Искра", chance = 5, income = 3, color = Color3.fromRGB(255, 240, 180) },
+	{ id = "dwarf", name = "Красный карлик", chance = 15, income = 10, color = Color3.fromRGB(255, 90, 70) },
+	{ id = "sun", name = "Жёлтое солнце", chance = 50, income = 35, color = Color3.fromRGB(255, 210, 60) },
+	{ id = "giant", name = "Голубой гигант", chance = 200, income = 150, color = Color3.fromRGB(80, 160, 255) },
+	{ id = "pulsar", name = "Пульсар", chance = 1000, income = 800, color = Color3.fromRGB(170, 90, 255) },
+	{ id = "neutron", name = "Нейтронная звезда", chance = 10000, income = 9000, color = Color3.fromRGB(90, 255, 220) },
+	{ id = "quasar", name = "Квазар", chance = 100000, income = 100000, color = Color3.fromRGB(255, 80, 200) },
+	{ id = "supernova", name = "Сверхновая", chance = 1000000, income = 1500000, color = Color3.fromRGB(255, 255, 255) },
+}
+
+Stars.ById = {}
+for index, star in Stars.List do
+	star.index = index
+	Stars.ById[star.id] = star
+end
+
+return Stars
+]]></ProtectedString></Properties></Item>
+</Item>
+</Item>
+<Item class="ServerScriptService" referent="RBX16"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX15"><Properties><string name="Name">Server</string></Properties><Item class="Script" referent="RBX7"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Stars = require(Shared.Stars)
+local Constellations = require(Shared.Constellations)
+local Odds = require(Shared.Odds)
+local Sky = require(Shared.Sky)
+local Format = require(Shared.Format)
+local DataService = require(script.Parent.DataService)
+
+-- Ремоуты
+local remotes = Instance.new("Folder")
+remotes.Name = "Remotes"
+local RollFn = Instance.new("RemoteFunction")
+RollFn.Name = "Roll"
+RollFn.Parent = remotes
+local ActionEv = Instance.new("RemoteEvent")
+ActionEv.Name = "Action"
+ActionEv.Parent = remotes
+local StateEv = Instance.new("RemoteEvent")
+StateEv.Name = "State"
+StateEv.Parent = remotes
+local AnnounceEv = Instance.new("RemoteEvent")
+AnnounceEv.Name = "Announce"
+AnnounceEv.Parent = remotes
+remotes.Parent = ReplicatedStorage
+
+ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
+
+local rng = Random.new()
+local sessions: { [Player]: any } = {}
+
+local function checkPass(player: Player, name: string): boolean
+	local id = Config.GamePasses[name]
+	if not id or id == 0 then
+		return false
+	end
+	local ok, owns = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, id)
+	return ok and owns == true
+end
+
+local function refreshPasses(player: Player)
+	local session = sessions[player]
+	if not session then
+		return
+	end
+	for name in Config.GamePasses do
+		session.passes[name] = checkPass(player, name)
+	end
+end
+
+local function isShower(): boolean
+	return workspace:GetServerTimeNow() < (ReplicatedStorage:GetAttribute("ShowerEndsAt") or 0)
+end
+
+local function getLuck(player: Player, data): number
+	local luck = 1 + data.luckLevel * Config.LuckPerLevel
+	if sessions[player].passes.Luck2x then
+		luck *= 2
+	end
+	if isShower() then
+		luck *= Config.ShowerLuck
+	end
+	return luck
+end
+
+local function incomePerSecond(player: Player): number
+	local session = sessions[player]
+	return session.eval.income * (if session.passes.Cash2x then 2 else 1)
+end
+
+local function recompute(player: Player, data)
+	local session = sessions[player]
+	session.eval = Sky.evaluate(data.grid, data.gridSize)
+	for _, group in session.eval.groups do
+		if not data.discovered[group.id] then
+			data.discovered[group.id] = true
+			local pattern = Constellations.ById[group.id]
+			AnnounceEv:FireAllClients(
+				string.format("✨ %s открыл созвездие «%s» (x%s)!", player.DisplayName, pattern.name, pattern.mult),
+				Color3.fromRGB(255, 220, 120)
+			)
+		end
+	end
+end
+
+local function pushState(player: Player)
+	local session = sessions[player]
+	local data = DataService.get(player)
+	if not session or not data then
+		return
+	end
+	StateEv:FireClient(player, {
+		cash = data.cash,
+		inventory = data.inventory,
+		grid = data.grid,
+		gridSize = data.gridSize,
+		luckLevel = data.luckLevel,
+		luck = getLuck(player, data),
+		income = incomePerSecond(player),
+		groups = session.eval.groups,
+		discovered = data.discovered,
+		totalRolls = data.totalRolls,
+		passes = session.passes,
+	})
+end
+
+local function setCash(player: Player, data, value: number)
+	data.cash = value
+	local stats = player:FindFirstChild("leaderstats")
+	local cash = stats and stats:FindFirstChild("Cash")
+	if cash then
+		cash.Value = value
+	end
+end
+
+local function takeFromInventory(data, starId: string, count: number): boolean
+	local have = data.inventory[starId] or 0
+	if have < count then
+		return false
+	end
+	have -= count
+	data.inventory[starId] = if have > 0 then have else nil
+	return true
+end
+
+local function addToInventory(data, starId: string, count: number)
+	data.inventory[starId] = (data.inventory[starId] or 0) + count
+end
+
+local function inBounds(data, key: any): boolean
+	local x, y = Sky.parse(key)
+	return x ~= nil and y ~= nil and x >= 1 and y >= 1 and x <= data.gridSize and y <= data.gridSize
+end
+
+-- Вход / выход
+Players.PlayerAdded:Connect(function(player)
+	local data = DataService.load(player)
+	if not data then
+		return
+	end
+	sessions[player] = { lastRoll = 0, passes = {}, eval = nil }
+	refreshPasses(player)
+	recompute(player, data)
+
+	local stats = Instance.new("Folder")
+	stats.Name = "leaderstats"
+	local cash = Instance.new("NumberValue")
+	cash.Name = "Cash"
+	cash.Value = data.cash
+	cash.Parent = stats
+	stats.Parent = player
+
+	pushState(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	DataService.release(player)
+	sessions[player] = nil
+end)
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, _, purchased)
+	if purchased and sessions[player] then
+		refreshPasses(player)
+		pushState(player)
+	end
+end)
+
+-- Крутка
+RollFn.OnServerInvoke = function(player)
+	local session = sessions[player]
+	local data = DataService.get(player)
+	if not session or not data then
+		return nil
+	end
+	local now = os.clock()
+	if now - session.lastRoll < Config.RollCooldown * 0.9 then
+		return nil
+	end
+	session.lastRoll = now
+
+	local star = Odds.roll(getLuck(player, data), rng)
+	addToInventory(data, star.id, 1)
+	data.totalRolls += 1
+
+	if star.chance >= Config.AnnounceChance then
+		AnnounceEv:FireAllClients(
+			string.format("🌟 %s выбил «%s» (1 к %s)!", player.DisplayName, star.name, Format.number(star.chance)),
+			star.color
+		)
+	end
+	pushState(player)
+	return star.id
+end
+
+-- Действия игрока
+local actions = {}
+
+function actions.Place(player, data, cellKey, starId)
+	if not inBounds(data, cellKey) or type(starId) ~= "string" or not Stars.ById[starId] then
+		return
+	end
+	if not takeFromInventory(data, starId, 1) then
+		return
+	end
+	local old = data.grid[cellKey]
+	if old then
+		addToInventory(data, old, 1)
+	end
+	data.grid[cellKey] = starId
+	recompute(player, data)
+end
+
+function actions.Remove(player, data, cellKey)
+	if type(cellKey) ~= "string" then
+		return
+	end
+	local old = data.grid[cellKey]
+	if not old then
+		return
+	end
+	data.grid[cellKey] = nil
+	addToInventory(data, old, 1)
+	recompute(player, data)
+end
+
+function actions.Sell(player, data, starId, count)
+	if type(starId) ~= "string" or type(count) ~= "number" then
+		return
+	end
+	local star = Stars.ById[starId]
+	count = math.floor(count)
+	if not star or count < 1 or count ~= count then
+		return
+	end
+	count = math.min(count, data.inventory[starId] or 0)
+	if count > 0 and takeFromInventory(data, starId, count) then
+		setCash(player, data, data.cash + star.income * Config.SellMultiplier * count)
+	end
+end
+
+function actions.BuyLuck(player, data)
+	if data.luckLevel >= Config.MaxLuckLevel then
+		return
+	end
+	local cost = Config.LuckCost(data.luckLevel)
+	if data.cash < cost then
+		return
+	end
+	setCash(player, data, data.cash - cost)
+	data.luckLevel += 1
+end
+
+function actions.BuyGrid(player, data)
+	if data.gridSize >= Config.MaxGridSize then
+		return
+	end
+	local cost = Config.GridCost(data.gridSize)
+	if data.cash < cost then
+		return
+	end
+	setCash(player, data, data.cash - cost)
+	data.gridSize += 1
+	recompute(player, data)
+end
+
+ActionEv.OnServerEvent:Connect(function(player, action, a, b)
+	local handler = type(action) == "string" and actions[action]
+	local data = DataService.get(player)
+	if not handler or not data or not sessions[player] then
+		return
+	end
+	handler(player, data, a, b)
+	pushState(player)
+end)
+
+-- Доход каждую секунду
+task.spawn(function()
+	while true do
+		task.wait(1)
+		for player, session in sessions do
+			local data = DataService.get(player)
+			if data and session.eval then
+				setCash(player, data, data.cash + incomePerSecond(player))
+			end
+		end
+	end
+end)
+
+-- Звездопад
+task.spawn(function()
+	while true do
+		task.wait(Config.ShowerInterval)
+		ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
+		AnnounceEv:FireAllClients(
+			string.format("🌠 ЗВЕЗДОПАД! Удача x%s на %s", Config.ShowerLuck, Format.time(Config.ShowerDuration)),
+			Color3.fromRGB(140, 200, 255)
+		)
+		for player in sessions do
+			pushState(player)
+		end
+		task.wait(Config.ShowerDuration)
+		for player in sessions do
+			pushState(player)
+		end
+	end
+end)
+]]></ProtectedString></Properties></Item>
+<Item class="ModuleScript" referent="RBX8"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- Сохранение прогресса игроков в DataStore
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+
+local DataService = {}
+
+local store = nil
+pcall(function()
+	store = DataStoreService:GetDataStore(Config.DataStoreName)
+end)
+
+local cache: { [Player]: any } = {}
+
+local function default()
+	return {
+		cash = 0,
+		inventory = {}, -- [starId] = count
+		grid = {}, -- ["x_y"] = starId
+		gridSize = Config.StartGridSize,
+		luckLevel = 0,
+		discovered = {}, -- [constellationId] = true
+		totalRolls = 0,
+	}
+end
+
+local function reconcile(data)
+	for key, value in default() do
+		if data[key] == nil then
+			data[key] = value
+		end
+	end
+	return data
+end
+
+local function retry(fn)
+	for attempt = 1, 3 do
+		local ok, result = pcall(fn)
+		if ok then
+			return true, result
+		end
+		warn("[DataService] попытка", attempt, result)
+		task.wait(attempt)
+	end
+	return false, nil
+end
+
+local function keyFor(player: Player): string
+	return "p_" .. player.UserId
+end
+
+function DataService.load(player: Player)
+	local ok, data = false, nil
+	if store then
+		ok, data = retry(function()
+			return store:GetAsync(keyFor(player))
+		end)
+	end
+	if not ok then
+		if RunService:IsStudio() then
+			warn("[DataService] DataStore недоступен (включи API Services в Game Settings). Играем без сохранений.")
+		else
+			player:Kick("Не удалось загрузить данные. Зайди ещё раз.")
+			return nil
+		end
+	end
+	data = reconcile(if type(data) == "table" then data else default())
+	cache[player] = data
+	return data
+end
+
+function DataService.get(player: Player)
+	return cache[player]
+end
+
+function DataService.save(player: Player)
+	local data = cache[player]
+	if not data or not store then
+		return
+	end
+	retry(function()
+		store:SetAsync(keyFor(player), data)
+	end)
+end
+
+function DataService.release(player: Player)
+	DataService.save(player)
+	cache[player] = nil
+end
+
+task.spawn(function()
+	while true do
+		task.wait(Config.AutosaveInterval)
+		for player in cache do
+			task.spawn(DataService.save, player)
+		end
+	end
+end)
+
+game:BindToClose(function()
+	local pending = 0
+	for _, player in Players:GetPlayers() do
+		pending += 1
+		task.spawn(function()
+			DataService.save(player)
+			pending -= 1
+		end)
+	end
+	while pending > 0 do
+		task.wait()
+	end
+end)
+
+return DataService
+]]></ProtectedString></Properties></Item>
+</Item>
+</Item>
+<Item class="StarterPlayer" referent="RBX19"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX18"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="Folder" referent="RBX17"><Properties><string name="Name">Client</string></Properties><Item class="LocalScript" referent="RBX9"><Properties><string name="Name">Main</string><ProtectedString name="Source"><![CDATA[local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MarketplaceService = game:GetService("MarketplaceService")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
+local Stars = require(Shared.Stars)
+local Constellations = require(Shared.Constellations)
+local Odds = require(Shared.Odds)
+local Sky = require(Shared.Sky)
+local Format = require(Shared.Format)
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local RollFn = Remotes:WaitForChild("Roll")
+local ActionEv = Remotes:WaitForChild("Action")
+local StateEv = Remotes:WaitForChild("State")
+local AnnounceEv = Remotes:WaitForChild("Announce")
+
+local state = nil
+local selectedStar: string? = nil
+local rolling = false
+local autoRoll = false
+
+---------------------------------------------------------------- UI helpers
+local BG = Color3.fromRGB(14, 16, 34)
+local PANEL = Color3.fromRGB(26, 30, 58)
+local ACCENT = Color3.fromRGB(110, 90, 255)
+local TEXT = Color3.fromRGB(235, 235, 255)
+local MUTED = Color3.fromRGB(150, 150, 190)
+
+local function make(className: string, props, children)
+	local inst = Instance.new(className)
+	for key, value in props do
+		if key ~= "Parent" then
+			inst[key] = value
+		end
+	end
+	for _, child in children or {} do
+		child.Parent = inst
+	end
+	inst.Parent = props.Parent
+	return inst
+end
+
+local function corner(radius: number?)
+	return make("UICorner", { CornerRadius = UDim.new(0, radius or 10) })
+end
+
+local function padding(px: number)
+	return make("UIPadding", {
+		PaddingTop = UDim.new(0, px), PaddingBottom = UDim.new(0, px),
+		PaddingLeft = UDim.new(0, px), PaddingRight = UDim.new(0, px),
+	})
+end
+
+local function label(props)
+	local max = props.MaxText or 28
+	props.MaxText = nil
+	props.BackgroundTransparency = props.BackgroundTransparency or 1
+	props.TextColor3 = props.TextColor3 or TEXT
+	props.Font = props.Font or Enum.Font.GothamBold
+	props.TextScaled = if props.TextScaled == nil then true else props.TextScaled
+	return make("TextLabel", props, { make("UITextSizeConstraint", { MaxTextSize = max }) })
+end
+
+local function button(props, onClick)
+	local max = props.MaxText or 24
+	props.MaxText = nil
+	props.BackgroundColor3 = props.BackgroundColor3 or ACCENT
+	props.TextColor3 = props.TextColor3 or TEXT
+	props.Font = props.Font or Enum.Font.GothamBold
+	props.TextScaled = true
+	props.AutoButtonColor = true
+	local btn = make("TextButton", props, { corner(), make("UITextSizeConstraint", { MaxTextSize = max }) })
+	btn.Activated:Connect(onClick)
+	return btn
+end
+
+local function panel(props)
+	props.BackgroundColor3 = props.BackgroundColor3 or PANEL
+	return make("Frame", props, { corner(14), padding(8) })
+end
+
+---------------------------------------------------------------- Layout
+local gui = make("ScreenGui", {
+	Name = "ConstellationsUI",
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = player:WaitForChild("PlayerGui"),
+})
+
+-- Верх: деньги, доход, удача, звездопад
+local top = panel({ Size = UDim2.new(0.6, 0, 0.09, 0), Position = UDim2.new(0.2, 0, 0.01, 0), Parent = gui })
+make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), Parent = top })
+local cashLabel = label({ Size = UDim2.new(0.3, 0, 1, 0), Text = "💰 0", TextColor3 = Color3.fromRGB(255, 220, 90), Parent = top })
+local incomeLabel = label({ Size = UDim2.new(0.22, 0, 1, 0), Text = "+0/с", TextColor3 = Color3.fromRGB(140, 255, 160), Parent = top })
+local luckLabel = label({ Size = UDim2.new(0.2, 0, 1, 0), Text = "🍀 x1", Parent = top })
+local showerLabel = label({ Size = UDim2.new(0.24, 0, 1, 0), Text = "", TextColor3 = Color3.fromRGB(140, 200, 255), Parent = top })
+
+-- Лево: крутка
+local left = panel({ Size = UDim2.new(0.2, 0, 0.6, 0), Position = UDim2.new(0.01, 0, 0.14, 0), Parent = gui })
+local resultLabel = label({ Size = UDim2.new(1, 0, 0.22, 0), Text = "Крути звёзды!", MaxText = 30, Parent = left })
+local chanceLabel = label({ Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.22, 0), Text = "", TextColor3 = MUTED, MaxText = 18, Parent = left })
+local rollButton
+local autoButton
+local oddsButton
+local bookButton
+
+-- Центр: небо
+local skyHolder = make("Frame", { Size = UDim2.new(0.5, 0, 0.66, 0), Position = UDim2.new(0.25, 0, 0.14, 0), BackgroundTransparency = 1, Parent = gui })
+local sky = make("Frame", {
+	Size = UDim2.new(1, 0, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
+	BackgroundColor3 = BG, Parent = skyHolder,
+}, { corner(16), padding(8), make("UIAspectRatioConstraint", { AspectRatio = 1 }), make("UIStroke", { Color = ACCENT, Thickness = 2 }) })
+local skyGrid = make("UIGridLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Parent = sky })
+local skyHint = label({
+	Size = UDim2.new(0.5, 0, 0.05, 0), Position = UDim2.new(0.25, 0, 0.805, 0),
+	Text = "Выбери звезду справа и тыкни клетку. Тыкни звезду на небе, чтобы снять.", TextColor3 = MUTED, MaxText = 16, Font = Enum.Font.Gotham, Parent = gui,
+})
+
+-- Право: инвентарь
+local right = panel({ Size = UDim2.new(0.22, 0, 0.6, 0), Position = UDim2.new(0.77, 0, 0.14, 0), Parent = gui })
+label({ Size = UDim2.new(1, 0, 0.08, 0), Text = "Инвентарь", Parent = right })
+local invList = make("ScrollingFrame", {
+	Size = UDim2.new(1, 0, 0.72, 0), Position = UDim2.new(0, 0, 0.09, 0), BackgroundTransparency = 1,
+	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 6, Parent = right,
+}, { make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+local sellOne
+local sellAll
+
+-- Низ: улучшения
+local bottom = panel({ Size = UDim2.new(0.5, 0, 0.09, 0), Position = UDim2.new(0.25, 0, 0.88, 0), Parent = gui })
+make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.02, 0), Parent = bottom })
+local luckUpgrade
+local gridUpgrade
+
+-- Объявления
+local announce = label({
+	Size = UDim2.new(0.6, 0, 0.05, 0), Position = UDim2.new(0.2, 0, 0.105, 0),
+	Text = "", TextTransparency = 1, TextStrokeTransparency = 1, MaxText = 26, Parent = gui,
+})
+
+-- Всплывающие окна
+local function popup(title: string)
+	local frame = panel({ Size = UDim2.new(0.4, 0, 0.7, 0), Position = UDim2.new(0.3, 0, 0.14, 0), Visible = false, ZIndex = 10, Parent = gui })
+	label({ Size = UDim2.new(0.85, 0, 0.08, 0), Text = title, ZIndex = 10, Parent = frame })
+	button({ Size = UDim2.new(0.1, 0, 0.08, 0), Position = UDim2.new(0.9, 0, 0, 0), Text = "✕", BackgroundColor3 = Color3.fromRGB(200, 60, 80), ZIndex = 10 }, function()
+		frame.Visible = false
+	end).Parent = frame
+	local list = make("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 0.9, 0), Position = UDim2.new(0, 0, 0.1, 0), BackgroundTransparency = 1,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 6, ZIndex = 10, Parent = frame,
+	}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	return frame, list
+end
+
+local oddsFrame, oddsList = popup("Шансы (с твоей удачей)")
+local bookFrame, bookList = popup("Книга созвездий")
+
+local function clear(container: Instance)
+	for _, child in container:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+end
+
+---------------------------------------------------------------- Render
+local function renderOdds()
+	clear(oddsList)
+	local odds = Odds.exact(if state then state.luck else 1)
+	for i = #Stars.List, 1, -1 do
+		local star = Stars.List[i]
+		label({
+			Size = UDim2.new(1, -10, 0, 30), LayoutOrder = -i, ZIndex = 10, TextXAlignment = Enum.TextXAlignment.Left,
+			Text = string.format("%s  •  1 к %s  •  %s", star.name, Format.number(star.chance), Format.percent(odds[star.id])),
+			TextColor3 = star.color, MaxText = 20, Parent = oddsList,
+		})
+	end
+end
+
+local function renderBook()
+	clear(bookList)
+	for order, pattern in Constellations.List do
+		local found = state and state.discovered[pattern.id]
+		local row = make("Frame", { Size = UDim2.new(1, -10, 0, 70), BackgroundColor3 = BG, LayoutOrder = order, ZIndex = 10, Parent = bookList }, { corner() })
+		-- мини-схема
+		local maxX, maxY = 0, 0
+		for _, c in pattern.cells do
+			maxX = math.max(maxX, c[1])
+			maxY = math.max(maxY, c[2])
+		end
+		local box = make("Frame", { Size = UDim2.new(0, 60, 0, 60), Position = UDim2.new(0, 5, 0, 5), BackgroundTransparency = 1, ZIndex = 10, Parent = row })
+		local cell = 60 / math.max(maxX + 1, maxY + 1)
+		for _, c in pattern.cells do
+			make("Frame", {
+				Size = UDim2.new(0, cell - 2, 0, cell - 2), Position = UDim2.new(0, c[1] * cell, 0, c[2] * cell),
+				BackgroundColor3 = if found then Color3.fromRGB(255, 220, 120) else MUTED, ZIndex = 10, Parent = box,
+			}, { corner(3) })
+		end
+		label({
+			Size = UDim2.new(1, -80, 1, -10), Position = UDim2.new(0, 75, 0, 5), ZIndex = 10, TextXAlignment = Enum.TextXAlignment.Left,
+			Text = if found then string.format("%s  •  x%s", pattern.name, pattern.mult) else string.format("???  •  %d звёзд", #pattern.cells),
+			TextColor3 = if found then TEXT else MUTED, MaxText = 20, Parent = row,
+		})
+	end
+	label({
+		Size = UDim2.new(1, -10, 0, 50), LayoutOrder = 999, ZIndex = 10, Font = Enum.Font.Gotham, TextColor3 = MUTED, MaxText = 16,
+		Text = string.format("Группа должна быть ровно этой формы, без лишних соседей (и по диагонали). Все звёзды одного типа: ещё x%s.", Constellations.PureBonus),
+		Parent = bookList,
+	})
+end
+
+local function renderSky()
+	clear(sky)
+	local size = state.gridSize
+	local gap = 4
+	skyGrid.CellPadding = UDim2.new(0, gap, 0, gap)
+	skyGrid.CellSize = UDim2.new(1 / size, -gap, 1 / size, -gap)
+
+	local inGroup = {}
+	for _, group in state.groups do
+		for _, key in group.cells do
+			inGroup[key] = group
+		end
+	end
+
+	for y = 1, size do
+		for x = 1, size do
+			local key = Sky.key(x, y)
+			local star = Stars.ById[state.grid[key]]
+			local group = inGroup[key]
+			local cellBtn = make("TextButton", {
+				LayoutOrder = y * 100 + x,
+				BackgroundColor3 = if star then Color3.fromRGB(34, 38, 74) else Color3.fromRGB(22, 24, 48),
+				Text = if star then "★" else "",
+				TextColor3 = if star then star.color else TEXT,
+				TextScaled = true, Font = Enum.Font.GothamBold, AutoButtonColor = true,
+				Parent = sky,
+			}, { corner(8) })
+			if group then
+				make("UIStroke", {
+					Color = if group.pure then Color3.fromRGB(120, 255, 255) else Color3.fromRGB(255, 220, 120),
+					Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = cellBtn,
+				})
+			end
+			cellBtn.Activated:Connect(function()
+				if selectedStar and (state.inventory[selectedStar] or 0) > 0 and state.grid[key] ~= selectedStar then
+					ActionEv:FireServer("Place", key, selectedStar)
+				elseif star then
+					ActionEv:FireServer("Remove", key)
+				end
+			end)
+		end
+	end
+end
+
+local function renderInventory()
+	clear(invList)
+	if selectedStar and not state.inventory[selectedStar] then
+		selectedStar = nil
+	end
+	for i = #Stars.List, 1, -1 do
+		local star = Stars.List[i]
+		local count = state.inventory[star.id]
+		if count then
+			local selected = selectedStar == star.id
+			button({
+				Size = UDim2.new(1, -8, 0, 36), LayoutOrder = -i,
+				BackgroundColor3 = if selected then Color3.fromRGB(70, 60, 150) else BG,
+				TextColor3 = star.color, MaxText = 18,
+				Text = string.format("%s ×%d  (+%s/с)", star.name, count, Format.number(star.income)),
+				Parent = invList,
+			}, function()
+				selectedStar = if selectedStar == star.id then nil else star.id
+				renderInventory()
+			end)
+		end
+	end
+	sellOne.Text = if selectedStar then "Продать 1" else "Выбери звезду"
+	sellAll.Text = if selectedStar then "Продать все" else ""
+end
+
+local function renderUpgrades()
+	if state.luckLevel >= Config.MaxLuckLevel then
+		luckUpgrade.Text = "🍀 Удача: макс"
+	else
+		luckUpgrade.Text = string.format("🍀 Удача +%s  (💰%s)", Config.LuckPerLevel, Format.number(Config.LuckCost(state.luckLevel)))
+	end
+	if state.gridSize >= Config.MaxGridSize then
+		gridUpgrade.Text = "🌌 Небо: макс"
+	else
+		gridUpgrade.Text = string.format("🌌 Небо %d×%d  (💰%s)", state.gridSize + 1, state.gridSize + 1, Format.number(Config.GridCost(state.gridSize)))
+	end
+end
+
+local function canAutoRoll(): boolean
+	return Config.GamePasses.AutoRoll == 0 or (state ~= nil and state.passes.AutoRoll == true)
+end
+
+local function render()
+	if not state then
+		return
+	end
+	incomeLabel.Text = "+" .. Format.number(state.income) .. "/с"
+	luckLabel.Text = "🍀 x" .. (math.floor(state.luck * 100 + 0.5) / 100)
+	renderSky()
+	renderInventory()
+	renderUpgrades()
+	if oddsFrame.Visible then
+		renderOdds()
+	end
+	if bookFrame.Visible then
+		renderBook()
+	end
+	autoButton.Text = if autoRoll then "Авто: ВКЛ" else "Авто: выкл"
+end
+
+---------------------------------------------------------------- Buttons
+local function doRoll()
+	if rolling then
+		return
+	end
+	rolling = true
+	local result = nil
+	task.spawn(function()
+		result = RollFn:InvokeServer()
+	end)
+	-- анимация перебора
+	local started = os.clock()
+	while os.clock() - started < 0.6 or result == nil do
+		local fake = Stars.List[math.random(1, math.min(#Stars.List, 6))]
+		resultLabel.Text = fake.name
+		resultLabel.TextColor3 = fake.color
+		task.wait(0.05)
+		if os.clock() - started > 5 then
+			break
+		end
+	end
+	local star = Stars.ById[result]
+	if star then
+		resultLabel.Text = star.name
+		resultLabel.TextColor3 = star.color
+		chanceLabel.Text = "1 к " .. Format.number(star.chance)
+		local pop = TweenService:Create(resultLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = UDim2.new(1, 0, 0.22, 0) })
+		resultLabel.Size = UDim2.new(1.2, 0, 0.26, 0)
+		pop:Play()
+	end
+	task.wait(math.max(0, Config.RollCooldown - (os.clock() - started)))
+	rolling = false
+end
+
+rollButton = button({ Size = UDim2.new(1, 0, 0.2, 0), Position = UDim2.new(0, 0, 0.35, 0), Text = "🎲 КРУТИТЬ", MaxText = 32, Parent = left }, doRoll)
+autoButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.58, 0), Text = "Авто: выкл", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
+	if canAutoRoll() then
+		autoRoll = not autoRoll
+		render()
+	elseif Config.GamePasses.AutoRoll ~= 0 then
+		MarketplaceService:PromptGamePassPurchase(player, Config.GamePasses.AutoRoll)
+	end
+end)
+oddsButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.73, 0), Text = "📊 Шансы", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
+	bookFrame.Visible = false
+	oddsFrame.Visible = not oddsFrame.Visible
+	renderOdds()
+end)
+bookButton = button({ Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.new(0, 0, 0.88, 0), Text = "📖 Созвездия", BackgroundColor3 = Color3.fromRGB(60, 60, 110), Parent = left }, function()
+	oddsFrame.Visible = false
+	bookFrame.Visible = not bookFrame.Visible
+	renderBook()
+end)
+
+sellOne = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.84, 0), Text = "Выбери звезду", BackgroundColor3 = Color3.fromRGB(180, 70, 90), MaxText = 18, Parent = right }, function()
+	if selectedStar then
+		ActionEv:FireServer("Sell", selectedStar, 1)
+	end
+end)
+sellAll = button({ Size = UDim2.new(0.48, 0, 0.16, 0), Position = UDim2.new(0.52, 0, 0.84, 0), Text = "", BackgroundColor3 = Color3.fromRGB(150, 50, 70), MaxText = 18, Parent = right }, function()
+	if selectedStar and state then
+		ActionEv:FireServer("Sell", selectedStar, state.inventory[selectedStar] or 0)
+	end
+end)
+
+luckUpgrade = button({ Size = UDim2.new(0.48, 0, 1, 0), Text = "", BackgroundColor3 = Color3.fromRGB(50, 140, 90), MaxText = 20, Parent = bottom }, function()
+	ActionEv:FireServer("BuyLuck")
+end)
+gridUpgrade = button({ Size = UDim2.new(0.48, 0, 1, 0), Text = "", BackgroundColor3 = Color3.fromRGB(60, 90, 170), MaxText = 20, Parent = bottom }, function()
+	ActionEv:FireServer("BuyGrid")
+end)
+
+---------------------------------------------------------------- Events
+StateEv.OnClientEvent:Connect(function(newState)
+	state = newState
+	render()
+end)
+
+local announceTween = nil
+AnnounceEv.OnClientEvent:Connect(function(text: string, color: Color3?)
+	if announceTween then
+		announceTween:Cancel()
+	end
+	announce.Text = text
+	announce.TextColor3 = color or TEXT
+	announce.TextTransparency = 0
+	announce.TextStrokeTransparency = 0.4
+	announceTween = TweenService:Create(announce, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 4), {
+		TextTransparency = 1, TextStrokeTransparency = 1,
+	})
+	announceTween:Play()
+end)
+
+-- Деньги из leaderstats (обновляются каждую секунду)
+task.spawn(function()
+	local cash = player:WaitForChild("leaderstats"):WaitForChild("Cash")
+	local function update()
+		cashLabel.Text = "💰 " .. Format.number(cash.Value)
+	end
+	cash.Changed:Connect(update)
+	update()
+end)
+
+-- Таймер звездопада + автокрутка
+task.spawn(function()
+	while true do
+		local remaining = (ReplicatedStorage:GetAttribute("ShowerEndsAt") or 0) - workspace:GetServerTimeNow()
+		showerLabel.Text = if remaining > 0 then "🌠 x" .. Config.ShowerLuck .. " " .. Format.time(remaining) else ""
+		if autoRoll and canAutoRoll() and not rolling then
+			task.spawn(doRoll)
+		end
+		task.wait(0.2)
+	end
+end)
+]]></ProtectedString></Properties></Item>
+</Item>
+</Item>
+</Item>
+</roblox>
