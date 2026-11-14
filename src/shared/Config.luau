@@ -139,6 +139,47 @@ Config.AdminUserIds = {}
 Config.AutosaveInterval = 120
 Config.DataStoreName = "ConstellationsRNG_v1"
 
+-- ================= Robux shop (Developer Products). id = 0 -> not created yet (free test purchases in Studio)
+Config.Shop = {
+	-- permanent, bought one after another, each tier much pricier
+	speedTiers = {
+		{ id = 0, price = 49 }, { id = 0, price = 149 }, { id = 0, price = 449 },
+		{ id = 0, price = 1299 }, { id = 0, price = 3499 }, { id = 0, price = 9999 },
+	},
+	multiTiers = {
+		{ id = 0, price = 99 }, { id = 0, price = 299 }, { id = 0, price = 899 },
+		{ id = 0, price = 2499 }, { id = 0, price = 6999 },
+	},
+	luckBoosts = { { id = 0, price = 49, minutes = 15 }, { id = 0, price = 89, minutes = 30 }, { id = 0, price = 149, minutes = 60 } },
+	speedBoosts = { { id = 0, price = 39, minutes = 15 }, { id = 0, price = 69, minutes = 30 }, { id = 0, price = 119, minutes = 60 } },
+	-- paid random item: the odds are always shown before buying (Roblox rule)
+	crate = {
+		packs = { { id = 0, price = 99, count = 1 }, { id = 0, price = 249, count = 3 }, { id = 0, price = 799, count = 10 } },
+		odds = {
+			{ item = "hypergiant", p = 0.39 },
+			{ item = "kilonova", p = 0.24 },
+			{ item = "supernova", p = 0.18 },
+			{ item = "magnetar", p = 0.12 },
+			{ item = "etacarinae", p = 0.065 },
+			{ item = "eventhorizon|golden", p = 0.005 },
+		},
+	},
+}
+Config.RobuxSpeedStep = 0.85 -- each speed tier: roll time x0.85
+
+-- roll cooldown with every upgrade/boost (same formula on server and client)
+function Config.EffectiveCooldown(data, now: number): number
+	local cooldown = Config.RollCooldown(data.rollSpeedLevel or 0) * Config.RobuxSpeedStep ^ (data.robuxSpeed or 0)
+	if (data.boostSpeedUntil or 0) > now then
+		cooldown *= 0.5
+	end
+	return math.max(0.1, cooldown)
+end
+
+function Config.RollsPerClick(data): number
+	return 1 + (data.multiRollLevel or 0) + (data.robuxMulti or 0)
+end
+
 -- Game pass IDs. 0 = not created yet
 Config.GamePasses = {
 	Luck2x = 0,

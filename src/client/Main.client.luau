@@ -6,6 +6,7 @@ local CollectionService = game:GetService("CollectionService")
 local LocalizationService = game:GetService("LocalizationService")
 local SoundService = game:GetService("SoundService")
 local ContextActionService = game:GetService("ContextActionService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 
@@ -30,6 +31,7 @@ local AnnounceEv = Remotes:WaitForChild("Announce")
 local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
 local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
+local CrateEv = Remotes:WaitForChild("CrateResult")
 
 local state = nil
 local selected: string? = nil
@@ -397,6 +399,9 @@ local pickerW = window("pickTitle", "center", centerProps())
 local forgeW = window("forgeTitle", "center", centerProps())
 local holeW = window("holeTitle", "center", centerProps())
 local elevatorW = window("elevatorTitle", "center", { Size = UDim2.new(0.26, 0, 0.5, 0), Position = UDim2.new(0.37, 0, 0.22, 0) })
+local shopW = window("shop", "center", { Size = UDim2.new(0.62, 0, 0.78, 0), Position = UDim2.new(0.19, 0, 0.12, 0) })
+local crateW = window("crateGot", "center", { Size = UDim2.new(0.4, 0, 0.5, 0), Position = UDim2.new(0.3, 0, 0.24, 0) })
+local lastCrate = {}
 local elevatorInfo = { plot = 0, floor = 1, floors = 1 }
 local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
 local settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.56, 0), Position = UDim2.new(0.31, 0, 0.18, 0) })
@@ -1685,11 +1690,12 @@ local function addButtons(parent: Frame, entries)
 	end
 end
 
-local bottomRow = buttonGroup(3, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
+local bottomRow = buttonGroup(4, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
 addButtons(bottomRow, {
 	{ "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
 	{ "rewards", rewardsW, RED, "rewards" },
 	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
+	{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
 })
 local rightColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
 addButtons(rightColumn, {
@@ -1706,7 +1712,7 @@ local function canAutoRoll(): boolean
 end
 
 local function renderTelescope()
-	local multi = if state then 1 + state.multiRollLevel else 1
+	local multi = if state then Config.RollsPerClick(state) else 1
 	rollButton.Text = if multi > 1 then t("rollN", multi) else t("roll")
 	if not canAutoRoll() then
 		autoRoll = false
@@ -1828,7 +1834,7 @@ local function doRoll()
 		end
 	end
 	renderTelescope()
-	local cooldown = Config.RollCooldown(if state then state.rollSpeedLevel else 0)
+	local cooldown = if state then Config.EffectiveCooldown(state, workspace:GetServerTimeNow()) else 1
 	task.wait(math.max(0, cooldown - (os.clock() - started)))
 	rolling = false
 end
@@ -1887,6 +1893,125 @@ renderers[elevatorW] = function()
 		end)
 	end
 end
+
+---------------------------------------------------------------- Robux shop
+local function buy(kind: string, index: number, entry)
+	if entry.id and entry.id ~= 0 then
+		MarketplaceService:PromptProductPurchase(player, entry.id)
+	elseif RunService:IsStudio() then
+		ActionEv:FireServer("ShopTest", kind, index) -- free test in Studio until the product exists
+	else
+		showToast(t("notConfigured"))
+	end
+end
+
+local function sectionTitle(parent: Instance, order: number, key: string)
+	text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = order, Text = "— " .. t(key) .. " —", FontFace = TITLE, TextColor3 = Color3.fromRGB(255, 200, 60), TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 26, ZIndex = 22, Parent = parent })
+end
+
+renderers[shopW] = function()
+	local body = shopW.body
+	clear(body)
+	local now = workspace:GetServerTimeNow()
+
+	-- featured crate with its odds
+	sectionTitle(body, 1, "featured")
+	local card = make("Frame", { Size = UDim2.new(1, 0, 0, 250), LayoutOrder = 2, BackgroundColor3 = WHITE, ZIndex = 21, Parent = body }, {
+		corner(14), stroke(INK, 3),
+		make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(120, 70, 220), Color3.fromRGB(40, 20, 90)), Rotation = 30 }),
+	})
+	text({ Size = UDim2.new(1, -20, 0, 40), Position = UDim2.new(0, 14, 0, 8), Text = t("crateName"), FontFace = TITLE, TextColor3 = Color3.fromRGB(255, 220, 90), TextStrokeColor3 = INK, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Max = 30, ZIndex = 22, Parent = card })
+	text({ Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 14, 0, 46), Text = t("crateOdds"), FontFace = BODY_SEMI, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = card })
+	local oddsRow = make("Frame", { Size = UDim2.new(1, -20, 0, 110), Position = UDim2.new(0, 10, 0, 68), BackgroundTransparency = 1, ZIndex = 22, Parent = card })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = oddsRow })
+	for _, entry in Config.Shop.crate.odds do
+		local star, mutation = Items.parse(entry.item)
+		if star then
+			local tile = make("Frame", { Size = UDim2.new(0, 96, 1, 0), BackgroundColor3 = Color3.fromRGB(30, 20, 60), ZIndex = 22, Parent = oddsRow }, { corner(10), stroke(if entry.p < 0.02 then GOLD else INK, 2.5) })
+			starIcon(star, mutation, { Size = UDim2.new(0, 64, 0, 64), Position = UDim2.new(0.5, -32, 0, 4), ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, -4, 0, 16), Position = UDim2.new(0, 2, 0, 70), Text = Lang.item(lang, entry.item), FontFace = BODY, TextColor3 = WHITE, Max = 12, ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 88), Text = (math.floor(entry.p * 1000 + 0.5) / 10) .. "%", FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 17, ZIndex = 23, Parent = tile })
+		end
+	end
+	local packRow = make("Frame", { Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 0, 188), BackgroundTransparency = 1, ZIndex = 22, Parent = card })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = packRow })
+	for i, pack in Config.Shop.crate.packs do
+		btn(if i == #Config.Shop.crate.packs then RED else MINT, { Size = UDim2.new(0.31, 0, 1, 0), LayoutOrder = i, Text = t("crateBuy", pack.count, pack.price), Max = 18, ZIndex = 23, Parent = packRow }, function()
+			buy("crate", i, pack)
+		end)
+	end
+
+	-- timed boosts
+	sectionTitle(body, 3, "boosts")
+	local boostGrid = make("Frame", { Size = UDim2.new(1, 0, 0, 2 * 118), LayoutOrder = 4, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+	make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -8, 0, 110), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = boostGrid })
+	for group, info in { { kind = "luckBoost", list = Config.Shop.luckBoosts, title = "luckBoost", color = MINT, icon = "luck" }, { kind = "speedBoost", list = Config.Shop.speedBoosts, title = "speedBoost", color = BLUE, icon = "rolls" } } do
+		for i, boost in info.list do
+			local tile = make("Frame", { LayoutOrder = group * 10 + i, BackgroundColor3 = WHITE, ZIndex = 22, Parent = boostGrid }, { corner(12), stroke(INK, 2.5) })
+			uiIcon(info.icon, { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 8, 0, 8), ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, -60, 0, 24), Position = UDim2.new(0, 54, 0, 8), Text = t(info.title), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, -60, 0, 18), Position = UDim2.new(0, 54, 0, 32), Text = t("minutes", boost.minutes), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 23, Parent = tile })
+			btn(info.color, { Size = UDim2.new(1, -16, 0, 42), Position = UDim2.new(0, 8, 0, 60), Text = t("buyRobux", boost.price), Max = 18, ZIndex = 23, Parent = tile }, function()
+				buy(info.kind, i, boost)
+			end)
+		end
+	end
+
+	-- permanent tiers, every next one pricier
+	sectionTitle(body, 5, "forever")
+	local function tierRow(order: number, titleKey: string, desc: string, list, owned: number, kind: string, color: Color3)
+		local r = row(body, order, 74, WHITE)
+		text({ Size = UDim2.new(0.6, 0, 0, 28), Position = UDim2.new(0, 12, 0, 8), Text = t(titleKey), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.6, 0, 0, 20), Position = UDim2.new(0, 12, 0, 42), Text = desc, FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 15, ZIndex = 22, Parent = r })
+		local nextTier = list[owned + 1]
+		btn(if nextTier then color else GREY, { Size = UDim2.new(0.34, 0, 0, 50), Position = UDim2.new(0.64, 0, 0, 12), Text = if nextTier then t("buyRobux", nextTier.price) else t("upMax"), Max = 20, ZIndex = 22, Parent = r }, function()
+			if nextTier then
+				buy(kind, owned + 1, nextTier)
+			end
+		end)
+	end
+	local speedOwned = state.robuxSpeed or 0
+	local multiOwned = state.robuxMulti or 0
+	tierRow(6, "permSpeed", t("permSpeedDesc", speedOwned, speedOwned + 1), Config.Shop.speedTiers, speedOwned, "speed", BLUE)
+	tierRow(7, "permMulti", t("permMultiDesc", Config.RollsPerClick(state), Config.RollsPerClick(state) + 1), Config.Shop.multiTiers, multiOwned, "multi", LILAC)
+	local _ = now
+end
+
+renderers[crateW] = function()
+	local body = crateW.body
+	clear(body)
+	local counts, order = {}, {}
+	for _, key in lastCrate do
+		if not counts[key] then
+			table.insert(order, key)
+		end
+		counts[key] = (counts[key] or 0) + 1
+	end
+	for i, key in order do
+		itemRow(body, i, key, t("oneIn", Format.number(Items.chance(key))) .. "   x" .. counts[key])
+	end
+end
+
+CrateEv.OnClientEvent:Connect(function(got)
+	if type(got) ~= "table" or #got == 0 then
+		return
+	end
+	lastCrate = got
+	local best = got[1]
+	for _, key in got do
+		if Items.chance(key) > Items.chance(best) then
+			best = key
+		end
+	end
+	if wantsReveal(Items.chance(best)) then
+		bigReveal(best, Items.chance(best), nil, Items.chance(best) >= Config.UltraRevealChance)
+		task.delay(if Items.chance(best) >= Config.UltraRevealChance then 12 else 6, function()
+			open(crateW, true)
+		end)
+	else
+		open(crateW, true)
+	end
+end)
 
 OpenWindowEv.OnClientEvent:Connect(function(name: string, info)
 	if name == "forge" then
@@ -1968,7 +2093,19 @@ task.spawn(function()
 		end
 
 		local remaining = (ReplicatedStorage:GetAttribute("ShowerEndsAt") or 0) - workspace:GetServerTimeNow()
-		showerBanner.Text = if remaining > 0 then t("shower", Config.ShowerLuck, Format.time(remaining)) else ""
+		-- star shower + bought boosts with their timers
+		local banner = {}
+		if remaining > 0 then
+			table.insert(banner, t("shower", Config.ShowerLuck, Format.time(remaining)))
+		end
+		local now = workspace:GetServerTimeNow()
+		if state and (state.boostLuckUntil or 0) > now then
+			table.insert(banner, t("luckActive", Format.time(state.boostLuckUntil - now)))
+		end
+		if state and (state.boostSpeedUntil or 0) > now then
+			table.insert(banner, t("speedActive", Format.time(state.boostSpeedUntil - now)))
+		end
+		showerBanner.Text = table.concat(banner, "   ·   ")
 		task.wait(0.5)
 	end
 end)

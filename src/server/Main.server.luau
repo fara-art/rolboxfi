@@ -33,6 +33,7 @@ local AnnounceEv = remote("RemoteEvent", "Announce") -- (langKey, args, color)
 local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
 local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
+local CrateEv = remote("RemoteEvent", "CrateResult") -- ({ itemKey })
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -79,6 +80,9 @@ local function getLuck(player: Player, data): number
 	local luck = (1 + data.luckLevel * Config.LuckPerLevel + data.bonusLuck) * (1 + data.rebirths * Config.RebirthLuckMult)
 	if sessions[player].passes.Luck2x then
 		luck *= 2
+	end
+	if (data.boostLuckUntil or 0) > workspace:GetServerTimeNow() then
+		luck *= 2 -- bought x2 luck boost
 	end
 	if isShower() then
 		luck *= Config.ShowerLuck
@@ -154,6 +158,10 @@ local function pushState(player: Player)
 		totalRolls = data.totalRolls,
 		rebirthRolls = data.rebirthRolls,
 		luckyProgress = data.luckyProgress,
+		robuxSpeed = data.robuxSpeed,
+		robuxMulti = data.robuxMulti,
+		boostLuckUntil = data.boostLuckUntil,
+		boostSpeedUntil = data.boostSpeedUntil,
 		floors = data.floors,
 		theme = data.theme,
 		rebirths = data.rebirths,
@@ -413,7 +421,7 @@ RollFn.OnServerInvoke = function(player)
 		return nil
 	end
 	local now = os.clock()
-	if now - session.lastRoll < Config.RollCooldown(data.rollSpeedLevel) * 0.9 then
+	if now - session.lastRoll < Config.EffectiveCooldown(data, workspace:GetServerTimeNow()) * 0.9 then
 		return nil
 	end
 	session.lastRoll = now
@@ -421,7 +429,7 @@ RollFn.OnServerInvoke = function(player)
 	local before = data.totalRolls
 	local luck = getLuck(player, data)
 	local results = {}
-	for i = 1, 1 + data.multiRollLevel do
+	for i = 1, Config.RollsPerClick(data) do
 		-- lucky roll: every N rolls one gets boosted luck
 		data.luckyProgress += 1
 		local rollLuck = luck
@@ -845,6 +853,106 @@ task.spawn(function()
 		startShower()
 	end
 end)
+
+---------------------------------------------------------------- Robux shop
+-- product id -> what it gives
+local products = {}
+local function registerProducts()
+	for i, tier in Config.Shop.speedTiers do
+		products[tier.id] = { kind = "speed", index = i }
+	end
+	for i, tier in Config.Shop.multiTiers do
+		products[tier.id] = { kind = "multi", index = i }
+	end
+	for i, boost in Config.Shop.luckBoosts do
+		products[boost.id] = { kind = "luckBoost", minutes = boost.minutes }
+	end
+	for i, boost in Config.Shop.speedBoosts do
+		products[boost.id] = { kind = "speedBoost", minutes = boost.minutes }
+	end
+	for i, pack in Config.Shop.crate.packs do
+		products[pack.id] = { kind = "crate", count = pack.count }
+	end
+	products[0] = nil -- not created yet
+end
+registerProducts()
+
+local function openCrate(): string
+	local r = rng:NextNumber()
+	local acc = 0
+	for _, entry in Config.Shop.crate.odds do
+		acc += entry.p
+		if r <= acc then
+			return entry.item
+		end
+	end
+	return Config.Shop.crate.odds[1].item
+end
+
+local function grantProduct(player: Player, data, product): boolean
+	local now = workspace:GetServerTimeNow()
+	if product.kind == "speed" then
+		data.robuxSpeed += 1
+	elseif product.kind == "multi" then
+		data.robuxMulti += 1
+	elseif product.kind == "luckBoost" then
+		data.boostLuckUntil = math.max(now, data.boostLuckUntil) + product.minutes * 60
+	elseif product.kind == "speedBoost" then
+		data.boostSpeedUntil = math.max(now, data.boostSpeedUntil) + product.minutes * 60
+	elseif product.kind == "crate" then
+		local got = {}
+		for i = 1, product.count do
+			local key = openCrate()
+			if Items.parse(key) then
+				addToInventory(player, data, key, 1)
+				got[i] = key
+			end
+		end
+		CrateEv:FireClient(player, got)
+	else
+		return false
+	end
+	pushState(player)
+	return true
+end
+
+MarketplaceService.ProcessReceipt = function(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	local data = player and DataService.get(player)
+	local product = products[receipt.ProductId]
+	if not player or not data or not sessions[player] or not product then
+		return Enum.ProductPurchaseDecision.NotProcessedYet -- Roblox will retry later
+	end
+	if data.receipts[receipt.PurchaseId] then
+		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
+	end
+	if not grantProduct(player, data, product) then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	data.receipts[receipt.PurchaseId] = true
+	-- keep the receipt list small
+	local count = 0
+	for _ in data.receipts do
+		count += 1
+	end
+	if count > 200 then
+		data.receipts = { [receipt.PurchaseId] = true }
+	end
+	task.spawn(DataService.save, player)
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+-- Studio only: try shop items for free before the products exist
+actions.ShopTest = function(player, data, kind, index)
+	if not RunService:IsStudio() or type(kind) ~= "string" or type(index) ~= "number" then
+		return
+	end
+	local list = ({ speed = Config.Shop.speedTiers, multi = Config.Shop.multiTiers, luckBoost = Config.Shop.luckBoosts, speedBoost = Config.Shop.speedBoosts, crate = Config.Shop.crate.packs })[kind]
+	local entry = list and list[index]
+	if entry then
+		grantProduct(player, data, { kind = kind, minutes = entry.minutes, count = entry.count })
+	end
+end
 
 ---------------------------------------------------------------- Leaderboards: submit + refresh every 2 minutes
 local function liveRows()

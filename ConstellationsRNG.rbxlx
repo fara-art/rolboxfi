@@ -143,6 +143,47 @@ Config.AdminUserIds = {}
 Config.AutosaveInterval = 120
 Config.DataStoreName = "ConstellationsRNG_v1"
 
+-- ================= Robux shop (Developer Products). id = 0 -> not created yet (free test purchases in Studio)
+Config.Shop = {
+	-- permanent, bought one after another, each tier much pricier
+	speedTiers = {
+		{ id = 0, price = 49 }, { id = 0, price = 149 }, { id = 0, price = 449 },
+		{ id = 0, price = 1299 }, { id = 0, price = 3499 }, { id = 0, price = 9999 },
+	},
+	multiTiers = {
+		{ id = 0, price = 99 }, { id = 0, price = 299 }, { id = 0, price = 899 },
+		{ id = 0, price = 2499 }, { id = 0, price = 6999 },
+	},
+	luckBoosts = { { id = 0, price = 49, minutes = 15 }, { id = 0, price = 89, minutes = 30 }, { id = 0, price = 149, minutes = 60 } },
+	speedBoosts = { { id = 0, price = 39, minutes = 15 }, { id = 0, price = 69, minutes = 30 }, { id = 0, price = 119, minutes = 60 } },
+	-- paid random item: the odds are always shown before buying (Roblox rule)
+	crate = {
+		packs = { { id = 0, price = 99, count = 1 }, { id = 0, price = 249, count = 3 }, { id = 0, price = 799, count = 10 } },
+		odds = {
+			{ item = "hypergiant", p = 0.39 },
+			{ item = "kilonova", p = 0.24 },
+			{ item = "supernova", p = 0.18 },
+			{ item = "magnetar", p = 0.12 },
+			{ item = "etacarinae", p = 0.065 },
+			{ item = "eventhorizon|golden", p = 0.005 },
+		},
+	},
+}
+Config.RobuxSpeedStep = 0.85 -- each speed tier: roll time x0.85
+
+-- roll cooldown with every upgrade/boost (same formula on server and client)
+function Config.EffectiveCooldown(data, now: number): number
+	local cooldown = Config.RollCooldown(data.rollSpeedLevel or 0) * Config.RobuxSpeedStep ^ (data.robuxSpeed or 0)
+	if (data.boostSpeedUntil or 0) > now then
+		cooldown *= 0.5
+	end
+	return math.max(0.1, cooldown)
+end
+
+function Config.RollsPerClick(data): number
+	return 1 + (data.multiRollLevel or 0) + (data.robuxMulti or 0)
+end
+
 -- Game pass IDs. 0 = not created yet
 Config.GamePasses = {
 	Luck2x = 0,
@@ -482,7 +523,11 @@ Lang.Strings = {
 		upLuckDesc = "x%s → x%s", upSpeedDesc = "%ss → %ss", upMultiDesc = "%d → %d per roll", upSkyDesc = "%dx%d → %dx%d",
 		indexTitle = "STAR INDEX", tabStars = "STARS", tabRolls = "ROLL REWARDS",
 		claim = "CLAIM", claimed = "CLAIMED", rewardLuck = "+%s luck", rewardCash = "+%s cash", rollsReq = "%s rolls",
-		rowReward = "Reward: +%s luck forever + %s", luckyBar = "x%s LUCK in %d rolls", luckyNow = "x%s LUCK ROLL!",
+		rowReward = "Reward: +%s luck forever + %s", luckyBar = "x%s LUCK in %d rolls",
+		shop = "SHOP", featured = "FEATURED", crateName = "CELESTIAL CRATE", crateOdds = "Drop chances (shown before you buy)", crateBuy = "%d CRATE  R$ %s",
+		boosts = "BOOSTS", luckBoost = "x2 Luck", speedBoost = "x2 Roll speed", minutes = "%d min", forever = "FOREVER",
+		permSpeed = "Faster rolls", permSpeedDesc = "level %d → %d  (-15%% roll time)", permMulti = "Extra roll per click", permMultiDesc = "%d → %d rolls per click",
+		buyRobux = "R$ %s", notConfigured = "This item isn't set up yet", luckActive = "x2 LUCK %s", speedActive = "x2 SPEED %s", crateGot = "YOU GOT", luckyNow = "x%s LUCK ROLL!",
 		bookTitle = "CONSTELLATION BOOK", unknown = "Unknown", nStars = "%d stars", incomeX = "income x%s",
 		bookHint = "Place stars on pedestals in exactly this shape, with no extra neighbours (diagonals count). All stars of one kind: another x%s.",
 		shower = "STAR SHOWER  x%s LUCK  %s",
@@ -535,7 +580,11 @@ Lang.Strings = {
 		upLuckDesc = "x%s → x%s", upSpeedDesc = "%sс → %sс", upMultiDesc = "%d → %d за раз", upSkyDesc = "%dx%d → %dx%d",
 		indexTitle = "ИНДЕКС ЗВЁЗД", tabStars = "ЗВЁЗДЫ", tabRolls = "НАГРАДЫ ЗА КРУТКИ",
 		claim = "ЗАБРАТЬ", claimed = "ПОЛУЧЕНО", rewardLuck = "+%s удачи", rewardCash = "+%s денег", rollsReq = "%s круток",
-		rowReward = "Награда: +%s удачи навсегда + %s", luckyBar = "x%s УДАЧА через %d", luckyNow = "КРУТКА С x%s УДАЧЕЙ!",
+		rowReward = "Награда: +%s удачи навсегда + %s", luckyBar = "x%s УДАЧА через %d",
+		shop = "МАГАЗИН", featured = "ГЛАВНОЕ", crateName = "НЕБЕСНЫЙ ЯЩИК", crateOdds = "Шансы выпадения (видны до покупки)", crateBuy = "%d ЯЩ.  R$ %s",
+		boosts = "БУСТЫ", luckBoost = "x2 Удача", speedBoost = "x2 Скорость круток", minutes = "%d мин", forever = "НАВСЕГДА",
+		permSpeed = "Быстрые крутки", permSpeedDesc = "уровень %d → %d  (-15%% времени)", permMulti = "+1 крутка за раз", permMultiDesc = "%d → %d за раз",
+		buyRobux = "R$ %s", notConfigured = "Этот товар ещё не настроен", luckActive = "x2 УДАЧА %s", speedActive = "x2 СКОРОСТЬ %s", crateGot = "ВЫПАЛО", luckyNow = "КРУТКА С x%s УДАЧЕЙ!",
 		bookTitle = "КНИГА СОЗВЕЗДИЙ", unknown = "Неизвестно", nStars = "звёзд: %d", incomeX = "доход x%s",
 		bookHint = "Ставь звёзды на постаменты ровно такой фигурой, без лишних соседей (диагонали тоже считаются). Все звёзды одного вида: ещё x%s.",
 		shower = "ЗВЕЗДОПАД  x%s УДАЧИ  %s",
@@ -1035,6 +1084,7 @@ local AnnounceEv = remote("RemoteEvent", "Announce") -- (langKey, args, color)
 local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
 local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
+local CrateEv = remote("RemoteEvent", "CrateResult") -- ({ itemKey })
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -1081,6 +1131,9 @@ local function getLuck(player: Player, data): number
 	local luck = (1 + data.luckLevel * Config.LuckPerLevel + data.bonusLuck) * (1 + data.rebirths * Config.RebirthLuckMult)
 	if sessions[player].passes.Luck2x then
 		luck *= 2
+	end
+	if (data.boostLuckUntil or 0) > workspace:GetServerTimeNow() then
+		luck *= 2 -- bought x2 luck boost
 	end
 	if isShower() then
 		luck *= Config.ShowerLuck
@@ -1156,6 +1209,10 @@ local function pushState(player: Player)
 		totalRolls = data.totalRolls,
 		rebirthRolls = data.rebirthRolls,
 		luckyProgress = data.luckyProgress,
+		robuxSpeed = data.robuxSpeed,
+		robuxMulti = data.robuxMulti,
+		boostLuckUntil = data.boostLuckUntil,
+		boostSpeedUntil = data.boostSpeedUntil,
 		floors = data.floors,
 		theme = data.theme,
 		rebirths = data.rebirths,
@@ -1415,7 +1472,7 @@ RollFn.OnServerInvoke = function(player)
 		return nil
 	end
 	local now = os.clock()
-	if now - session.lastRoll < Config.RollCooldown(data.rollSpeedLevel) * 0.9 then
+	if now - session.lastRoll < Config.EffectiveCooldown(data, workspace:GetServerTimeNow()) * 0.9 then
 		return nil
 	end
 	session.lastRoll = now
@@ -1423,7 +1480,7 @@ RollFn.OnServerInvoke = function(player)
 	local before = data.totalRolls
 	local luck = getLuck(player, data)
 	local results = {}
-	for i = 1, 1 + data.multiRollLevel do
+	for i = 1, Config.RollsPerClick(data) do
 		-- lucky roll: every N rolls one gets boosted luck
 		data.luckyProgress += 1
 		local rollLuck = luck
@@ -1848,6 +1905,106 @@ task.spawn(function()
 	end
 end)
 
+---------------------------------------------------------------- Robux shop
+-- product id -> what it gives
+local products = {}
+local function registerProducts()
+	for i, tier in Config.Shop.speedTiers do
+		products[tier.id] = { kind = "speed", index = i }
+	end
+	for i, tier in Config.Shop.multiTiers do
+		products[tier.id] = { kind = "multi", index = i }
+	end
+	for i, boost in Config.Shop.luckBoosts do
+		products[boost.id] = { kind = "luckBoost", minutes = boost.minutes }
+	end
+	for i, boost in Config.Shop.speedBoosts do
+		products[boost.id] = { kind = "speedBoost", minutes = boost.minutes }
+	end
+	for i, pack in Config.Shop.crate.packs do
+		products[pack.id] = { kind = "crate", count = pack.count }
+	end
+	products[0] = nil -- not created yet
+end
+registerProducts()
+
+local function openCrate(): string
+	local r = rng:NextNumber()
+	local acc = 0
+	for _, entry in Config.Shop.crate.odds do
+		acc += entry.p
+		if r <= acc then
+			return entry.item
+		end
+	end
+	return Config.Shop.crate.odds[1].item
+end
+
+local function grantProduct(player: Player, data, product): boolean
+	local now = workspace:GetServerTimeNow()
+	if product.kind == "speed" then
+		data.robuxSpeed += 1
+	elseif product.kind == "multi" then
+		data.robuxMulti += 1
+	elseif product.kind == "luckBoost" then
+		data.boostLuckUntil = math.max(now, data.boostLuckUntil) + product.minutes * 60
+	elseif product.kind == "speedBoost" then
+		data.boostSpeedUntil = math.max(now, data.boostSpeedUntil) + product.minutes * 60
+	elseif product.kind == "crate" then
+		local got = {}
+		for i = 1, product.count do
+			local key = openCrate()
+			if Items.parse(key) then
+				addToInventory(player, data, key, 1)
+				got[i] = key
+			end
+		end
+		CrateEv:FireClient(player, got)
+	else
+		return false
+	end
+	pushState(player)
+	return true
+end
+
+MarketplaceService.ProcessReceipt = function(receipt)
+	local player = Players:GetPlayerByUserId(receipt.PlayerId)
+	local data = player and DataService.get(player)
+	local product = products[receipt.ProductId]
+	if not player or not data or not sessions[player] or not product then
+		return Enum.ProductPurchaseDecision.NotProcessedYet -- Roblox will retry later
+	end
+	if data.receipts[receipt.PurchaseId] then
+		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
+	end
+	if not grantProduct(player, data, product) then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	data.receipts[receipt.PurchaseId] = true
+	-- keep the receipt list small
+	local count = 0
+	for _ in data.receipts do
+		count += 1
+	end
+	if count > 200 then
+		data.receipts = { [receipt.PurchaseId] = true }
+	end
+	task.spawn(DataService.save, player)
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+-- Studio only: try shop items for free before the products exist
+actions.ShopTest = function(player, data, kind, index)
+	if not RunService:IsStudio() or type(kind) ~= "string" or type(index) ~= "number" then
+		return
+	end
+	local list = ({ speed = Config.Shop.speedTiers, multi = Config.Shop.multiTiers, luckBoost = Config.Shop.luckBoosts, speedBoost = Config.Shop.speedBoosts, crate = Config.Shop.crate.packs })[kind]
+	local entry = list and list[index]
+	if entry then
+		grantProduct(player, data, { kind = kind, minutes = entry.minutes, count = entry.count })
+	end
+end
+
 ---------------------------------------------------------------- Leaderboards: submit + refresh every 2 minutes
 local function liveRows()
 	local rows = {}
@@ -1914,6 +2071,11 @@ local function default()
 		rebirthRolls = -1, -- rolls since the last rebirth (roll rewards); -1 = not migrated yet
 		floors = 1, -- museum floors
 		luckyProgress = 0, -- rolls towards the next x2 luck roll
+		robuxSpeed = 0, -- bought speed tiers
+		robuxMulti = 0, -- bought extra rolls per click
+		boostLuckUntil = 0, -- server time when the x2 luck boost ends
+		boostSpeedUntil = 0,
+		receipts = {}, -- processed purchase ids (never grant twice)
 		theme = "sky",
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}
@@ -3641,6 +3803,7 @@ local CollectionService = game:GetService("CollectionService")
 local LocalizationService = game:GetService("LocalizationService")
 local SoundService = game:GetService("SoundService")
 local ContextActionService = game:GetService("ContextActionService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 
@@ -3665,6 +3828,7 @@ local AnnounceEv = Remotes:WaitForChild("Announce")
 local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
 local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
+local CrateEv = Remotes:WaitForChild("CrateResult")
 
 local state = nil
 local selected: string? = nil
@@ -4032,6 +4196,9 @@ local pickerW = window("pickTitle", "center", centerProps())
 local forgeW = window("forgeTitle", "center", centerProps())
 local holeW = window("holeTitle", "center", centerProps())
 local elevatorW = window("elevatorTitle", "center", { Size = UDim2.new(0.26, 0, 0.5, 0), Position = UDim2.new(0.37, 0, 0.22, 0) })
+local shopW = window("shop", "center", { Size = UDim2.new(0.62, 0, 0.78, 0), Position = UDim2.new(0.19, 0, 0.12, 0) })
+local crateW = window("crateGot", "center", { Size = UDim2.new(0.4, 0, 0.5, 0), Position = UDim2.new(0.3, 0, 0.24, 0) })
+local lastCrate = {}
 local elevatorInfo = { plot = 0, floor = 1, floors = 1 }
 local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
 local settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.56, 0), Position = UDim2.new(0.31, 0, 0.18, 0) })
@@ -5320,11 +5487,12 @@ local function addButtons(parent: Frame, entries)
 	end
 end
 
-local bottomRow = buttonGroup(3, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
+local bottomRow = buttonGroup(4, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
 addButtons(bottomRow, {
 	{ "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
 	{ "rewards", rewardsW, RED, "rewards" },
 	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
+	{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
 })
 local rightColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
 addButtons(rightColumn, {
@@ -5341,7 +5509,7 @@ local function canAutoRoll(): boolean
 end
 
 local function renderTelescope()
-	local multi = if state then 1 + state.multiRollLevel else 1
+	local multi = if state then Config.RollsPerClick(state) else 1
 	rollButton.Text = if multi > 1 then t("rollN", multi) else t("roll")
 	if not canAutoRoll() then
 		autoRoll = false
@@ -5463,7 +5631,7 @@ local function doRoll()
 		end
 	end
 	renderTelescope()
-	local cooldown = Config.RollCooldown(if state then state.rollSpeedLevel else 0)
+	local cooldown = if state then Config.EffectiveCooldown(state, workspace:GetServerTimeNow()) else 1
 	task.wait(math.max(0, cooldown - (os.clock() - started)))
 	rolling = false
 end
@@ -5522,6 +5690,125 @@ renderers[elevatorW] = function()
 		end)
 	end
 end
+
+---------------------------------------------------------------- Robux shop
+local function buy(kind: string, index: number, entry)
+	if entry.id and entry.id ~= 0 then
+		MarketplaceService:PromptProductPurchase(player, entry.id)
+	elseif RunService:IsStudio() then
+		ActionEv:FireServer("ShopTest", kind, index) -- free test in Studio until the product exists
+	else
+		showToast(t("notConfigured"))
+	end
+end
+
+local function sectionTitle(parent: Instance, order: number, key: string)
+	text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = order, Text = "— " .. t(key) .. " —", FontFace = TITLE, TextColor3 = Color3.fromRGB(255, 200, 60), TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 26, ZIndex = 22, Parent = parent })
+end
+
+renderers[shopW] = function()
+	local body = shopW.body
+	clear(body)
+	local now = workspace:GetServerTimeNow()
+
+	-- featured crate with its odds
+	sectionTitle(body, 1, "featured")
+	local card = make("Frame", { Size = UDim2.new(1, 0, 0, 250), LayoutOrder = 2, BackgroundColor3 = WHITE, ZIndex = 21, Parent = body }, {
+		corner(14), stroke(INK, 3),
+		make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(120, 70, 220), Color3.fromRGB(40, 20, 90)), Rotation = 30 }),
+	})
+	text({ Size = UDim2.new(1, -20, 0, 40), Position = UDim2.new(0, 14, 0, 8), Text = t("crateName"), FontFace = TITLE, TextColor3 = Color3.fromRGB(255, 220, 90), TextStrokeColor3 = INK, TextStrokeTransparency = 0, TextXAlignment = Enum.TextXAlignment.Left, Max = 30, ZIndex = 22, Parent = card })
+	text({ Size = UDim2.new(1, -20, 0, 18), Position = UDim2.new(0, 14, 0, 46), Text = t("crateOdds"), FontFace = BODY_SEMI, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = card })
+	local oddsRow = make("Frame", { Size = UDim2.new(1, -20, 0, 110), Position = UDim2.new(0, 10, 0, 68), BackgroundTransparency = 1, ZIndex = 22, Parent = card })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = oddsRow })
+	for _, entry in Config.Shop.crate.odds do
+		local star, mutation = Items.parse(entry.item)
+		if star then
+			local tile = make("Frame", { Size = UDim2.new(0, 96, 1, 0), BackgroundColor3 = Color3.fromRGB(30, 20, 60), ZIndex = 22, Parent = oddsRow }, { corner(10), stroke(if entry.p < 0.02 then GOLD else INK, 2.5) })
+			starIcon(star, mutation, { Size = UDim2.new(0, 64, 0, 64), Position = UDim2.new(0.5, -32, 0, 4), ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, -4, 0, 16), Position = UDim2.new(0, 2, 0, 70), Text = Lang.item(lang, entry.item), FontFace = BODY, TextColor3 = WHITE, Max = 12, ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 0, 88), Text = (math.floor(entry.p * 1000 + 0.5) / 10) .. "%", FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 17, ZIndex = 23, Parent = tile })
+		end
+	end
+	local packRow = make("Frame", { Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 0, 188), BackgroundTransparency = 1, ZIndex = 22, Parent = card })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = packRow })
+	for i, pack in Config.Shop.crate.packs do
+		btn(if i == #Config.Shop.crate.packs then RED else MINT, { Size = UDim2.new(0.31, 0, 1, 0), LayoutOrder = i, Text = t("crateBuy", pack.count, pack.price), Max = 18, ZIndex = 23, Parent = packRow }, function()
+			buy("crate", i, pack)
+		end)
+	end
+
+	-- timed boosts
+	sectionTitle(body, 3, "boosts")
+	local boostGrid = make("Frame", { Size = UDim2.new(1, 0, 0, 2 * 118), LayoutOrder = 4, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+	make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -8, 0, 110), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = boostGrid })
+	for group, info in { { kind = "luckBoost", list = Config.Shop.luckBoosts, title = "luckBoost", color = MINT, icon = "luck" }, { kind = "speedBoost", list = Config.Shop.speedBoosts, title = "speedBoost", color = BLUE, icon = "rolls" } } do
+		for i, boost in info.list do
+			local tile = make("Frame", { LayoutOrder = group * 10 + i, BackgroundColor3 = WHITE, ZIndex = 22, Parent = boostGrid }, { corner(12), stroke(INK, 2.5) })
+			uiIcon(info.icon, { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 8, 0, 8), ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, -60, 0, 24), Position = UDim2.new(0, 54, 0, 8), Text = t(info.title), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 23, Parent = tile })
+			text({ Size = UDim2.new(1, -60, 0, 18), Position = UDim2.new(0, 54, 0, 32), Text = t("minutes", boost.minutes), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 23, Parent = tile })
+			btn(info.color, { Size = UDim2.new(1, -16, 0, 42), Position = UDim2.new(0, 8, 0, 60), Text = t("buyRobux", boost.price), Max = 18, ZIndex = 23, Parent = tile }, function()
+				buy(info.kind, i, boost)
+			end)
+		end
+	end
+
+	-- permanent tiers, every next one pricier
+	sectionTitle(body, 5, "forever")
+	local function tierRow(order: number, titleKey: string, desc: string, list, owned: number, kind: string, color: Color3)
+		local r = row(body, order, 74, WHITE)
+		text({ Size = UDim2.new(0.6, 0, 0, 28), Position = UDim2.new(0, 12, 0, 8), Text = t(titleKey), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.6, 0, 0, 20), Position = UDim2.new(0, 12, 0, 42), Text = desc, FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 15, ZIndex = 22, Parent = r })
+		local nextTier = list[owned + 1]
+		btn(if nextTier then color else GREY, { Size = UDim2.new(0.34, 0, 0, 50), Position = UDim2.new(0.64, 0, 0, 12), Text = if nextTier then t("buyRobux", nextTier.price) else t("upMax"), Max = 20, ZIndex = 22, Parent = r }, function()
+			if nextTier then
+				buy(kind, owned + 1, nextTier)
+			end
+		end)
+	end
+	local speedOwned = state.robuxSpeed or 0
+	local multiOwned = state.robuxMulti or 0
+	tierRow(6, "permSpeed", t("permSpeedDesc", speedOwned, speedOwned + 1), Config.Shop.speedTiers, speedOwned, "speed", BLUE)
+	tierRow(7, "permMulti", t("permMultiDesc", Config.RollsPerClick(state), Config.RollsPerClick(state) + 1), Config.Shop.multiTiers, multiOwned, "multi", LILAC)
+	local _ = now
+end
+
+renderers[crateW] = function()
+	local body = crateW.body
+	clear(body)
+	local counts, order = {}, {}
+	for _, key in lastCrate do
+		if not counts[key] then
+			table.insert(order, key)
+		end
+		counts[key] = (counts[key] or 0) + 1
+	end
+	for i, key in order do
+		itemRow(body, i, key, t("oneIn", Format.number(Items.chance(key))) .. "   x" .. counts[key])
+	end
+end
+
+CrateEv.OnClientEvent:Connect(function(got)
+	if type(got) ~= "table" or #got == 0 then
+		return
+	end
+	lastCrate = got
+	local best = got[1]
+	for _, key in got do
+		if Items.chance(key) > Items.chance(best) then
+			best = key
+		end
+	end
+	if wantsReveal(Items.chance(best)) then
+		bigReveal(best, Items.chance(best), nil, Items.chance(best) >= Config.UltraRevealChance)
+		task.delay(if Items.chance(best) >= Config.UltraRevealChance then 12 else 6, function()
+			open(crateW, true)
+		end)
+	else
+		open(crateW, true)
+	end
+end)
 
 OpenWindowEv.OnClientEvent:Connect(function(name: string, info)
 	if name == "forge" then
@@ -5603,7 +5890,19 @@ task.spawn(function()
 		end
 
 		local remaining = (ReplicatedStorage:GetAttribute("ShowerEndsAt") or 0) - workspace:GetServerTimeNow()
-		showerBanner.Text = if remaining > 0 then t("shower", Config.ShowerLuck, Format.time(remaining)) else ""
+		-- star shower + bought boosts with their timers
+		local banner = {}
+		if remaining > 0 then
+			table.insert(banner, t("shower", Config.ShowerLuck, Format.time(remaining)))
+		end
+		local now = workspace:GetServerTimeNow()
+		if state and (state.boostLuckUntil or 0) > now then
+			table.insert(banner, t("luckActive", Format.time(state.boostLuckUntil - now)))
+		end
+		if state and (state.boostSpeedUntil or 0) > now then
+			table.insert(banner, t("speedActive", Format.time(state.boostSpeedUntil - now)))
+		end
+		showerBanner.Text = table.concat(banner, "   ·   ")
 		task.wait(0.5)
 	end
 end)

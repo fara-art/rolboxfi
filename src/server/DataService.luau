@@ -40,6 +40,11 @@ local function default()
 		rebirthRolls = -1, -- rolls since the last rebirth (roll rewards); -1 = not migrated yet
 		floors = 1, -- museum floors
 		luckyProgress = 0, -- rolls towards the next x2 luck roll
+		robuxSpeed = 0, -- bought speed tiers
+		robuxMulti = 0, -- bought extra rolls per click
+		boostLuckUntil = 0, -- server time when the x2 luck boost ends
+		boostSpeedUntil = 0,
+		receipts = {}, -- processed purchase ids (never grant twice)
 		theme = "sky",
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}
