@@ -61,12 +61,20 @@ Rolls (auto unlocks at 50 rolls, speed + multi-roll upgrades) · 77 stars up to 
 museum plot (claim by walking in, stands bought in build mode: stone/gold/emerald/marble = x1/x1.5/x2.5/x4,
 themes Sky/Hell/Cosmos/Ice/Emerald, floors) · Star Forge (5 same → next star, mutation upgrades) ·
 Black Hole (feed stars → rebirth: income x(1+2r), luck x(1+0.5r)) · 9 Star Index tiers with luck rewards ·
-roll rewards per rebirth · global leaderboards · server-wide cinematic for 1/1B+ finds, personal one from a
-threshold in settings · star shower event · music/sfx toggles · RU/EN · admin panel for the owner.
+roll rewards per rebirth · x2-luck roll every 50 rolls · rarest find over heads · global leaderboards · server-wide cinematic for 1/1B+ finds, personal one from a
+threshold in settings, ultra black-screen reveal from 1/500K · star shower event · music/sfx and day/night
+toggles · RU/EN · admin panel for the owner · Robux shop · glass museums that appear only when claimed.
+
+## Robux shop (src/shared/Config.luau → Config.Shop)
+Developer Products: crate x1/x3/x10 (odds shown in the shop — Roblox rule for paid random items),
+x2 luck and x2 roll-speed boosts for 15/30/60 min, permanent speed tiers (6) and multi-roll tiers (5) with rising prices.
+`id = 0` = not created yet: in Studio the buttons grant for free (action ShopTest), live servers show "not set up".
+Owner must create every product in Creator Hub (Monetization → Developer Products) and send the IDs.
+ProcessReceipt is idempotent (data.receipts).
 
 ## Ideas agreed / next up
-- Daily rewards with streaks, codes (`/code`), first-minutes tutorial, Robux shop (game passes + boosts,
-  no paid random items), group bonus, invite bonus.
+- Daily rewards with streaks, codes (`/code`), first-minutes tutorial, group bonus, invite bonus.
+- Owner wants more things to do with stars (to be decided).
 - More museum content (decor per theme), better 3D star detail.
 - Before public launch: full test, API Services on, Max Players = 7, experience questionnaire, thumbnails,
   mobile check. Warn owner: DevEx payouts to Russia are likely blocked.
