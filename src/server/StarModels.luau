@@ -296,6 +296,143 @@ builders.infinity = function(m, cf, color)
 	return core
 end
 
+builders.browndwarf = function(m, cf, color)
+	local core = orb(m, cf, 1.5, color)
+	for i = -2, 2 do
+		disk(m, cf * CFrame.new(0, i * 0.22, 0), 1.5 - math.abs(i) * 0.25, Color3.fromRGB(120, 70, 50), 0.4)
+	end
+	orb(m, cf, 2.2, Color3.fromRGB(140, 70, 40), 0.85)
+	particles(core, { Color = Color3.fromRGB(200, 120, 80), Rate = 5 })
+	return core
+end
+
+builders.whitedwarf = function(m, cf, color)
+	local core = orb(m, cf, 0.7, WHITE)
+	bar(m, cf, Vector3.new(0.12, 3, 0.12), Color3.fromRGB(220, 235, 255), 0.2)
+	bar(m, cf, Vector3.new(3, 0.12, 0.12), Color3.fromRGB(220, 235, 255), 0.2)
+	orb(m, cf, 1.6, color, 0.7)
+	orb(m, cf, 2.6, color, 0.9)
+	particles(core, { Color = WHITE, Color2 = color, Rate = 10, Texture = SPARKLE })
+	light(core, color, 10, 1.5)
+	return core
+end
+
+builders.redgiant = function(m, cf, color)
+	local core = orb(m, cf, 2.5, Color3.fromRGB(255, 150, 80))
+	orb(m, cf * CFrame.new(-0.5, 0.5, -0.5), 1.2, Color3.fromRGB(255, 190, 120), 0.3)
+	orb(m, cf, 3.2, color, 0.7)
+	orb(m, cf, 4.2, Color3.fromRGB(200, 60, 30), 0.88)
+	particles(core, { Color = Color3.fromRGB(255, 160, 90), Color2 = color, Rate = 14, Acceleration = Vector3.new(0, 1, 0) })
+	light(core, color, 14, 1.5)
+	return core
+end
+
+builders.binary = function(m, cf, color)
+	local core = orb(m, cf * CFrame.new(-0.9, 0, 0), 1.2, Color3.fromRGB(255, 220, 140))
+	orb(m, cf * CFrame.new(-0.9, 0, 0), 1.8, Color3.fromRGB(255, 180, 80), 0.6)
+	orb(m, cf * CFrame.new(1, 0, 0), 0.9, Color3.fromRGB(190, 220, 255))
+	orb(m, cf * CFrame.new(1, 0, 0), 1.4, Color3.fromRGB(120, 170, 255), 0.6)
+	bar(m, cf, Vector3.new(1.6, 0.15, 0.15), Color3.fromRGB(255, 230, 200), 0.4)
+	disk(m, cf, 4.4, color, 0.88)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(150, 190, 255), Rate = 14, Texture = SPARKLE })
+	light(core, color, 12, 1.5)
+	return core
+end
+
+builders.wolfrayet = function(m, cf, color)
+	local core = orb(m, cf, 0.8, WHITE)
+	for i = 1, 14 do
+		local a, b = i * 2.4, i * 1.3
+		orb(m, cf * CFrame.new(math.cos(a) * 1.8 * math.cos(b), math.sin(b) * 1.5, math.sin(a) * 1.8 * math.cos(b)), 0.6 + (i % 3) * 0.2, if i % 2 == 0 then color else Color3.fromRGB(255, 200, 130), 0.35)
+	end
+	particles(core, { Color = color, Color2 = WHITE, Rate = 30, Speed = NumberRange.new(2, 4), Texture = SPARKLE })
+	light(core, color, 16, 2.5)
+	return core
+end
+
+builders.hypergiant = function(m, cf, color)
+	local core = orb(m, cf, 3, Color3.fromRGB(255, 170, 90))
+	orb(m, cf, 3.6, color, 0.6)
+	for i = 1, 10 do
+		local a = i * 0.63
+		orb(m, cf * CFrame.new(math.cos(a) * 2.3, math.sin(i * 1.9) * 1.2, math.sin(a) * 2.3), 1, Color3.fromRGB(255, 120, 60), 0.55)
+	end
+	orb(m, cf, 5, color, 0.9)
+	particles(core, { Color = Color3.fromRGB(255, 170, 90), Color2 = color, Rate = 30, Speed = NumberRange.new(1, 3), Acceleration = Vector3.new(0, 1.5, 0) })
+	light(core, color, 20, 3)
+	return core
+end
+
+builders.kilonova = function(m, cf, color)
+	local core = orb(m, cf, 1.6, Color3.fromRGB(255, 240, 200))
+	orb(m, cf * CFrame.new(-0.35, 0, 0), 0.6, WHITE)
+	orb(m, cf * CFrame.new(0.35, 0, 0), 0.6, WHITE)
+	orb(m, cf, 2.6, color, 0.5)
+	orb(m, cf, 4, Color3.fromRGB(255, 120, 60), 0.85)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(255, 100, 60), Rate = 50, Speed = NumberRange.new(3, 6), Texture = SPARKLE })
+	light(core, color, 20, 3)
+	return core
+end
+
+builders.eventhorizon = function(m, cf, color)
+	local core = part(m, { Name = "Orb", Shape = Enum.PartType.Ball, Size = Vector3.one * 1.8, CFrame = cf, Material = Enum.Material.SmoothPlastic, Color = Color3.new(0, 0, 0) })
+	local ringCf = cf * CFrame.Angles(math.rad(75), 0, 0)
+	disk(m, ringCf, 3.6, color, 0.2)
+	disk(m, ringCf, 2.6, Color3.fromRGB(255, 220, 150), 0.1)
+	disk(m, cf * CFrame.Angles(0, 0, math.rad(90)), 2.4, Color3.fromRGB(255, 170, 80), 0.5)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(255, 220, 160), Rate = 40, Speed = NumberRange.new(0.5, 1.5), Texture = SPARKLE })
+	light(core, color, 20, 3)
+	return core
+end
+
+builders.darkmatter = function(m, cf, color)
+	local core = orb(m, cf, 1.2, Color3.fromRGB(60, 30, 100))
+	for i = 1, 8 do
+		local a = i * 0.785
+		orb(m, cf * CFrame.new(math.cos(a) * 1.7, math.sin(i * 2.1) * 0.8, math.sin(a) * 1.7), 1.2, color, 0.75)
+	end
+	disk(m, cf * CFrame.Angles(math.rad(30), 0, 0), 5, Color3.fromRGB(200, 170, 255), 0.85)
+	particles(core, { Color = color, Color2 = Color3.fromRGB(40, 20, 80), Rate = 40, Speed = NumberRange.new(0.3, 1), Lifetime = NumberRange.new(2, 4) })
+	light(core, color, 18, 2)
+	return core
+end
+
+builders.multiverse = function(m, cf, color)
+	local core = orb(m, cf, 0.8, WHITE)
+	local tints = { Color3.fromRGB(120, 220, 255), Color3.fromRGB(255, 140, 220), Color3.fromRGB(160, 255, 170), Color3.fromRGB(255, 220, 120), Color3.fromRGB(200, 160, 255) }
+	for i, tint in tints do
+		local a = i * 1.26
+		local p = cf * CFrame.new(math.cos(a) * 1.9, math.sin(i * 1.7) * 0.9, math.sin(a) * 1.9)
+		orb(m, p, 1.3, tint, 0.45)
+		orb(m, p, 0.4, WHITE, 0)
+	end
+	particles(core, { Color = color, Color2 = Color3.fromRGB(255, 160, 230), Rate = 50, Texture = SPARKLE })
+	light(core, color, 22, 3.5)
+	return core
+end
+
+builders.cosmicweb = function(m, cf, color)
+	local core = orb(m, cf, 0.9, WHITE)
+	local nodes = {}
+	for i = 1, 9 do
+		local a, b = i * 2.39, i * 0.9
+		local p = cf * CFrame.new(math.cos(a) * 2.3 * math.cos(b), math.sin(b) * 2, math.sin(a) * 2.3 * math.cos(b))
+		table.insert(nodes, p.Position)
+		orb(m, p, 0.45, WHITE, 0)
+	end
+	for i = 1, #nodes do
+		for j = i + 1, #nodes do
+			local a, b = nodes[i], nodes[j]
+			if (a - b).Magnitude < 2.8 then
+				bar(m, CFrame.lookAt((a + b) / 2, b) * CFrame.Angles(math.rad(90), 0, 0), Vector3.new(0.1, (a - b).Magnitude, 0.1), color, 0.2)
+			end
+		end
+	end
+	particles(core, { Color = color, Color2 = WHITE, Rate = 40, Texture = SPARKLE })
+	light(core, color, 22, 3.5)
+	return core
+end
+
 -- star, mutation, level -> Model at position
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")

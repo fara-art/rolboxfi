@@ -612,7 +612,8 @@ renderers[indexW] = function()
 		end
 		local complete = found == #Stars.List
 		local claimed = state.indexClaims[mutation.id] == true
-		local r = row(body, order, 64 + 2 * 50, WHITE)
+		local starRows = math.ceil(#Stars.List / 8)
+		local r = row(body, order, 64 + starRows * 50, WHITE)
 		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
 		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
 		btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
@@ -620,8 +621,8 @@ renderers[indexW] = function()
 				ActionEv:FireServer("ClaimIndexRow", mutation.id)
 			end
 		end)
-		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 100), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
-		make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -4, 0.5, -4), CellPadding = UDim2.new(0, 4, 0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip })
+		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, starRows * 50), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
+		make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -4, 1 / starRows, -4), CellPadding = UDim2.new(0, 4, 0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip })
 		for _, star in Stars.List do
 			local key = Items.key(star.id, mutation.id)
 			if state.index[key] then
@@ -1024,9 +1025,11 @@ renderers[adminW] = function()
 	amountRow(1, "adminCash", "AdminCash", "1Qd")
 
 	-- star picker: all stars as icons, mutations as buttons
-	local starRow = section(2, "adminStar", 300)
-	local grid = make("Frame", { Size = UDim2.new(1, -20, 0, 130), Position = UDim2.new(0, 10, 0, 36), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
-	make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -6, 0.5, -6), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+	local gridRows = math.ceil(#Stars.List / 8)
+	local gridHeight = gridRows * 62
+	local starRow = section(2, "adminStar", 170 + gridHeight)
+	local grid = make("Frame", { Size = UDim2.new(1, -20, 0, gridHeight), Position = UDim2.new(0, 10, 0, 36), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
+	make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -6, 1 / gridRows, -6), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
 	for _, star in Stars.List do
 		local cell = make("TextButton", {
 			LayoutOrder = star.index, Text = "", AutoButtonColor = true, ZIndex = 23, Parent = grid,
@@ -1038,7 +1041,7 @@ renderers[adminW] = function()
 			renderers[adminW]()
 		end)
 	end
-	local mutations = make("Frame", { Size = UDim2.new(1, -20, 0, 36), Position = UDim2.new(0, 10, 0, 172), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
+	local mutations = make("Frame", { Size = UDim2.new(1, -20, 0, 36), Position = UDim2.new(0, 10, 0, 42 + gridHeight), BackgroundTransparency = 1, ZIndex = 22, Parent = starRow })
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = mutations })
 	for _, mutation in Mutations.List do
 		btn(if adminMutation == mutation.id then BLUE else GREY, { Size = UDim2.new(0.19, -5, 1, 0), Text = Lang.mutation(lang, mutation), Max = 14, ZIndex = 23, Parent = mutations }, function()
@@ -1047,9 +1050,9 @@ renderers[adminW] = function()
 		end)
 	end
 	local key = Items.key(adminStar, adminMutation)
-	text({ Size = UDim2.new(1, -20, 0, 24), Position = UDim2.new(0, 10, 0, 214), Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextColor3 = BLUE, Max = 17, ZIndex = 22, Parent = starRow })
-	local countBox = inputBox(starRow, "countHint", "1", { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 10, 0, 248) })
-	btn(MINT, { Size = UDim2.new(0.32, 0, 0, 40), Position = UDim2.new(0.66, 0, 0, 248), Text = t("give"), ZIndex = 22, Parent = starRow }, function()
+	text({ Size = UDim2.new(1, -20, 0, 24), Position = UDim2.new(0, 10, 0, 84 + gridHeight), Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextColor3 = BLUE, Max = 17, ZIndex = 22, Parent = starRow })
+	local countBox = inputBox(starRow, "countHint", "1", { Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 10, 0, 118 + gridHeight) })
+	btn(MINT, { Size = UDim2.new(0.32, 0, 0, 40), Position = UDim2.new(0.66, 0, 0, 118 + gridHeight), Text = t("give"), ZIndex = 22, Parent = starRow }, function()
 		local count = Format.parse(countBox.Text)
 		if count and count >= 1 then
 			ActionEv:FireServer("AdminStar", key, count)

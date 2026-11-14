@@ -300,6 +300,9 @@ local function buildHub(folder: Folder)
 	for i = 0, 7 do
 		local a = (i + 0.5) / 8 * math.pi * 2
 		local base = Vector3.new(math.cos(a) * 43, 0, math.sin(a) * 43)
+		if i >= 4 then
+			continue -- the leaderboard tablets stand on this half of the edge
+		end
 		pillar(base, 14, folder)
 		crystal(base + Vector3.new(0, 18, 0), 2.2, if i % 2 == 0 then Color3.fromRGB(150, 220, 255) else Color3.fromRGB(190, 255, 220), folder)
 	end
@@ -327,7 +330,7 @@ local function buildHub(folder: Folder)
 	local boards = make("Folder", { Name = "Leaderboards", Parent = folder })
 	for i, board in { "rolls", "rebirths", "cash", "rarest" } do
 		local a = math.rad(202.5 + (i - 1) * 45)
-		local pos = Vector3.new(math.cos(a) * 32, 0, math.sin(a) * 32)
+		local pos = Vector3.new(math.cos(a) * 45, 0, math.sin(a) * 45)
 		local cf = CFrame.lookAt(pos, Vector3.zero)
 		make("Part", { Name = "Step", Size = Vector3.new(14, 1.4, 5), CFrame = cf * CFrame.new(0, 0.7, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(118, 120, 132), Parent = folder })
 		make("Part", { Name = "Board_" .. board, Size = Vector3.new(12, 16, 1.4), CFrame = cf * CFrame.new(0, 9.4, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(172, 174, 186), Parent = boards })

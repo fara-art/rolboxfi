@@ -112,6 +112,9 @@ Lang.StarNames = {
 		pulsar = "Пульсар", neutron = "Нейтронная звезда", quasar = "Квазар", supernova = "Сверхновая",
 		magnetar = "Магнетар", nebula = "Сердце туманности", whitehole = "Белая дыра", galaxy = "Ядро галактики",
 		cosmic = "Космическая струна", bigbang = "Большой взрыв", infinity = "Звезда бесконечности",
+		browndwarf = "Коричневый карлик", whitedwarf = "Белый карлик", redgiant = "Красный гигант", binary = "Звёзды-близнецы",
+		wolfrayet = "Звезда Вольфа-Райе", hypergiant = "Гипергигант", kilonova = "Килоновая", eventhorizon = "Горизонт событий",
+		darkmatter = "Звезда тёмной материи", multiverse = "Мультивселенная", cosmicweb = "Космическая паутина",
 	},
 }
 

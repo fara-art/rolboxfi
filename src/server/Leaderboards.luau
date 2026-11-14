@@ -19,7 +19,7 @@ local TOP = 100
 local stores = {}
 pcall(function()
 	for _, board in BOARDS do
-		stores[board] = DataStoreService:GetOrderedDataStore("LB_" .. board .. "_v1")
+		stores[board] = DataStoreService:GetOrderedDataStore("LB_" .. board .. "_v2")
 	end
 end)
 

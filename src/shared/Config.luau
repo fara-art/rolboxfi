@@ -120,6 +120,17 @@ Config.StarIcons = {
 	cosmic = "117932676104830",
 	bigbang = "113793732641956",
 	infinity = "91772650758251",
+	browndwarf = "",
+	whitedwarf = "",
+	redgiant = "",
+	binary = "",
+	wolfrayet = "",
+	hypergiant = "",
+	kilonova = "",
+	eventhorizon = "",
+	darkmatter = "",
+	multiverse = "",
+	cosmicweb = "",
 }
 
 -- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
