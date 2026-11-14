@@ -47,16 +47,19 @@ Config.AltarReach = 30
 -- Star Index: complete a mutation row (all stars) -> claim permanent luck
 Config.IndexRowLuck = 0.5
 
--- Roll milestones (claimed in the Index)
+-- Roll milestones (Roll Rewards window). Reward: cash / luck / item (+ count)
 Config.RollMilestones = {
-	{ rolls = 100, cash = 2000 },
+	{ rolls = 50, cash = 500 },
+	{ rolls = 100, item = "sun", count = 1 },
 	{ rolls = 250, luck = 0.25 },
-	{ rolls = 500, cash = 20000 },
-	{ rolls = 1000, luck = 0.5 },
-	{ rolls = 2500, cash = 250000 },
+	{ rolls = 500, item = "giant", count = 1 },
+	{ rolls = 1000, cash = 50000 },
+	{ rolls = 2500, item = "giant|golden", count = 1 },
 	{ rolls = 5000, luck = 1 },
-	{ rolls = 10000, cash = 5000000 },
-	{ rolls = 25000, luck = 2 },
+	{ rolls = 10000, item = "pulsar|shiny", count = 1 },
+	{ rolls = 25000, cash = 5000000 },
+	{ rolls = 50000, item = "neutron|golden", count = 1 },
+	{ rolls = 100000, luck = 3 },
 }
 
 -- Star Shower: server-wide luck event
@@ -87,6 +90,20 @@ Config.StarIcons = {
 	neutron = "",
 	quasar = "",
 	supernova = "",
+}
+
+-- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
+Config.UiIcons = {
+	catalogue = "",
+	sky = "",
+	upgrades = "",
+	index = "",
+	constellations = "",
+	odds = "",
+	rewards = "",
+	cash = "",
+	luck = "",
+	rolls = "",
 }
 
 return Config

@@ -51,16 +51,19 @@ Config.AltarReach = 30
 -- Star Index: complete a mutation row (all stars) -> claim permanent luck
 Config.IndexRowLuck = 0.5
 
--- Roll milestones (claimed in the Index)
+-- Roll milestones (Roll Rewards window). Reward: cash / luck / item (+ count)
 Config.RollMilestones = {
-	{ rolls = 100, cash = 2000 },
+	{ rolls = 50, cash = 500 },
+	{ rolls = 100, item = "sun", count = 1 },
 	{ rolls = 250, luck = 0.25 },
-	{ rolls = 500, cash = 20000 },
-	{ rolls = 1000, luck = 0.5 },
-	{ rolls = 2500, cash = 250000 },
+	{ rolls = 500, item = "giant", count = 1 },
+	{ rolls = 1000, cash = 50000 },
+	{ rolls = 2500, item = "giant|golden", count = 1 },
 	{ rolls = 5000, luck = 1 },
-	{ rolls = 10000, cash = 5000000 },
-	{ rolls = 25000, luck = 2 },
+	{ rolls = 10000, item = "pulsar|shiny", count = 1 },
+	{ rolls = 25000, cash = 5000000 },
+	{ rolls = 50000, item = "neutron|golden", count = 1 },
+	{ rolls = 100000, luck = 3 },
 }
 
 -- Star Shower: server-wide luck event
@@ -91,6 +94,20 @@ Config.StarIcons = {
 	neutron = "",
 	quasar = "",
 	supernova = "",
+}
+
+-- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
+Config.UiIcons = {
+	catalogue = "",
+	sky = "",
+	upgrades = "",
+	index = "",
+	constellations = "",
+	odds = "",
+	rewards = "",
+	cash = "",
+	luck = "",
+	rolls = "",
 }
 
 return Config
@@ -283,6 +300,8 @@ Lang.Strings = {
 		signFree = "FREE PLOT\nstep in to claim", signPlot = "%s's plot\n+%s/s",
 		signForge = "STAR FORGE", signHole = "BLACK HOLE", signHub = "SKY HAVEN",
 		promptPlace = "Place star", promptRemove = "Take star", promptForge = "Forge", promptHole = "Black Hole", pedestal = "Pedestal",
+		rewardsTitle = "ROLL REWARDS", rewards = "REWARDS", rewardsDone = "ROLLS DONE", nextReward = "Next reward",
+		moreRolls = "%s more rolls", allDone = "All rewards reached!", locked = "LOCKED", cashWord = "Cash", luckWord = "Luck", rollsWord = "ROLLS", toastReward = "Reward: %s",
 		langButton = "EN",
 	},
 	ru = {
@@ -323,6 +342,8 @@ Lang.Strings = {
 		signFree = "СВОБОДНЫЙ УЧАСТОК\nзайди, чтобы занять", signPlot = "Участок %s\n+%s/с",
 		signForge = "ЗВЁЗДНАЯ КУЗНЯ", signHole = "ЧЁРНАЯ ДЫРА", signHub = "НЕБЕСНАЯ ГАВАНЬ",
 		promptPlace = "Поставить звезду", promptRemove = "Забрать звезду", promptForge = "Ковать", promptHole = "Чёрная дыра", pedestal = "Постамент",
+		rewardsTitle = "НАГРАДЫ ЗА КРУТКИ", rewards = "НАГРАДЫ", rewardsDone = "КРУТОК СДЕЛАНО", nextReward = "Следующая награда",
+		moreRolls = "ещё %s круток", allDone = "Все награды открыты!", locked = "ЗАКРЫТО", cashWord = "Деньги", luckWord = "Удача", rollsWord = "КРУТОК", toastReward = "Награда: %s",
 		langButton = "RU",
 	},
 }
@@ -1100,6 +1121,10 @@ function actions.ClaimMilestone(player, data, number)
 	end
 	if milestone.luck then
 		data.bonusLuck += milestone.luck
+	end
+	if milestone.item and Items.parse(milestone.item) then
+		addToInventory(player, data, milestone.item, milestone.count or 1)
+		toast(player, "toastReward", { { item = milestone.item } }, Items.parse(milestone.item).color)
 	end
 end
 
@@ -2275,6 +2300,7 @@ local GOLD = Color3.fromRGB(255, 186, 60)
 local RED = Color3.fromRGB(240, 102, 102)
 local LILAC = Color3.fromRGB(150, 110, 255)
 local GREY = Color3.fromRGB(170, 184, 205)
+local INK = Color3.fromRGB(26, 28, 48)
 
 local TITLE = Font.new("rbxasset://fonts/families/FredokaOne.json")
 local BODY = Font.new("rbxasset://fonts/families/Nunito.json", Enum.FontWeight.Bold)
@@ -2324,25 +2350,58 @@ local function shade(color: Color3, amount: number): Color3
 	return color:Lerp(Color3.new(0, 0, 0), amount)
 end
 
-local function btn(color: Color3, props, onClick)
+-- Uploaded UI icon (Config.UiIcons) or nil when not configured
+local function uiIcon(key: string, props)
+	local id = Config.UiIcons[key]
+	if not id or id == "" then
+		return nil
+	end
+	props.BackgroundTransparency = 1
+	props.Image = if string.find(id, "://") then id else "rbxassetid://" .. id
+	return make("ImageLabel", props, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+end
+
+-- Chunky cartoon button: thick ink outline, white text with ink stroke, optional icon on the left
+local function btn(color: Color3, props, onClick, iconKey: string?)
 	local max = props.Max or 18
 	props.Max = nil
 	props.BackgroundColor3 = color
 	props.TextColor3 = props.TextColor3 or WHITE
+	props.TextStrokeColor3 = INK
+	props.TextStrokeTransparency = if props.TextColor3 == WHITE then 0 else 1
 	props.FontFace = props.FontFace or TITLE
 	props.TextScaled = true
 	props.AutoButtonColor = true
+	local padding = pad(6)
 	local b = make("TextButton", props, {
-		corner(10),
-		stroke(shade(color, 0.18), 2),
-		pad(6),
+		corner(12),
+		stroke(INK, 3),
+		padding,
 		make("UITextSizeConstraint", { MaxTextSize = max }),
-		make("UIGradient", { Color = ColorSequence.new(WHITE, Color3.fromRGB(215, 225, 240)), Rotation = 90 }),
+		make("UIGradient", { Color = ColorSequence.new(WHITE, Color3.fromRGB(200, 212, 232)), Rotation = 90 }),
 	})
+	if iconKey then
+		local icon = uiIcon(iconKey, {
+			Size = UDim2.new(1.35, 0, 1.35, 0), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(0, -2, 0.5, 0),
+			ZIndex = (props.ZIndex or 1) + 1, Parent = b,
+		})
+		if icon then
+			padding.PaddingLeft = UDim.new(0.3, 0)
+		end
+	end
 	if onClick then
 		b.Activated:Connect(onClick)
 	end
 	return b
+end
+
+-- red "!" bubble in a button's corner
+local function badge(target: GuiObject)
+	return make("TextLabel", {
+		Size = UDim2.new(0, 24, 0, 24), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -2, 0, 2),
+		BackgroundColor3 = RED, Text = "!", TextScaled = true, FontFace = TITLE, TextColor3 = WHITE,
+		TextStrokeColor3 = INK, TextStrokeTransparency = 0, Visible = false, ZIndex = (target.ZIndex or 1) + 5, Parent = target,
+	}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(INK, 2.5) })
 end
 
 local function clear(container: Instance)
@@ -2401,7 +2460,7 @@ local gui = make("ScreenGui", {
 local function panelFrame(props)
 	props.BackgroundColor3 = props.BackgroundColor3 or PANEL
 	props.BackgroundTransparency = props.BackgroundTransparency or 0.04
-	return make("Frame", props, { corner(16), stroke(LINE, 2), pad(10) })
+	return make("Frame", props, { corner(16), stroke(INK, 3), pad(10) })
 end
 
 ---------------------------------------------------------------- Header
@@ -2410,7 +2469,7 @@ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Horizontal
 local function readout(key: string, color: Color3)
 	local box = make("Frame", { Size = UDim2.new(0.19, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
 	bind(text({ Size = UDim2.new(1, 0, 0.36, 0), TextColor3 = MUTED, FontFace = BODY, Max = 12, Parent = box }), key)
-	return text({ Size = UDim2.new(1, 0, 0.64, 0), Position = UDim2.new(0, 0, 0.36, 0), Text = "0", TextColor3 = color, FontFace = TITLE, Max = 24, Parent = box })
+	return text({ Size = UDim2.new(1, 0, 0.64, 0), Position = UDim2.new(0, 0, 0.36, 0), Text = "0", TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0.4, FontFace = TITLE, Max = 26, Parent = box })
 end
 local cashValue = readout("cash", Color3.fromRGB(230, 150, 20))
 local incomeValue = readout("perSec", MINT)
@@ -2465,12 +2524,16 @@ local function window(titleKey: string, group: string, props)
 	props.Visible = false
 	props.ZIndex = 20
 	local frame = panelFrame(props)
-	bind(text({ Size = UDim2.new(1, -50, 0, 30), FontFace = TITLE, TextColor3 = BLUE, Max = 22, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 21, Parent = frame }), titleKey)
-	btn(RED, { Size = UDim2.new(0, 34, 0, 34), Position = UDim2.new(1, -34, 0, -2), Text = "X", Max = 18, ZIndex = 22, Parent = frame }, function()
+	local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = BLUE, ZIndex = 21, Parent = frame }, {
+		corner(12), stroke(INK, 3),
+		make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(130, 200, 255), Color3.fromRGB(60, 130, 235)), Rotation = 90 }),
+	})
+	bind(text({ Size = UDim2.new(1, -70, 1, -8), Position = UDim2.new(0, 12, 0, 4), FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 26, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 22, Parent = bar }), titleKey)
+	btn(RED, { Size = UDim2.new(0, 46, 0, 46), Position = UDim2.new(1, -40, 0, -8), Text = "X", Max = 24, ZIndex = 23, Parent = frame }, function()
 		frame.Visible = false
 	end)
 	local body = make("ScrollingFrame", {
-		Size = UDim2.new(1, 0, 1, -40), Position = UDim2.new(0, 0, 0, 40), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 21,
+		Size = UDim2.new(1, 0, 1, -50), Position = UDim2.new(0, 0, 0, 50), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 21,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 5, ScrollBarImageColor3 = LINE, Parent = frame,
 	}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }), make("UIPadding", { PaddingRight = UDim.new(0, 8) }) })
 	local w = { frame = frame, body = body, group = group }
@@ -2492,6 +2555,7 @@ local oddsW = window("oddsTitle", "center", centerProps())
 local pickerW = window("pickTitle", "center", centerProps())
 local forgeW = window("forgeTitle", "center", centerProps())
 local holeW = window("holeTitle", "center", centerProps())
+local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
 
 -- catalogue: list + sell bar at the bottom
 catalogueW.body.Size = UDim2.new(1, 0, 1, -124)
@@ -2684,67 +2748,168 @@ renderers[upgradesW] = function()
 end
 
 ---------------------------------------------------------------- Star Index (+ roll rewards)
-local indexTab = "stars"
 renderers[indexW] = function()
 	local body = indexW.body
 	clear(body)
-	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
-	btn(if indexTab == "stars" then BLUE else GREY, { Size = UDim2.new(0.49, 0, 1, 0), Text = t("tabStars"), ZIndex = 22, Parent = tabs }, function()
-		indexTab = "stars"
-		renderers[indexW]()
-	end)
-	btn(if indexTab == "rolls" then BLUE else GREY, { Size = UDim2.new(0.49, 0, 1, 0), Position = UDim2.new(0.51, 0, 0, 0), Text = t("tabRolls"), ZIndex = 22, Parent = tabs }, function()
-		indexTab = "rolls"
-		renderers[indexW]()
-	end)
+	for order, mutation in Mutations.List do
+		local found = 0
+		for _, star in Stars.List do
+			if state.index[Items.key(star.id, mutation.id)] then
+				found += 1
+			end
+		end
+		local complete = found == #Stars.List
+		local claimed = state.indexClaims[mutation.id] == true
+		local r = row(body, order, 120, WHITE)
+		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
+		btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
+			if complete and not claimed then
+				ActionEv:FireServer("ClaimIndexRow", mutation.id)
+			end
+		end)
+		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 56), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
+		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), Parent = strip })
+		for _, star in Stars.List do
+			local key = Items.key(star.id, mutation.id)
+			if state.index[key] then
+				starIcon(star, mutation, { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), ZIndex = 23, Parent = strip })
+			else
+				local unknown = make("Frame", { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+				make("TextLabel", {
+					Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = PANEL_2, Text = "?", TextScaled = true,
+					FontFace = TITLE, TextColor3 = GREY, ZIndex = 24, Parent = unknown,
+				}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+			end
+		end
+	end
+end
 
-	if indexTab == "stars" then
-		for order, mutation in Mutations.List do
-			local found = 0
-			for _, star in Stars.List do
-				if state.index[Items.key(star.id, mutation.id)] then
-					found += 1
-				end
-			end
-			local complete = found == #Stars.List
-			local claimed = state.indexClaims[mutation.id] == true
-			local r = row(body, order, 120, WHITE)
-			text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
-			text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
-			btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
-				if complete and not claimed then
-					ActionEv:FireServer("ClaimIndexRow", mutation.id)
-				end
-			end)
-			local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 56), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
-			make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), Parent = strip })
-			for _, star in Stars.List do
-				local key = Items.key(star.id, mutation.id)
-				if state.index[key] then
-					starIcon(star, mutation, { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), ZIndex = 23, Parent = strip })
-				else
-					local unknown = make("Frame", { Size = UDim2.new(1 / #Stars.List, -4, 1, 0), BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
-					make("TextLabel", {
-						Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = PANEL_2, Text = "?", TextScaled = true,
-						FontFace = TITLE, TextColor3 = GREY, ZIndex = 24, Parent = unknown,
-					}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
-				end
-			end
+---------------------------------------------------------------- Roll rewards (cards)
+local rewardsBody = rewardsW.body
+rewardsBody.Size = UDim2.new(0.72, 0, 1, -50)
+rewardsBody.Position = UDim2.new(0.28, 0, 0, 50)
+rewardsBody.ScrollingDirection = Enum.ScrollingDirection.X
+rewardsBody.AutomaticCanvasSize = Enum.AutomaticSize.X
+rewardsBody.ScrollBarThickness = 8
+local rewardsLayout = rewardsBody:FindFirstChildOfClass("UIListLayout")
+rewardsLayout.FillDirection = Enum.FillDirection.Horizontal
+rewardsLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+rewardsLayout.Padding = UDim.new(0, 10)
+local rewardsSummary = make("Frame", {
+	Size = UDim2.new(0.26, 0, 1, -50), Position = UDim2.new(0, 0, 0, 50), BackgroundColor3 = WHITE, ZIndex = 21, Parent = rewardsW.frame,
+}, {
+	corner(14), stroke(INK, 3),
+	make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(120, 190, 255), Color3.fromRGB(90, 90, 230)), Rotation = 90 }),
+})
+
+local function stroked(props)
+	props.TextColor3 = props.TextColor3 or WHITE
+	props.TextStrokeColor3 = INK
+	props.TextStrokeTransparency = 0
+	props.FontFace = props.FontFace or TITLE
+	props.ZIndex = props.ZIndex or 22
+	return text(props)
+end
+
+-- icon for a milestone reward: the star itself, or coin / clover
+local function rewardIcon(milestone, props)
+	if milestone.item then
+		local star, mutation = Items.parse(milestone.item)
+		if star then
+			return starIcon(star, mutation, props)
 		end
+	end
+	local key = if milestone.cash then "cash" else "luck"
+	local icon = uiIcon(key, props)
+	if icon then
+		return icon
+	end
+	local color = if milestone.cash then GOLD else MINT
+	local holder = make("Frame", props, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+	holder.BackgroundTransparency = 1
+	make("TextLabel", {
+		Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = color,
+		Text = if milestone.cash then "$" else "+", TextScaled = true, FontFace = TITLE, TextColor3 = WHITE,
+		TextStrokeColor3 = INK, TextStrokeTransparency = 0, ZIndex = holder.ZIndex, Parent = holder,
+	}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(INK, 3) })
+	return holder
+end
+
+local function rewardName(milestone): string
+	if milestone.item then
+		return Lang.item(lang, milestone.item)
+	end
+	return if milestone.cash then t("cashWord") else t("luckWord")
+end
+
+local function rewardAmount(milestone): string
+	if milestone.item then
+		return "x" .. (milestone.count or 1)
+	end
+	return if milestone.cash then "+" .. Format.number(milestone.cash) else "+" .. milestone.luck
+end
+
+renderers[rewardsW] = function()
+	clear(rewardsBody)
+	clear(rewardsSummary)
+	local rolls = state.totalRolls
+
+	-- left: progress summary
+	stroked({ Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.03, 0), Text = t("rewardsDone"), Max = 22, Parent = rewardsSummary })
+	stroked({ Size = UDim2.new(1, 0, 0.24, 0), Position = UDim2.new(0, 0, 0.14, 0), Text = Format.number(rolls), Max = 64, Parent = rewardsSummary })
+	local nextMilestone = nil
+	for _, milestone in Config.RollMilestones do
+		if rolls < milestone.rolls then
+			nextMilestone = milestone
+			break
+		end
+	end
+	if nextMilestone then
+		stroked({ Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, 0.46, 0), Text = t("nextReward"), Max = 18, Parent = rewardsSummary })
+		local iconBox = make("Frame", { Size = UDim2.new(0.42, 0, 0.32, 0), Position = UDim2.new(0.04, 0, 0.58, 0), BackgroundTransparency = 1, ZIndex = 22, Parent = rewardsSummary })
+		rewardIcon(nextMilestone, { Size = UDim2.new(1, 0, 1, 0), ZIndex = 23, Parent = iconBox })
+		stroked({ Size = UDim2.new(0.5, 0, 0.12, 0), Position = UDim2.new(0.48, 0, 0.6, 0), Text = rewardAmount(nextMilestone), Max = 26, Parent = rewardsSummary })
+		stroked({ Size = UDim2.new(0.5, 0, 0.14, 0), Position = UDim2.new(0.48, 0, 0.74, 0), Text = t("moreRolls", Format.number(nextMilestone.rolls - rolls)), TextWrapped = true, Max = 18, Parent = rewardsSummary })
 	else
-		for i, milestone in Config.RollMilestones do
-			local claimed = state.milestones[tostring(i)] == true
-			local ready = state.totalRolls >= milestone.rolls
-			local r = row(body, i, 64, WHITE)
-			text({ Size = UDim2.new(0.6, 0, 0, 26), Position = UDim2.new(0, 12, 0, 6), Text = t("rollsReq", Format.number(milestone.rolls)), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
-			local reward = if milestone.cash then t("rewardCash", Format.number(milestone.cash)) else t("rewardLuck", milestone.luck)
-			text({ Size = UDim2.new(0.6, 0, 0, 20), Position = UDim2.new(0, 12, 0, 34), Text = reward .. "    " .. Format.number(math.min(state.totalRolls, milestone.rolls)) .. "/" .. Format.number(milestone.rolls), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = r })
-			btn(if claimed then GREY elseif ready then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 40), Position = UDim2.new(0.64, 0, 0, 12), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
-				if ready and not claimed then
-					ActionEv:FireServer("ClaimMilestone", i)
-				end
-			end)
+		stroked({ Size = UDim2.new(1, 0, 0.2, 0), Position = UDim2.new(0, 0, 0.55, 0), Text = t("allDone"), TextWrapped = true, Max = 22, Parent = rewardsSummary })
+	end
+
+	-- right: one card per milestone
+	local h = math.max(160, rewardsBody.AbsoluteSize.Y - 14)
+	local w = math.floor(h * 0.66)
+	for i, milestone in Config.RollMilestones do
+		local claimed = state.milestones[tostring(i)] == true
+		local ready = rolls >= milestone.rolls and not claimed
+		local card = make("Frame", {
+			Size = UDim2.new(0, w, 0, h), LayoutOrder = i, ZIndex = 21, Parent = rewardsBody,
+			BackgroundColor3 = if claimed then Color3.fromRGB(205, 242, 220) elseif ready then Color3.fromRGB(255, 244, 200) else WHITE,
+		}, { corner(14), stroke(if ready then GOLD else INK, if ready then 4 else 3) })
+		stroked({ Size = UDim2.new(1, 0, 0.09, 0), Position = UDim2.new(0, 0, 0.03, 0), Text = t("rollsWord"), TextColor3 = BLUE, Max = 20, Parent = card })
+		stroked({ Size = UDim2.new(1, 0, 0.17, 0), Position = UDim2.new(0, 0, 0.12, 0), Text = Format.number(milestone.rolls), Max = 48, Parent = card })
+		local mutation = nil
+		if milestone.item then
+			local _, parsed = Items.parse(milestone.item)
+			mutation = parsed
 		end
+		stroked({
+			Size = UDim2.new(0.94, 0, 0.08, 0), Position = UDim2.new(0.03, 0, 0.31, 0), Text = rewardName(milestone), Max = 18,
+			TextColor3 = if mutation and mutation.id ~= "normal" then mutation.color elseif milestone.cash then GOLD elseif milestone.luck then MINT else BLUE,
+			Parent = card,
+		})
+		local box = make("Frame", {
+			Size = UDim2.new(0.84, 0, 0.38, 0), Position = UDim2.new(0.08, 0, 0.41, 0), BackgroundColor3 = PANEL_2, ZIndex = 22, Parent = card,
+		}, { corner(12), stroke(INK, 2.5) })
+		rewardIcon(milestone, { Size = UDim2.new(0.78, 0, 0.78, 0), Position = UDim2.new(0.11, 0, 0.06, 0), ZIndex = 23, Parent = box })
+		stroked({ Size = UDim2.new(0.9, 0, 0.26, 0), Position = UDim2.new(0.05, 0, 0.72, 0), Text = rewardAmount(milestone), Max = 26, ZIndex = 24, Parent = box })
+		btn(if ready then MINT else GREY, {
+			Size = UDim2.new(0.86, 0, 0.13, 0), Position = UDim2.new(0.07, 0, 0.84, 0), ZIndex = 22, Max = 20,
+			Text = if claimed then t("claimed") elseif ready then t("claim") else t("locked"), Parent = card,
+		}, function()
+			if ready then
+				ActionEv:FireServer("ClaimMilestone", i)
+			end
+		end)
 	end
 end
 
@@ -2858,13 +3023,21 @@ renderers[holeW] = function()
 end
 
 ---------------------------------------------------------------- Bottom dock
-local dock = make("Frame", { Size = UDim2.new(0.72, 0, 0, 52), Position = UDim2.new(0.14, 0, 1, -64), BackgroundTransparency = 1, Parent = gui })
-make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.01, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = dock })
-for order, entry in { { "catalogue", catalogueW, BLUE }, { "mySky", skyW, MINT }, { "upgrades", upgradesW, GOLD }, { "index", indexW, LILAC }, { "constellations", bookW, BLUE }, { "odds", oddsW, GREY } } do
-	bind(btn(entry[3], { Size = UDim2.new(0.158, 0, 1, 0), LayoutOrder = order, Max = 17, Parent = dock }, function()
+local dock = make("Frame", { Size = UDim2.new(0.84, 0, 0, 54), Position = UDim2.new(0.08, 0, 1, -66), BackgroundTransparency = 1, Parent = gui })
+make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0.012, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = dock })
+local dockButtons = {}
+for order, entry in {
+	{ "catalogue", catalogueW, BLUE, "catalogue" }, { "mySky", skyW, MINT, "sky" }, { "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
+	{ "rewards", rewardsW, RED, "rewards" }, { "index", indexW, LILAC, "index" }, { "constellations", bookW, Color3.fromRGB(70, 90, 200), "constellations" },
+	{ "odds", oddsW, GOLD, "odds" },
+} do
+	local b = bind(btn(entry[3], { Size = UDim2.new(0.13, 0, 1, 0), LayoutOrder = order, Max = 17, Parent = dock }, function()
 		open(entry[2])
-	end), entry[1])
+	end, entry[4]), entry[1])
+	dockButtons[entry[1]] = b
 end
+local rewardsBadge = badge(dockButtons.rewards)
+local indexBadge = badge(dockButtons.index)
 
 ---------------------------------------------------------------- Render
 local function canAutoRoll(): boolean
@@ -2906,6 +3079,28 @@ render = function()
 	rollsValue.Text = Format.number(state.totalRolls)
 	rebirthValue.Text = tostring(state.rebirths)
 	renderTelescope()
+
+	local rewardReady = false
+	for i, milestone in Config.RollMilestones do
+		if state.totalRolls >= milestone.rolls and not state.milestones[tostring(i)] then
+			rewardReady = true
+		end
+	end
+	rewardsBadge.Visible = rewardReady
+	local rowReady = false
+	for _, mutation in Mutations.List do
+		if not state.indexClaims[mutation.id] then
+			local complete = true
+			for _, star in Stars.List do
+				if not state.index[Items.key(star.id, mutation.id)] then
+					complete = false
+				end
+			end
+			rowReady = rowReady or complete
+		end
+	end
+	indexBadge.Visible = rowReady
+
 	for _, w in windows do
 		if w.frame.Visible and renderers[w] then
 			renderers[w]()

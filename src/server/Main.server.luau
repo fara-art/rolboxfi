@@ -473,6 +473,10 @@ function actions.ClaimMilestone(player, data, number)
 	if milestone.luck then
 		data.bonusLuck += milestone.luck
 	end
+	if milestone.item and Items.parse(milestone.item) then
+		addToInventory(player, data, milestone.item, milestone.count or 1)
+		toast(player, "toastReward", { { item = milestone.item } }, Items.parse(milestone.item).color)
+	end
 end
 
 function actions.SetLang(player, data, lang)

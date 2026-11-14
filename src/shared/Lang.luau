@@ -42,6 +42,8 @@ Lang.Strings = {
 		signFree = "FREE PLOT\nstep in to claim", signPlot = "%s's plot\n+%s/s",
 		signForge = "STAR FORGE", signHole = "BLACK HOLE", signHub = "SKY HAVEN",
 		promptPlace = "Place star", promptRemove = "Take star", promptForge = "Forge", promptHole = "Black Hole", pedestal = "Pedestal",
+		rewardsTitle = "ROLL REWARDS", rewards = "REWARDS", rewardsDone = "ROLLS DONE", nextReward = "Next reward",
+		moreRolls = "%s more rolls", allDone = "All rewards reached!", locked = "LOCKED", cashWord = "Cash", luckWord = "Luck", rollsWord = "ROLLS", toastReward = "Reward: %s",
 		langButton = "EN",
 	},
 	ru = {
@@ -82,6 +84,8 @@ Lang.Strings = {
 		signFree = "СВОБОДНЫЙ УЧАСТОК\nзайди, чтобы занять", signPlot = "Участок %s\n+%s/с",
 		signForge = "ЗВЁЗДНАЯ КУЗНЯ", signHole = "ЧЁРНАЯ ДЫРА", signHub = "НЕБЕСНАЯ ГАВАНЬ",
 		promptPlace = "Поставить звезду", promptRemove = "Забрать звезду", promptForge = "Ковать", promptHole = "Чёрная дыра", pedestal = "Постамент",
+		rewardsTitle = "НАГРАДЫ ЗА КРУТКИ", rewards = "НАГРАДЫ", rewardsDone = "КРУТОК СДЕЛАНО", nextReward = "Следующая награда",
+		moreRolls = "ещё %s круток", allDone = "Все награды открыты!", locked = "ЗАКРЫТО", cashWord = "Деньги", luckWord = "Удача", rollsWord = "КРУТОК", toastReward = "Награда: %s",
 		langButton = "RU",
 	},
 }
