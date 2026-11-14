@@ -97,7 +97,7 @@ function Sky.evaluate(grid: { [string]: any }, size: number, slabs: { [string]: 
 				end
 
 				local mult = 1
-				local pattern = lookup[shapeKey(cells)]
+				local pattern = Config.ConstellationsEnabled and lookup[shapeKey(cells)]
 				if pattern then
 					local first = Items.parse(grid[keys[1]].id)
 					local pure = true

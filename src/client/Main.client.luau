@@ -390,7 +390,7 @@ local pickerW = window("pickTitle", "center", centerProps())
 local forgeW = window("forgeTitle", "center", centerProps())
 local holeW = window("holeTitle", "center", centerProps())
 local rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
-local settingsW = window("settings", "center", { Size = UDim2.new(0.3, 0, 0.32, 0), Position = UDim2.new(0.35, 0, 0.28, 0) })
+local settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.46, 0), Position = UDim2.new(0.31, 0, 0.22, 0) })
 
 -- catalogue: list + sell bar at the bottom
 catalogueW.body.Size = UDim2.new(1, 0, 1, -124)
@@ -401,13 +401,15 @@ local renderers = {}
 local function isOpen(w): boolean
 	return w.frame.Visible
 end
+local onWindowOpened = nil -- set by build mode: opening any window leaves build mode
 local function open(w, force: boolean?)
 	local willShow = force or not w.frame.Visible
-	if willShow and w.group == "center" then
+	if willShow then
 		for _, other in windows do
-			if other.group == "center" then
-				other.frame.Visible = false
-			end
+			other.frame.Visible = false
+		end
+		if onWindowOpened then
+			onWindowOpened()
 		end
 	end
 	w.frame.Visible = willShow
@@ -600,35 +602,46 @@ renderers[upgradesW] = function()
 end
 
 ---------------------------------------------------------------- Star Index (+ roll rewards)
+local indexTier = 1
 renderers[indexW] = function()
 	local body = indexW.body
 	clear(body)
+	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = tabs })
+	for number, tier in Config.IndexTiers do
+		btn(if indexTier == number then BLUE else GREY, { Size = UDim2.new(1 / #Config.IndexTiers, -5, 1, 0), Text = t("tier_" .. tier.id), Max = 15, ZIndex = 22, Parent = tabs }, function()
+			indexTier = number
+			renderers[indexW]()
+		end)
+	end
+	local tier = Config.IndexTiers[indexTier]
+	local count = tier.last - tier.first + 1
 	for order, mutation in Mutations.List do
 		local found = 0
-		for _, star in Stars.List do
-			if state.index[Items.key(star.id, mutation.id)] then
+		for i = tier.first, tier.last do
+			if state.index[Items.key(Stars.List[i].id, mutation.id)] then
 				found += 1
 			end
 		end
-		local complete = found == #Stars.List
-		local claimed = state.indexClaims[mutation.id] == true
-		local starRows = math.ceil(#Stars.List / 8)
-		local r = row(body, order, 64 + starRows * 50, WHITE)
-		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. #Stars.List, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
-		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", Config.IndexRowLuck), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
+		local complete = found == count
+		local claimed = state.indexClaims[indexTier .. ":" .. mutation.id] == true
+		local reward = tier.luck * (Config.IndexMutationMult[mutation.id] or 1)
+		local r = row(body, order, 64 + 52, WHITE)
+		text({ Size = UDim2.new(0.6, 0, 0, 24), Position = UDim2.new(0, 10, 0, 6), Text = Lang.mutation(lang, mutation) .. "   " .. found .. "/" .. count, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 22, Parent = r })
+		text({ Size = UDim2.new(0.6, 0, 0, 18), Position = UDim2.new(0, 10, 0, 30), Text = t("rowReward", reward), FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 13, ZIndex = 22, Parent = r })
 		btn(if claimed then GREY elseif complete then MINT else GREY, { Size = UDim2.new(0.34, 0, 0, 36), Position = UDim2.new(0.64, 0, 0, 8), ZIndex = 22, Max = 15, Text = if claimed then t("claimed") else t("claim"), Parent = r }, function()
 			if complete and not claimed then
-				ActionEv:FireServer("ClaimIndexRow", mutation.id)
+				ActionEv:FireServer("ClaimIndexRow", mutation.id, indexTier)
 			end
 		end)
-		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, starRows * 50), Position = UDim2.new(0, 8, 0, 56), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
-		make("UIGridLayout", { CellSize = UDim2.new(1 / 8, -4, 1 / starRows, -4), CellPadding = UDim2.new(0, 4, 0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip })
-		for _, star in Stars.List do
-			local key = Items.key(star.id, mutation.id)
-			if state.index[key] then
-				starIcon(star, mutation, { LayoutOrder = star.index, ZIndex = 23, Parent = strip })
+		local strip = make("Frame", { Size = UDim2.new(1, -16, 0, 50), Position = UDim2.new(0, 8, 0, 58), BackgroundTransparency = 1, ZIndex = 22, Parent = r })
+		make("UIGridLayout", { CellSize = UDim2.new(1 / count, -4, 1, 0), CellPadding = UDim2.new(0, 4, 0, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip })
+		for i = tier.first, tier.last do
+			local star = Stars.List[i]
+			if state.index[Items.key(star.id, mutation.id)] then
+				starIcon(star, mutation, { LayoutOrder = i, ZIndex = 23, Parent = strip })
 			else
-				local unknown = make("Frame", { LayoutOrder = star.index, BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
+				local unknown = make("Frame", { LayoutOrder = i, BackgroundTransparency = 1, ZIndex = 23, Parent = strip }, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
 				make("TextLabel", {
 					Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), BackgroundColor3 = PANEL_2, Text = "?", TextScaled = true,
 					FontFace = TITLE, TextColor3 = GREY, ZIndex = 24, Parent = unknown,
@@ -706,7 +719,7 @@ end
 renderers[rewardsW] = function()
 	clear(rewardsBody)
 	clear(rewardsSummary)
-	local rolls = state.totalRolls
+	local rolls = state.rebirthRolls or state.totalRolls
 
 	-- left: progress summary
 	stroked({ Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.new(0, 0, 0.03, 0), Text = t("rewardsDone"), Max = 22, Parent = rewardsSummary })
@@ -800,9 +813,9 @@ renderers[oddsW] = function()
 	clear(body)
 	local luck = if state then state.luck else 1
 	local odds = Odds.exact(luck)
-	for i = #Stars.List, 1, -1 do
+	for i = 1, #Stars.List do
 		local star = Stars.List[i]
-		local r = row(body, -i, 40, WHITE)
+		local r = row(body, i, 40, WHITE)
 		starIcon(star, nil, { Size = UDim2.new(0, 32, 0, 32), Position = UDim2.new(0, 4, 0, 4), ZIndex = 22, Parent = r })
 		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 44, 0, 0), Text = Lang.star(lang, star), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
 		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if odds[star.id] > 0 then 1 / odds[star.id] else star.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
@@ -953,6 +966,24 @@ renderers[settingsW] = function()
 			end
 		end)
 	end
+	-- from which odds the big reveal / announcements show up
+	local alertRow = row(body, 3, 110, WHITE)
+	text({ Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 14, 0, 6), Text = t("rareAlert"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = alertRow })
+	local options = make("Frame", { Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 0, 46), BackgroundTransparency = 1, ZIndex = 22, Parent = alertRow })
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = options })
+	local current = (state and state.settings and state.settings.rareAlert) or 50000000
+	for _, value in { 1000, 1000000, 50000000, 1000000000, 0 } do
+		btn(if current == value then BLUE else GREY, {
+			Size = UDim2.new(0.2, -5, 1, 0), Text = if value == 0 then t("alertOff") else t("oneIn", Format.number(value)), Max = 15, ZIndex = 23, Parent = options,
+		}, function()
+			if state then
+				state.settings = state.settings or {}
+				state.settings.rareAlert = value
+				ActionEv:FireServer("SetSetting", "rareAlert", value)
+				renderers[settingsW]()
+			end
+		end)
+	end
 end
 
 settingsButton = iconButton("settings", "settings", Color3.fromRGB(120, 130, 160), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 136, 0, 64), Max = 10, Parent = gui }, function()
@@ -1076,53 +1107,166 @@ local adminButton = iconButton("admin", "admin", Color3.fromRGB(230, 90, 90), { 
 end)
 
 ---------------------------------------------------------------- Server-wide cinematic for 1-in-a-billion finds
-local function globalCinematic(finder: string, key: string, chance: number)
+local function rareThreshold(): number
+	local value = state and state.settings and state.settings.rareAlert
+	if value == 0 then
+		return math.huge -- off
+	end
+	return value or 50000000
+end
+
+local function circle(px: number, color: Color3, z: number, parent: Instance)
+	return make("Frame", {
+		Size = UDim2.new(0, px, 0, px), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = z, Parent = parent,
+	}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+end
+
+local function shakeCamera(duration: number, power: number)
+	task.spawn(function()
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if not humanoid then
+			return
+		end
+		local stop = os.clock() + duration
+		while os.clock() < stop do
+			local k = (stop - os.clock()) / duration * power
+			humanoid.CameraOffset = Vector3.new((math.random() - 0.5) * k, (math.random() - 0.5) * k, 0)
+			task.wait(0.03)
+		end
+		humanoid.CameraOffset = Vector3.zero
+	end)
+end
+
+-- The big reveal: darkness, a falling star, impact, shockwaves, particles, then the star and its odds
+local function bigReveal(key: string, chance: number, finder: string?)
 	local star, mutation = Items.parse(key)
 	if not star then
 		return
 	end
-	playSfx(if Config.Sounds.GlobalRare ~= "" then Config.Sounds.GlobalRare else Config.Sounds.Rebirth, 1)
-	local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 8, 30), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
-	TweenService:Create(root, TweenInfo.new(0.5), { BackgroundTransparency = 0.35 }):Play()
+	local glow = if mutation.id ~= "normal" then mutation.color else star.color
+	local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(6, 4, 20), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
+	TweenService:Create(root, TweenInfo.new(0.6), { BackgroundTransparency = 0.2 }):Play()
 
-	-- rotating light rays: 8 bars through the center = 16 rays (GUI rotates around each element's center)
-	local rays = make("Frame", { Size = UDim2.new(0, 1600, 0, 1600), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 201, Parent = root })
-	for i = 1, 8 do
-		make("Frame", {
-			Size = UDim2.new(0, 60, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = i * (180 / 8),
-			BackgroundColor3 = if i % 2 == 0 then star.color else WHITE, BorderSizePixel = 0, ZIndex = 201, Parent = rays,
-		}, { make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.15), NumberSequenceKeypoint.new(1, 1) }) }) })
-	end
-	TweenService:Create(rays, TweenInfo.new(6, Enum.EasingStyle.Linear), { Rotation = 120 }):Play()
-
-	local holder = make("Frame", { Size = UDim2.new(0, 640, 0, 420), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 202, Parent = root })
-	local scale = make("UIScale", { Scale = 0, Parent = holder })
-	starIcon(star, mutation, { Size = UDim2.new(0, 220, 0, 220), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 203, Parent = holder })
-	local function line(y: number, h: number, value: string, color: Color3, max: number)
-		text({ Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0, y), Text = value, FontFace = TITLE, TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = max, ZIndex = 203, Parent = holder })
-	end
-	line(222, 40, t("globalFound", finder), WHITE, 34)
-	line(262, 80, Lang.item(lang, key), star.color, 72)
-	line(344, 50, t("oneIn", Format.number(chance)), GOLD, 42)
-	TweenService:Create(scale, TweenInfo.new(0.7, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-
-	local camera = workspace.CurrentCamera
-	if camera then
-		TweenService:Create(camera, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = camera.FieldOfView + 20 }):Play()
-	end
-	task.delay(5.2, function()
-		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 }):Play()
-		TweenService:Create(root, TweenInfo.new(0.8), { BackgroundTransparency = 1 }):Play()
-		for _, ray in rays:GetChildren() do
-			if ray:IsA("Frame") then
-				TweenService:Create(ray, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
-			end
+	-- 1) the falling star with a fiery trail
+	local meteor = make("Frame", { Size = UDim2.new(0, 80, 0, 80), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1.1, 0, -0.15, 0), BackgroundTransparency = 1, ZIndex = 205, Parent = root })
+	starIcon(star, mutation, { Size = UDim2.new(1, 0, 1, 0), ZIndex = 206, Parent = meteor })
+	local fall = TweenService:Create(meteor, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(0.5, 0, 0.42, 0), Rotation = 540 })
+	fall:Play()
+	task.spawn(function()
+		local stop = os.clock() + 1
+		while os.clock() < stop do
+			local dot = circle(math.random(14, 34), if math.random() < 0.5 then glow else Color3.fromRGB(255, 200, 120), 204, root)
+			dot.Position = meteor.Position
+			TweenService:Create(dot, TweenInfo.new(0.6), { Size = UDim2.new(0, 2, 0, 2), BackgroundTransparency = 1 }):Play()
+			task.delay(0.65, function()
+				dot:Destroy()
+			end)
+			task.wait(0.025)
 		end
-		task.wait(0.9)
-		root:Destroy()
+	end)
+
+	task.delay(1, function()
+		meteor:Destroy()
+		-- 2) impact: flash, shockwaves, rays, particle burst, shake, sound
+		playSfx(if Config.Sounds.GlobalRare ~= "" then Config.Sounds.GlobalRare else Config.Sounds.Rebirth, 1)
+		shakeCamera(0.8, 1.6)
+		local camera = workspace.CurrentCamera
+		if camera then
+			TweenService:Create(camera, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = camera.FieldOfView + 22 }):Play()
+		end
+		local flash = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = WHITE, ZIndex = 230, Parent = root })
+		TweenService:Create(flash, TweenInfo.new(0.8, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
+
+		for i = 1, 3 do
+			local ring = make("Frame", {
+				Size = UDim2.new(0, 20, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.42, 0), BackgroundTransparency = 1, ZIndex = 210, Parent = root,
+			}, { make("UICorner", { CornerRadius = UDim.new(1, 0) }), make("UIStroke", { Color = if i == 2 then WHITE else glow, Thickness = 10 - i * 2 }) })
+			local stroke = ring:FindFirstChildOfClass("UIStroke")
+			task.delay((i - 1) * 0.15, function()
+				TweenService:Create(ring, TweenInfo.new(1, Enum.EasingStyle.Quad), { Size = UDim2.new(0, 1500, 0, 1500) }):Play()
+				TweenService:Create(stroke, TweenInfo.new(1), { Transparency = 1 }):Play()
+			end)
+			task.delay(1.4, function()
+				ring:Destroy()
+			end)
+		end
+
+		local rays = make("Frame", { Size = UDim2.new(0, 1600, 0, 1600), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.42, 0), BackgroundTransparency = 1, ZIndex = 201, Parent = root })
+		for i = 1, 8 do
+			make("Frame", {
+				Size = UDim2.new(0, 60, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = i * (180 / 8),
+				BackgroundColor3 = if i % 2 == 0 then glow else WHITE, BorderSizePixel = 0, ZIndex = 201, Parent = rays,
+			}, { make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }) }) })
+		end
+		TweenService:Create(rays, TweenInfo.new(6, Enum.EasingStyle.Linear), { Rotation = 140 }):Play()
+
+		local burstColors = { glow, WHITE, Color3.fromRGB(255, 210, 110), star.color }
+		for _ = 1, 70 do
+			local dot = circle(math.random(6, 20), burstColors[math.random(1, #burstColors)], 220, root)
+			dot.Position = UDim2.new(0.5, 0, 0.42, 0)
+			local a = math.random() * math.pi * 2
+			local dist = math.random(180, 760)
+			local life = 0.8 + math.random() * 0.9
+			TweenService:Create(dot, TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Position = UDim2.new(0.5, math.cos(a) * dist, 0.42, math.sin(a) * dist), BackgroundTransparency = 1, Size = UDim2.new(0, 3, 0, 3),
+			}):Play()
+			task.delay(life + 0.05, function()
+				dot:Destroy()
+			end)
+		end
+
+		-- 3) the star itself
+		local holder = make("Frame", { Size = UDim2.new(0, 660, 0, 440), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 240, Parent = root })
+		local scale = make("UIScale", { Scale = 0, Parent = holder })
+		starIcon(star, mutation, { Size = UDim2.new(0, 240, 0, 240), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 241, Parent = holder })
+		local function line(y: number, h: number, value: string, color: Color3, max: number)
+			text({ Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0, y), Text = value, FontFace = TITLE, TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = max, ZIndex = 242, Parent = holder })
+		end
+		local y = 244
+		if finder then
+			line(y, 36, t("globalFound", finder), WHITE, 32)
+			y += 36
+		end
+		line(y, 76, Lang.item(lang, key), glow, 70)
+		line(y + 76, 50, t("oneIn", Format.number(chance)), GOLD, 46)
+		TweenService:Create(scale, TweenInfo.new(0.7, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+
+		-- sparkles hovering around the star while it is shown
+		task.spawn(function()
+			local stop = os.clock() + 3.6
+			while os.clock() < stop and root.Parent do
+				local dot = circle(math.random(5, 12), if math.random() < 0.5 then WHITE else glow, 239, root)
+				local a = math.random() * math.pi * 2
+				local r = math.random(120, 200)
+				dot.Position = UDim2.new(0.5, math.cos(a) * r, 0.33, math.sin(a) * r)
+				TweenService:Create(dot, TweenInfo.new(1.2), { Position = UDim2.new(0.5, math.cos(a) * (r + 60), 0.33, math.sin(a) * (r + 60) - 40), BackgroundTransparency = 1 }):Play()
+				task.delay(1.25, function()
+					dot:Destroy()
+				end)
+				task.wait(0.05)
+			end
+		end)
+
+		task.delay(4.2, function()
+			TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 }):Play()
+			TweenService:Create(root, TweenInfo.new(0.9), { BackgroundTransparency = 1 }):Play()
+			for _, ray in rays:GetChildren() do
+				if ray:IsA("Frame") then
+					TweenService:Create(ray, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+				end
+			end
+			task.wait(1)
+			root:Destroy()
+		end)
 	end)
 end
-GlobalRareEv.OnClientEvent:Connect(globalCinematic)
+
+GlobalRareEv.OnClientEvent:Connect(function(finder: string, key: string, chance: number)
+	if chance >= rareThreshold() then
+		bigReveal(key, chance, finder)
+	end
+end)
 
 ---------------------------------------------------------------- Sprint: Shift on PC, a button on phones
 local sprinting = false
@@ -1212,7 +1356,8 @@ end)
 
 ---------------------------------------------------------------- Build mode: buy slabs and put them on your plot
 local buildMode = false
-local buildTool = Config.Slabs[1].id -- slab id or "remove"
+local buildTool: string? = Config.Slabs[1].id -- slab id, "remove", or nil (nothing selected)
+local pendingRemove: string? = nil -- slab waiting for the ✓ confirmation
 local setBuildMode -- defined below (the panel's EXIT button needs it)
 local buildPanel = panelFrame({ Size = UDim2.new(0, 640, 0, 150), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -100), Visible = false, ZIndex = 30, Parent = gui })
 
@@ -1238,8 +1383,8 @@ local function refreshMarkers()
 	end
 	for _, marker in markers:GetChildren() do
 		if marker:IsA("BasePart") then
-			marker.Transparency = if buildMode then 0.55 else 1
-			marker.Color = if buildTool == "remove" then RED else MINT
+			marker.Transparency = if not buildMode then 1 elseif marker.Name == pendingRemove then 0.15 elseif buildTool then 0.55 else 0.85
+			marker.Color = if marker.Name == pendingRemove or buildTool == "remove" then RED elseif buildTool then MINT else WHITE
 		end
 	end
 end
@@ -1259,19 +1404,53 @@ local function renderBuildPanel()
 		text({ Size = UDim2.new(1, -6, 0, 18), Position = UDim2.new(0, 3, 0, 48), Text = t("slab_" .. slab.id), FontFace = TITLE, Max = 13, ZIndex = 32, Parent = card })
 		text({ Size = UDim2.new(1, -6, 0, 18), Position = UDim2.new(0, 3, 0, 68), Text = Format.number(slab.cost) .. "  ·  x" .. slab.mult, FontFace = BODY, TextColor3 = MUTED, Max = 13, ZIndex = 32, Parent = card })
 		card.Activated:Connect(function()
-			buildTool = slab.id
+			buildTool = if buildTool == slab.id then nil else slab.id -- tap again to deselect
+			pendingRemove = nil
 			renderBuildPanel()
 			refreshMarkers()
 		end)
 	end
+	-- grey until selected, red while active; tap again to deselect
 	btn(if buildTool == "remove" then RED else GREY, { Size = UDim2.new(0, 84, 1, 0), LayoutOrder = 10, Text = t("removeTool"), Max = 14, ZIndex = 31, Parent = row }, function()
-		buildTool = "remove"
+		buildTool = if buildTool == "remove" then nil else "remove"
+		pendingRemove = nil
 		renderBuildPanel()
 		refreshMarkers()
 	end)
 	btn(BLUE, { Size = UDim2.new(0, 84, 1, 0), LayoutOrder = 11, Text = t("exitBuild"), Max = 14, ZIndex = 31, Parent = row }, function()
 		setBuildMode(false)
 	end)
+
+	-- removal needs a confirmation
+	if pendingRemove then
+		local bar = panelFrame({ Size = UDim2.new(0, 400, 0, 58), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), ZIndex = 32, Parent = buildPanel })
+		text({ Size = UDim2.new(1, -130, 1, 0), Text = t("confirmRemove"), FontFace = TITLE, TextColor3 = RED, TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 33, Parent = bar })
+		btn(MINT, { Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -120, 0, 0), Text = "✓", FontFace = Font.fromEnum(Enum.Font.SourceSansBold), Max = 30, ZIndex = 33, Parent = bar }, function()
+			if pendingRemove then
+				ActionEv:FireServer("RemoveSlab", pendingRemove)
+			end
+			pendingRemove = nil
+			renderBuildPanel()
+			refreshMarkers()
+		end)
+		btn(GREY, { Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -58, 0, 0), Text = "✕", FontFace = Font.fromEnum(Enum.Font.SourceSansBold), Max = 30, ZIndex = 33, Parent = bar }, function()
+			pendingRemove = nil
+			renderBuildPanel()
+			refreshMarkers()
+		end)
+	end
+end
+
+local function nearMyPlot(): boolean
+	local plot = myPlotFolder()
+	local floor = plot and plot:FindFirstChild("Floor")
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not floor or not root then
+		return false
+	end
+	local offset = root.Position - floor.Position
+	return Vector3.new(offset.X, 0, offset.Z).Magnitude <= Config.PlotReach
 end
 
 setBuildMode = function(on: boolean)
@@ -1279,12 +1458,27 @@ setBuildMode = function(on: boolean)
 		showToast(t("buildNoPlot"))
 		return
 	end
+	if on and not nearMyPlot() then
+		showToast(t("farFromPlot"))
+		return
+	end
+	if on then
+		for _, w in windows do
+			w.frame.Visible = false -- build mode gets the whole screen
+		end
+	end
 	buildMode = on
+	pendingRemove = nil
 	buildPanel.Visible = on
 	if on then
 		renderBuildPanel()
 	end
 	refreshMarkers()
+end
+onWindowOpened = function()
+	if buildMode then
+		setBuildMode(false)
+	end
 end
 
 -- tap/click a marker on your plot while building
@@ -1306,10 +1500,12 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { markers }
 	local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
-	if hit and hit.Instance then
+	if hit and hit.Instance and buildTool then
 		local key = hit.Instance.Name
 		if buildTool == "remove" then
-			ActionEv:FireServer("RemoveSlab", key)
+			pendingRemove = if pendingRemove == key then nil else key -- tap again to cancel
+			renderBuildPanel()
+			refreshMarkers()
 		else
 			ActionEv:FireServer("BuildSlab", key, buildTool)
 		end
@@ -1346,12 +1542,11 @@ local function addButtons(parent: Frame, entries)
 	end
 end
 
-local bottomRow = buttonGroup(5, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
+local bottomRow = buttonGroup(4, true, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Parent = gui })
 addButtons(bottomRow, {
 	{ "mySky", skyW, MINT, "sky" },
 	{ "upgrades", upgradesW, Color3.fromRGB(80, 210, 110), "upgrades" },
 	{ "rewards", rewardsW, RED, "rewards" },
-	{ "constellations", bookW, Color3.fromRGB(70, 90, 200), "constellations" },
 	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
 })
 local rightColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
@@ -1407,21 +1602,24 @@ render = function()
 
 	local rewardReady = false
 	for i, milestone in Config.RollMilestones do
-		if state.totalRolls >= milestone.rolls and not state.milestones[tostring(i)] then
+		if (state.rebirthRolls or state.totalRolls) >= milestone.rolls and not state.milestones[tostring(i)] then
 			rewardReady = true
 		end
 	end
 	rewardsBadge.Visible = rewardReady
 	local rowReady = false
-	for _, mutation in Mutations.List do
-		if not state.indexClaims[mutation.id] then
-			local complete = true
-			for _, star in Stars.List do
-				if not state.index[Items.key(star.id, mutation.id)] then
-					complete = false
+	for number, tier in Config.IndexTiers do
+		for _, mutation in Mutations.List do
+			if not state.indexClaims[number .. ":" .. mutation.id] then
+				local complete = true
+				for i = tier.first, tier.last do
+					if not state.index[Items.key(Stars.List[i].id, mutation.id)] then
+						complete = false
+						break
+					end
 				end
+				rowReady = rowReady or complete
 			end
-			rowReady = rowReady or complete
 		end
 	end
 	indexBadge.Visible = rowReady
@@ -1439,37 +1637,7 @@ end
 ---------------------------------------------------------------- Roll
 -- Big centered reveal for rare finds
 showRare = function(key: string)
-	local star, mutation = Items.parse(key)
-	if not star then
-		return
-	end
-	local legendary = Items.chance(key) >= 100000
-	local holder = make("Frame", {
-		Size = UDim2.new(0, 520, 0, 300), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.42, 0),
-		BackgroundTransparency = 1, ZIndex = 90, Parent = gui,
-	})
-	local scale = make("UIScale", { Scale = 0.2, Parent = holder })
-	starIcon(star, mutation, { Size = UDim2.new(0, 150, 0, 150), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 91, Parent = holder })
-	local title = text({
-		Size = UDim2.new(1, 0, 0, 70), Position = UDim2.new(0, 0, 0, 150), Text = t(if legendary then "legendBig" else "rareBig"), FontFace = TITLE,
-		TextColor3 = if legendary then GOLD else star.color, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 72, ZIndex = 91, Parent = holder,
-	})
-	local name = text({
-		Size = UDim2.new(1, 0, 0, 44), Position = UDim2.new(0, 0, 0, 222), Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))),
-		FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 34, ZIndex = 91, Parent = holder,
-	})
-	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-	local camera = workspace.CurrentCamera
-	if camera then
-		TweenService:Create(camera, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = camera.FieldOfView + (if legendary then 14 else 7) }):Play()
-	end
-	task.delay(2.2, function()
-		TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 }):Play()
-		task.wait(0.4)
-		holder:Destroy()
-	end)
-	local _ = title
-	local _n = name
+	bigReveal(key, Items.chance(key), nil)
 end
 
 local function doRoll()
@@ -1501,7 +1669,7 @@ local function doRoll()
 				best = key
 			end
 		end
-		if Items.chance(best) >= 1000 and Items.chance(best) < Config.GlobalRareChance then
+		if Items.chance(best) >= rareThreshold() and Items.chance(best) < Config.GlobalRareChance then
 			showRare(best)
 		end
 	end
@@ -1540,6 +1708,9 @@ StateEv.OnClientEvent:Connect(function(newState)
 end)
 
 AnnounceEv.OnClientEvent:Connect(function(key: string, args, color: Color3?)
+	if key == "annRolled" and type(args) == "table" and type(args[4]) == "number" and args[4] < rareThreshold() then
+		return
+	end
 	showToast(Lang.resolve(lang, key, args), color)
 end)
 
@@ -1611,7 +1782,12 @@ task.spawn(function()
 			end
 		end
 		if buildMode then
-			refreshMarkers()
+			if not nearMyPlot() then
+				setBuildMode(false)
+				showToast(t("farFromPlot"))
+			else
+				refreshMarkers()
+			end
 		end
 		if isOpen(forgeW) and distanceTo(partAt({ "Map", "Forge", "ForgeTable" })) > Config.ForgeReach + 6 then
 			forgeW.frame.Visible = false

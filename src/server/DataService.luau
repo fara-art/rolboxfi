@@ -33,10 +33,11 @@ local function default()
 		indexClaims = {}, -- [mutationId] = true
 		milestones = {}, -- ["1"] = true (string keys for DataStore)
 		lang = "", -- "" = auto
-		settings = { music = true, sfx = true },
+		settings = { music = true, sfx = true, rareAlert = 50000000 },
 		slabs = {}, -- ["x_y"] = slab id (build mode)
 		freeSlabsGiven = false,
 		best = "", -- rarest item ever found (leaderboard)
+		rebirthRolls = -1, -- rolls since the last rebirth (roll rewards); -1 = not migrated yet
 	}
 end
 

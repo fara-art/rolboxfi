@@ -332,10 +332,10 @@ local function buildHub(folder: Folder)
 		local a = math.rad(202.5 + (i - 1) * 45)
 		local pos = Vector3.new(math.cos(a) * 45, 0, math.sin(a) * 45)
 		local cf = CFrame.lookAt(pos, Vector3.zero)
-		make("Part", { Name = "Step", Size = Vector3.new(14, 1.4, 5), CFrame = cf * CFrame.new(0, 0.7, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(118, 120, 132), Parent = folder })
-		make("Part", { Name = "Board_" .. board, Size = Vector3.new(12, 16, 1.4), CFrame = cf * CFrame.new(0, 9.4, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(172, 174, 186), Parent = boards })
-		make("Part", { Name = "Cap", Size = Vector3.new(13.2, 1, 2.4), CFrame = cf * CFrame.new(0, 17.9, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
-		crystal((cf * CFrame.new(0, 20, 0)).Position, 1.6, Color3.fromRGB(255, 220, 120), folder)
+		make("Part", { Name = "Step", Size = Vector3.new(10.5, 1.2, 4), CFrame = cf * CFrame.new(0, 0.6, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(118, 120, 132), Parent = folder })
+		make("Part", { Name = "Board_" .. board, Size = Vector3.new(9, 12, 1.2), CFrame = cf * CFrame.new(0, 7.2, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(172, 174, 186), Parent = boards })
+		make("Part", { Name = "Cap", Size = Vector3.new(10, 0.8, 2), CFrame = cf * CFrame.new(0, 13.6, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = folder })
+		crystal((cf * CFrame.new(0, 15.4, 0)).Position, 1.3, Color3.fromRGB(255, 220, 120), folder)
 	end
 
 	-- the spawn plate stays but invisible
@@ -406,7 +406,7 @@ local function buildBlackHole(folder: Folder, slot: number)
 	local direction = directionAt(slot)
 	local center = direction * RING
 	World.AltarPosition = center
-	roundIsland(center, 34, folder, Color3.fromRGB(96, 84, 130))
+	roundIsland(center, 34, folder, Color3.fromRGB(42, 34, 58), Enum.Material.Basalt) -- obsidian
 	bridge(direction, HUB_RADIUS - 2, RING - 33, folder)
 
 	local holePos = center + Vector3.new(0, 34, 0)
@@ -422,16 +422,138 @@ local function buildBlackHole(folder: Folder, slot: number)
 		Color = ColorSequence.new(Color3.fromRGB(220, 170, 255), Color3.fromRGB(110, 50, 200)), LightEmission = 1, Rate = 40,
 		Lifetime = NumberRange.new(1.5, 3), Speed = NumberRange.new(0.5, 2), Size = NumberSequence.new(0.7, 0), Parent = disk,
 	})
-	-- debris caught in orbit
-	for i = 1, 12 do
-		local a = i / 12 * math.pi * 2
-		local r = rng:NextNumber(20, 28)
+	local FIRE = Color3.fromRGB(255, 120, 40)
+	local VIOLET = Color3.fromRGB(176, 110, 255)
+
+	-- second, steeper accretion ring
+	cylinder(CFrame.new(holePos) * CFrame.Angles(math.rad(-58), math.rad(30), 0), 0.3, 40, {
+		Name = "OuterDisk", Material = Enum.Material.Neon, Color = FIRE, Transparency = 0.55, CanCollide = false, CastShadow = false, Parent = folder,
+	})
+
+	-- particles sucked into the hole from every direction
+	local vortex = ball(holePos, 70, { Name = "Vortex", Transparency = 1, CanCollide = false, CanQuery = false, CastShadow = false, Parent = folder })
+	make("ParticleEmitter", {
+		Shape = Enum.ParticleEmitterShape.Sphere, ShapeInOut = Enum.ParticleEmitterShapeInOut.Inward, ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface,
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 200, 120), VIOLET),
+		LightEmission = 1, LightInfluence = 0, Rate = 60, Lifetime = NumberRange.new(2, 2.6), Speed = NumberRange.new(13, 16),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.7, 0.8), NumberSequenceKeypoint.new(1, 0) }),
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0), NumberSequenceKeypoint.new(1, 0.4) }),
+		Parent = vortex,
+	})
+
+	-- burning meteors orbiting the hole: welded to one anchored hub that the server spins
+	local orbitHub = make("Part", { Name = "OrbitHub", Size = Vector3.one, CFrame = CFrame.new(holePos), Transparency = 1, CanCollide = false, CanQuery = false, Parent = folder })
+	for i = 1, 14 do
+		local a = i / 14 * math.pi * 2
+		local r = rng:NextNumber(22, 32)
+		local size = rng:NextNumber(2, 4.5)
+		local rock = make("Part", {
+			Name = "Meteor", Shape = Enum.PartType.Ball, Size = Vector3.new(size, size * 0.85, size), Anchored = false, Massless = true,
+			CFrame = CFrame.new(holePos + Vector3.new(math.cos(a) * r, rng:NextNumber(-7, 7), math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0),
+			Material = Enum.Material.Basalt, Color = Color3.fromRGB(55, 40, 45), CanCollide = false, CanQuery = false, Parent = folder,
+		})
+		rock.Anchored = false
+		make("WeldConstraint", { Part0 = orbitHub, Part1 = rock, Parent = rock })
+		if i % 2 == 0 then
+			make("Fire", { Heat = 8, Size = size * 1.6, Color = FIRE, SecondaryColor = Color3.fromRGB(255, 220, 120), Parent = rock })
+		else
+			make("Fire", { Heat = 6, Size = size * 1.4, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 150, 220), Parent = rock })
+		end
+		local t0 = make("Attachment", { Position = Vector3.new(0, size * 0.3, 0), Parent = rock })
+		local t1 = make("Attachment", { Position = Vector3.new(0, -size * 0.3, 0), Parent = rock })
+		make("Trail", {
+			Attachment0 = t0, Attachment1 = t1, Lifetime = 0.8, LightEmission = 1, FaceCamera = true,
+			Color = ColorSequence.new(if i % 2 == 0 then FIRE else VIOLET, Color3.fromRGB(80, 30, 60)),
+			Transparency = NumberSequence.new(0.1, 1), Parent = rock,
+		})
+		make("PointLight", { Color = if i % 2 == 0 then FIRE else VIOLET, Range = 10, Brightness = 1.2, Parent = rock })
+	end
+	task.spawn(function()
+		local angle = 0
+		while orbitHub.Parent do
+			angle += task.wait(0.05) * 0.35
+			orbitHub.CFrame = CFrame.new(holePos) * CFrame.Angles(math.rad(12), angle, 0)
+		end
+	end)
+
+	-- lava cracks in the obsidian floor
+	for i = 1, 14 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(8, 28)
 		make("Part", {
-			Name = "Debris", Size = Vector3.new(rng:NextNumber(1.5, 4), rng:NextNumber(1.5, 3), rng:NextNumber(1.5, 4)),
-			CFrame = CFrame.new(holePos + Vector3.new(math.cos(a) * r, rng:NextNumber(-6, 6), math.sin(a) * r)) * CFrame.Angles(rng:NextNumber(0, 6), rng:NextNumber(0, 6), 0),
-			Material = Enum.Material.Marble, Color = Color3.fromRGB(70, 60, 95), CanCollide = false, Parent = folder,
+			Name = "LavaCrack", Size = Vector3.new(rng:NextNumber(0.3, 0.7), 0.12, rng:NextNumber(4, 10)),
+			CFrame = CFrame.new(center + Vector3.new(math.cos(a) * r, 0.06, math.sin(a) * r)) * CFrame.Angles(0, rng:NextNumber(0, math.pi), 0),
+			Material = Enum.Material.Neon, Color = if i % 3 == 0 then VIOLET else FIRE, CanCollide = false, Parent = folder,
 		})
 	end
+	-- burning rocks lying around + fire braziers
+	for i = 1, 8 do
+		local a = i / 8 * math.pi * 2 + 0.2
+		local pos = center + Vector3.new(math.cos(a) * 25, 1.2, math.sin(a) * 25)
+		local rock = make("Part", {
+			Name = "Rock", Size = Vector3.new(rng:NextNumber(3, 5), rng:NextNumber(2, 3.5), rng:NextNumber(3, 5)),
+			CFrame = CFrame.new(pos) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 6), rng:NextNumber(-0.3, 0.3)),
+			Material = Enum.Material.Basalt, Color = Color3.fromRGB(45, 35, 50), Parent = folder,
+		})
+		if i % 2 == 0 then
+			make("Fire", { Heat = 7, Size = 5, Color = FIRE, SecondaryColor = Color3.fromRGB(255, 220, 120), Parent = rock })
+			make("Smoke", { Color = Color3.fromRGB(60, 40, 70), Opacity = 0.25, RiseVelocity = 5, Size = 3, Parent = rock })
+		end
+	end
+	for i = 0, 3 do
+		local a = i / 4 * math.pi * 2 + math.pi / 4
+		local base = center + Vector3.new(math.cos(a) * 10, 0, math.sin(a) * 10)
+		cylinder(CFrame.new(base + Vector3.new(0, 2, 0)), 4, 1.4, { Name = "BrazierStand", Material = Enum.Material.Metal, Color = Color3.fromRGB(60, 50, 70), Parent = folder })
+		local bowl = cylinder(CFrame.new(base + Vector3.new(0, 4.3, 0)), 0.8, 3.2, { Name = "Brazier", Material = Enum.Material.Metal, Color = Color3.fromRGB(80, 60, 90), Parent = folder })
+		make("Fire", { Heat = 9, Size = 4, Color = VIOLET, SecondaryColor = Color3.fromRGB(255, 160, 230), Parent = bowl })
+		make("PointLight", { Color = VIOLET, Range = 14, Brightness = 1.5, Parent = bowl })
+	end
+	-- lightning-like arcs from the hole down to big crystals
+	for i = 0, 3 do
+		local a = i / 4 * math.pi * 2
+		local c = crystal(center + Vector3.new(math.cos(a) * 19, 5, math.sin(a) * 19), 3.2, VIOLET, folder)
+		local from = make("Attachment", { Parent = hole })
+		local to = make("Attachment", { Parent = c })
+		make("Beam", {
+			Attachment0 = from, Attachment1 = to, Color = ColorSequence.new(Color3.fromRGB(230, 200, 255), VIOLET), LightEmission = 1,
+			Width0 = 0.6, Width1 = 0.3, CurveSize0 = 8, CurveSize1 = -6, Segments = 20, FaceCamera = true,
+			Transparency = NumberSequence.new(0.1, 0.5), Parent = c,
+		})
+	end
+
+	-- every few seconds a fresh meteor falls into the hole and bursts
+	task.spawn(function()
+		while hole.Parent do
+			task.wait(rng:NextNumber(2.5, 5))
+			local a = rng:NextNumber(0, math.pi * 2)
+			local startPos = holePos + Vector3.new(math.cos(a) * 110, rng:NextNumber(50, 90), math.sin(a) * 110)
+			local meteor = ball(startPos, rng:NextNumber(2, 3.5), { Name = "FallingMeteor", Material = Enum.Material.Basalt, Color = Color3.fromRGB(60, 40, 40), CanCollide = false, CanQuery = false, Parent = folder })
+			make("Fire", { Heat = 15, Size = 8, Color = FIRE, SecondaryColor = Color3.fromRGB(255, 230, 140), Parent = meteor })
+			local m0 = make("Attachment", { Position = Vector3.new(0, 1, 0), Parent = meteor })
+			local m1 = make("Attachment", { Position = Vector3.new(0, -1, 0), Parent = meteor })
+			make("Trail", { Attachment0 = m0, Attachment1 = m1, Lifetime = 1.2, LightEmission = 1, FaceCamera = true, WidthScale = NumberSequence.new(1, 0),
+				Color = ColorSequence.new(Color3.fromRGB(255, 230, 150), FIRE), Transparency = NumberSequence.new(0, 1), Parent = meteor })
+			local flight = TweenService:Create(meteor, TweenInfo.new(2.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = CFrame.new(holePos) })
+			flight:Play()
+			flight.Completed:Wait()
+			local burst = make("ParticleEmitter", {
+				Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 220, 140), VIOLET), LightEmission = 1,
+				Lifetime = NumberRange.new(0.6, 1.4), Speed = NumberRange.new(15, 30), SpreadAngle = Vector2.new(180, 180), Rate = 0,
+				Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }), Parent = meteor,
+			})
+			meteor.Transparency = 1
+			for _, child in meteor:GetChildren() do
+				if child:IsA("Fire") then
+					child.Enabled = false
+				end
+			end
+			burst:Emit(60)
+			task.delay(2, function()
+				meteor:Destroy()
+			end)
+		end
+	end)
+
 	-- altar with a beam to the hole
 	local altar = cylinder(CFrame.new(center + Vector3.new(0, 1.5, 0)), 3, 10, { Name = "Altar", Material = Enum.Material.Basalt, Color = Color3.fromRGB(40, 32, 60), Parent = folder })
 	local top = cylinder(CFrame.new(center + Vector3.new(0, 3.15, 0)), 0.3, 8, { Name = "AltarTop", Material = Enum.Material.Neon, Color = Color3.fromRGB(176, 110, 255), Parent = folder })
@@ -459,11 +581,12 @@ local function buildCells(plot, size: number, slabs, grid)
 	plot.pedestals:ClearAllChildren()
 	plot.markers:ClearAllChildren()
 	plot.cells = {}
-	local half = (size + 1) / 2
+	-- the grid grows from one corner, so making the plot bigger never moves what is already built
+	local start = -(Config.MaxGridSize - 1) * SPACING / 2
 	for y = 1, size do
 		for x = 1, size do
 			local key = Sky.key(x, y)
-			local cf = plot.cf * CFrame.new((x - half) * SPACING, 0, (y - half) * SPACING)
+			local cf = plot.cf * CFrame.new(start + (x - 1) * SPACING, 0, start + (y - 1) * SPACING)
 			plot.cells[key] = { cf = cf }
 			make("Part", {
 				Name = key, Size = Vector3.new(6, 0.3, 6), CFrame = cf * CFrame.new(0, 0.2, 0), Transparency = 1,

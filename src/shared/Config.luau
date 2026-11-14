@@ -43,7 +43,7 @@ Config.SprintSpeed = 30
 
 -- Luck
 Config.LuckPerLevel = 0.5
-Config.MaxLuckLevel = 40
+Config.MaxLuckLevel = math.huge -- no limit
 function Config.LuckCost(level: number): number
 	return math.floor(150 * 1.6 ^ level)
 end
@@ -63,8 +63,17 @@ Config.RebirthIncomeBonus = 2 -- income x(1 + rebirths * this)
 Config.RebirthLuckMult = 0.5 -- luck x(1 + rebirths * this)
 Config.AltarReach = 30
 
--- Star Index: complete a mutation row (all stars) -> claim permanent luck
-Config.IndexRowLuck = 0.5
+-- Star Index: split into tiers; each tier has a row per mutation. A complete row -> permanent luck.
+Config.IndexTiers = {
+	{ id = "near", first = 1, last = 9, luck = 0.25 },
+	{ id = "deep", first = 10, last = 18, luck = 1 },
+	{ id = "legend", first = 19, last = 27, luck = 4 },
+}
+-- extra luck for a row with a rarer mutation: luck * this
+Config.IndexMutationMult = { normal = 1, shiny = 2, golden = 4, void = 8, celestial = 16 }
+
+-- Constellations (shape bonuses) are switched off for now; flip to true to bring them back
+Config.ConstellationsEnabled = false
 
 -- Roll milestones (Roll Rewards window). Reward: cash / luck / item (+ count)
 Config.RollMilestones = {

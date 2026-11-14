@@ -152,6 +152,7 @@ local function pushState(player: Player)
 		groups = if session.eval then session.eval.groups else {},
 		discovered = data.discovered,
 		totalRolls = data.totalRolls,
+		rebirthRolls = data.rebirthRolls,
 		rebirths = data.rebirths,
 		mass = data.mass,
 		index = data.index,
@@ -236,7 +237,7 @@ local function announceIfRare(player: Player, key: string)
 		GlobalRareEv:FireAllClients(player.DisplayName, key, chance)
 		World.lightPillar(player, Items.parse(key).color)
 	elseif chance >= Config.AnnounceChance then
-		announceAll("annRolled", { player.DisplayName, { item = key }, Format.number(chance) }, Items.parse(key).color)
+		announceAll("annRolled", { player.DisplayName, { item = key }, Format.number(chance), chance }, Items.parse(key).color)
 	end
 end
 
@@ -280,6 +281,10 @@ Players.PlayerAdded:Connect(function(player)
 		end
 	end
 	giveFreeSlabs(data)
+	if data.rebirthRolls < 0 then
+		data.rebirthRolls = data.totalRolls
+	end
+	data.settings.rareAlert = data.settings.rareAlert or 50000000
 
 	local stats = Instance.new("Folder")
 	stats.Name = "leaderstats"
@@ -384,6 +389,7 @@ RollFn.OnServerInvoke = function(player)
 		announceIfRare(player, key)
 	end
 	data.totalRolls += #results
+	data.rebirthRolls += #results
 	setStat(player, "Rolls", data.totalRolls)
 	if before < Config.AutoRollUnlock and data.totalRolls >= Config.AutoRollUnlock then
 		toast(player, "toastAutoUnlocked", {}, Color3.fromRGB(90, 200, 140))
@@ -485,6 +491,8 @@ function actions.Rebirth(player, data)
 	data.slabs = {}
 	data.freeSlabsGiven = false
 	giveFreeSlabs(data)
+	data.rebirthRolls = 0 -- roll rewards start over every rebirth
+	data.milestones = {}
 	setCash(player, data, 0)
 	setStat(player, "Rebirths", data.rebirths)
 	recompute(player, data)
@@ -516,24 +524,27 @@ function actions.BuyGrid(player, data)
 	end
 end
 
-function actions.ClaimIndexRow(player, data, mutationId)
+function actions.ClaimIndexRow(player, data, mutationId, tierNumber)
 	local mutation = type(mutationId) == "string" and Mutations.ById[mutationId]
-	if not mutation or data.indexClaims[mutationId] then
+	local tier = type(tierNumber) == "number" and Config.IndexTiers[tierNumber]
+	local claimKey = tostring(tierNumber) .. ":" .. tostring(mutationId)
+	if not mutation or not tier or data.indexClaims[claimKey] then
 		return
 	end
-	for _, star in Stars.List do
-		if not data.index[Items.key(star.id, mutationId)] then
+	for i = tier.first, tier.last do
+		local star = Stars.List[i]
+		if star and not data.index[Items.key(star.id, mutationId)] then
 			return
 		end
 	end
-	data.indexClaims[mutationId] = true
-	data.bonusLuck += Config.IndexRowLuck
+	data.indexClaims[claimKey] = true
+	data.bonusLuck += tier.luck * (Config.IndexMutationMult[mutationId] or 1)
 end
 
 function actions.ClaimMilestone(player, data, number)
 	local milestone = type(number) == "number" and Config.RollMilestones[number]
 	local id = tostring(number)
-	if not milestone or data.milestones[id] or data.totalRolls < milestone.rolls then
+	if not milestone or data.milestones[id] or data.rebirthRolls < milestone.rolls then
 		return
 	end
 	data.milestones[id] = true
@@ -552,6 +563,8 @@ end
 function actions.SetSetting(player, data, name, value)
 	if (name == "music" or name == "sfx") and type(value) == "boolean" then
 		data.settings[name] = value
+	elseif name == "rareAlert" and type(value) == "number" and value == value and value >= 0 and value <= 1e15 then
+		data.settings.rareAlert = value
 	end
 end
 
@@ -619,6 +632,7 @@ function actions.AdminRolls(player, data, amount)
 	amount = adminNumber(amount)
 	if amount then
 		data.totalRolls += math.floor(math.min(amount, 1e9))
+		data.rebirthRolls += math.floor(math.min(amount, 1e9))
 		setStat(player, "Rolls", data.totalRolls)
 	end
 end
