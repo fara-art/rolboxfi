@@ -250,9 +250,19 @@ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Horizontal
 local function readout(key: string, color: Color3, iconKey: string?)
 	local box = make("Frame", { Size = UDim2.new(0.19, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
 	bind(text({ Size = UDim2.new(1, 0, 0.36, 0), TextColor3 = MUTED, FontFace = BODY, Max = 12, Parent = box }), key)
-	local icon = iconKey and uiIcon(iconKey, { Size = UDim2.new(0, 26, 0, 26), Position = UDim2.new(0, 0, 0.36, -2), Parent = box })
-	local offset = if icon then 28 else 0
-	return text({ Size = UDim2.new(1, -offset, 0.64, 0), Position = UDim2.new(0, offset, 0.36, 0), Text = "0", TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0.4, FontFace = TITLE, Max = 26, Parent = box })
+	-- icon + number as one centered group
+	local line = make("Frame", { Size = UDim2.new(1, 0, 0.64, 0), Position = UDim2.new(0, 0, 0.36, 0), BackgroundTransparency = 1, Parent = box })
+	make("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = line,
+	})
+	if iconKey then
+		uiIcon(iconKey, { Size = UDim2.new(0, 24, 0, 24), LayoutOrder = 1, Parent = line })
+	end
+	return make("TextLabel", {
+		Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, LayoutOrder = 2,
+		Text = "0", TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0.4, FontFace = TITLE, TextSize = 24, Parent = line,
+	})
 end
 local cashValue = readout("cash", Color3.fromRGB(230, 150, 20), "cash")
 local incomeValue = readout("perSec", MINT)
@@ -308,6 +318,7 @@ local windows = {}
 local function window(titleKey: string, group: string, props)
 	props.Visible = false
 	props.ZIndex = 20
+	props.Parent = gui
 	local frame = panelFrame(props)
 	local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = BLUE, ZIndex = 21, Parent = frame }, {
 		corner(12), stroke(INK, 3),
