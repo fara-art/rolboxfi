@@ -1796,14 +1796,43 @@ local function tree(base: Vector3, parent: Instance, leafColor: Color3)
 	end
 end
 
+local WOOD = Color3.fromRGB(166, 112, 70)
+local WOOD_DARK = Color3.fromRGB(120, 78, 48)
+local BRIDGE_RISE = 6 -- how high the middle of the arch goes
+
 local function bridge(direction: Vector3, from: number, to: number, parent: Instance)
 	local length = to - from
-	local cf = CFrame.lookAt(direction * (from + to) / 2 + Vector3.new(0, -0.5, 0), Vector3.new(0, -0.5, 0))
-	make("Part", { Name = "Deck", Size = Vector3.new(12, 1, length), CFrame = cf, Material = Enum.Material.Marble, Color = MARBLE, Parent = parent })
-	make("Part", { Name = "Runner", Size = Vector3.new(3, 1.05, length), CFrame = cf, Material = Enum.Material.SmoothPlastic, Color = GOLD, CanCollide = false, Parent = parent })
-	for _, side in { -6.2, 6.2 } do
-		make("Part", { Name = "Rail", Size = Vector3.new(0.5, 2.6, length), CFrame = cf * CFrame.new(side, 1.8, 0), Material = Enum.Material.Glass, Color = GLASS, Transparency = 0.45, Parent = parent })
+	local segments = math.max(8, math.floor(length / 5))
+	local side = Vector3.new(-direction.Z, 0, direction.X) -- horizontal, across the bridge
+	local function point(t: number): Vector3
+		return direction * (from + length * t) + Vector3.new(0, math.sin(math.pi * t) * BRIDGE_RISE, 0)
 	end
+
+	for i = 0, segments - 1 do
+		local a, b = point(i / segments), point((i + 1) / segments)
+		local segLength = (b - a).Magnitude + 0.6 -- small overlap: no gaps or bumps
+		local cf = CFrame.lookAt((a + b) / 2, b, Vector3.yAxis)
+		-- planks
+		make("Part", { Name = "Deck", Size = Vector3.new(11, 1, segLength), CFrame = cf * CFrame.new(0, -0.5, 0), Material = Enum.Material.WoodPlanks, Color = WOOD, Parent = parent })
+		-- rails on both sides
+		for _, s in { -5.6, 5.6 } do
+			make("Part", { Name = "Rail", Size = Vector3.new(0.5, 0.5, segLength), CFrame = cf * CFrame.new(s, 2.6, 0), Material = Enum.Material.Wood, Color = WOOD_DARK, Parent = parent })
+		end
+	end
+	-- posts at every joint, lanterns in the middle
+	for i = 0, segments do
+		local t = i / segments
+		local base = point(t)
+		for _, s in { -5.6, 5.6 } do
+			local postPos = base + side * s + Vector3.new(0, 1.5, 0)
+			make("Part", { Name = "Post", Size = Vector3.new(0.7, 3.4, 0.7), CFrame = CFrame.new(postPos), Material = Enum.Material.Wood, Color = WOOD_DARK, Parent = parent })
+			if i == math.floor(segments / 2) then
+				local lamp = make("Part", { Name = "Lantern", Size = Vector3.new(1, 1.2, 1), CFrame = CFrame.new(postPos + Vector3.new(0, 2.3, 0)), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 214, 150), CanCollide = false, Parent = parent })
+				make("PointLight", { Color = Color3.fromRGB(255, 200, 140), Range = 12, Brightness = 1, Parent = lamp })
+			end
+		end
+	end
+
 	-- arch at the hub end
 	local archCF = CFrame.lookAt(direction * (from + 2), Vector3.zero)
 	for _, side in { -7, 7 } do
@@ -1812,7 +1841,7 @@ local function bridge(direction: Vector3, from: number, to: number, parent: Inst
 	make("Part", { Name = "ArchBeam", Size = Vector3.new(17, 1.6, 2.4), CFrame = archCF * CFrame.new(0, 13.4, 0), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = parent })
 	-- cloud tufts under the bridge
 	for t = 0.2, 0.8, 0.3 do
-		cloudPuff(direction * (from + length * t) + Vector3.new(0, -6, 0), 9, parent, 2)
+		cloudPuff(point(t) + Vector3.new(0, -7, 0), 9, parent, 2)
 	end
 end
 
