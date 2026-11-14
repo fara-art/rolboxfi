@@ -33,6 +33,7 @@ local pickerCell: string? = nil
 local rolling = false
 local autoRoll = false
 local lastResult: { string }? = nil
+local showRare -- defined later (rare roll reveal)
 
 local autoLang = if string.sub(LocalizationService.RobloxLocaleId, 1, 2) == "ru" then "ru" else "en"
 local lang = autoLang
@@ -150,6 +151,23 @@ local function btn(color: Color3, props, onClick, iconKey: string?)
 			padding.PaddingLeft = UDim.new(0.3, 0)
 		end
 	end
+	-- juice: grow on hover, squish on press
+	local scale = make("UIScale", { Parent = b })
+	local function to(value: number)
+		TweenService:Create(scale, TweenInfo.new(0.12, Enum.EasingStyle.Quad), { Scale = value }):Play()
+	end
+	b.MouseEnter:Connect(function()
+		to(1.06)
+	end)
+	b.MouseLeave:Connect(function()
+		to(1)
+	end)
+	b.MouseButton1Down:Connect(function()
+		to(0.92)
+	end)
+	b.MouseButton1Up:Connect(function()
+		to(1.06)
+	end)
 	if onClick then
 		b.Activated:Connect(onClick)
 	end
@@ -270,7 +288,7 @@ local cashValue = readout("cash", Color3.fromRGB(230, 150, 20), "coins", "cash")
 local incomeValue = readout("perSec", MINT, "income")
 local luckValue = readout("luck", BLUE, "luck")
 local rollsValue = readout("rolls", LILAC, "rolls")
-local rebirthValue = readout("rebirths", TEXT)
+local rebirthValue = readout("rebirths", TEXT, "rebirth")
 
 local showerBanner = text({ Size = UDim2.new(0.4, 0, 0, 22), Position = UDim2.new(0.3, 0, 0, 70), Text = "", TextColor3 = BLUE, FontFace = TITLE, TextStrokeColor3 = WHITE, TextStrokeTransparency = 0, Max = 18, Parent = gui })
 local announce = text({
@@ -334,7 +352,7 @@ local function window(titleKey: string, group: string, props)
 		Size = UDim2.new(1, 0, 1, -50), Position = UDim2.new(0, 0, 0, 50), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 21,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 5, ScrollBarImageColor3 = LINE, Parent = frame,
 	}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }), make("UIPadding", { PaddingRight = UDim.new(0, 8) }) })
-	local w = { frame = frame, body = body, group = group }
+	local w = { frame = frame, body = body, group = group, scale = make("UIScale", { Parent = frame }) }
 	table.insert(windows, w)
 	return w
 end
@@ -375,6 +393,10 @@ local function open(w, force: boolean?)
 		end
 	end
 	w.frame.Visible = willShow
+	if willShow then
+		w.scale.Scale = 0.85
+		TweenService:Create(w.scale, TweenInfo.new(0.28, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	end
 	if willShow and renderers[w] then
 		local ok, err = pcall(renderers[w])
 		if not ok then
@@ -810,7 +832,7 @@ renderers[holeW] = function()
 		if ready then
 			ActionEv:FireServer("Rebirth")
 		end
-	end)
+	end, "rebirth")
 	text({ Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 11, Text = t("holeFeed"), TextColor3 = MUTED, FontFace = BODY_SEMI, Max = 15, ZIndex = 21, Parent = body })
 	for order, key in sortedInventory() do
 		local mass = Items.income(key) * Config.SellMultiplier
@@ -1048,6 +1070,41 @@ render = function()
 end
 
 ---------------------------------------------------------------- Roll
+-- Big centered reveal for rare finds
+showRare = function(key: string)
+	local star, mutation = Items.parse(key)
+	if not star then
+		return
+	end
+	local legendary = Items.chance(key) >= 100000
+	local holder = make("Frame", {
+		Size = UDim2.new(0, 520, 0, 300), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.42, 0),
+		BackgroundTransparency = 1, ZIndex = 90, Parent = gui,
+	})
+	local scale = make("UIScale", { Scale = 0.2, Parent = holder })
+	starIcon(star, mutation, { Size = UDim2.new(0, 150, 0, 150), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = 91, Parent = holder })
+	local title = text({
+		Size = UDim2.new(1, 0, 0, 70), Position = UDim2.new(0, 0, 0, 150), Text = t(if legendary then "legendBig" else "rareBig"), FontFace = TITLE,
+		TextColor3 = if legendary then GOLD else star.color, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 72, ZIndex = 91, Parent = holder,
+	})
+	local name = text({
+		Size = UDim2.new(1, 0, 0, 44), Position = UDim2.new(0, 0, 0, 222), Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))),
+		FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 34, ZIndex = 91, Parent = holder,
+	})
+	TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	local camera = workspace.CurrentCamera
+	if camera then
+		TweenService:Create(camera, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), { FieldOfView = camera.FieldOfView + (if legendary then 14 else 7) }):Play()
+	end
+	task.delay(2.2, function()
+		TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 }):Play()
+		task.wait(0.4)
+		holder:Destroy()
+	end)
+	local _ = title
+	local _n = name
+end
+
 local function doRoll()
 	if rolling then
 		return
@@ -1071,6 +1128,15 @@ local function doRoll()
 		lastResult = result
 		resultName.Size = UDim2.new(1, 0, 0.2, 0)
 		TweenService:Create(resultName, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = UDim2.new(1, 0, 0.16, 0) }):Play()
+		local best = result[1]
+		for _, key in result do
+			if Items.chance(key) > Items.chance(best) then
+				best = key
+			end
+		end
+		if Items.chance(best) >= 1000 then
+			showRare(best)
+		end
 	end
 	renderTelescope()
 	local cooldown = Config.RollCooldown(if state then state.rollSpeedLevel else 0)
@@ -1138,11 +1204,16 @@ end)
 -- Cash readout
 task.spawn(function()
 	local cash = player:WaitForChild("leaderstats"):WaitForChild("Cash")
-	local function update()
-		cashValue.Text = Format.number(cash.Value)
-	end
-	cash.Changed:Connect(update)
-	update()
+	-- the number rolls smoothly to the new value
+	local shown = Instance.new("NumberValue")
+	shown.Value = cash.Value
+	shown.Changed:Connect(function()
+		cashValue.Text = Format.number(shown.Value)
+	end)
+	cash.Changed:Connect(function()
+		TweenService:Create(shown, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { Value = cash.Value }):Play()
+	end)
+	cashValue.Text = Format.number(cash.Value)
 end)
 
 ---------------------------------------------------------------- World text, prompts, location windows (2x a second)

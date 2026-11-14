@@ -160,6 +160,17 @@ local function crystal(position: Vector3, size: number, color: Color3, parent: I
 	return c
 end
 
+local FLOWERS = { Color3.fromRGB(255, 160, 200), Color3.fromRGB(255, 230, 120), Color3.fromRGB(255, 255, 255), Color3.fromRGB(190, 170, 255) }
+local function flowers(center: Vector3, radius: number, count: number, parent: Instance)
+	for _ = 1, count do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(radius * 0.4, radius)
+		local p = center + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		make("Part", { Name = "Stem", Size = Vector3.new(0.15, 0.9, 0.15), CFrame = CFrame.new(p + Vector3.new(0, 0.45, 0)), Color = Color3.fromRGB(90, 170, 80), CanCollide = false, CastShadow = false, Parent = parent })
+		ball(p + Vector3.new(0, 1, 0), rng:NextNumber(0.6, 0.9), { Name = "Flower", Material = Enum.Material.SmoothPlastic, Color = FLOWERS[rng:NextInteger(1, #FLOWERS)], CanCollide = false, CastShadow = false, Parent = parent })
+	end
+end
+
 local function tree(base: Vector3, parent: Instance, leafColor: Color3)
 	local height = rng:NextNumber(7, 10)
 	make("Part", {
@@ -264,11 +275,23 @@ local function buildHub(folder: Folder)
 		crystal(base + Vector3.new(0, 18, 0), 2.2, if i % 2 == 0 then Color3.fromRGB(150, 220, 255) else Color3.fromRGB(190, 255, 220), folder)
 	end
 
+	-- drifting golden sparkles above the island
+	local air = make("Part", { Name = "AirSparkles", Size = Vector3.new(90, 1, 90), CFrame = CFrame.new(0, 6, 0), Transparency = 1, CanCollide = false, CanQuery = false, Parent = folder })
+	make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 240, 190), Color3.fromRGB(190, 230, 255)),
+		LightEmission = 1, LightInfluence = 0, Rate = 14, Lifetime = NumberRange.new(5, 9), Speed = NumberRange.new(0.4, 1.2),
+		SpreadAngle = Vector2.new(180, 180), RotSpeed = NumberRange.new(-40, 40),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0) }),
+		Parent = air,
+	})
+
 	-- trees
 	local leaves = { Color3.fromRGB(255, 205, 225), Color3.fromRGB(190, 240, 205), Color3.fromRGB(255, 230, 190), Color3.fromRGB(215, 205, 255) }
 	for i = 1, 4 do
 		local a = (i - 0.5) / 4 * math.pi * 2 + 0.3
-		tree(Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31), folder, leaves[i])
+		local base = Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31)
+		tree(base, folder, leaves[i])
+		flowers(base, 5, 10, folder)
 	end
 
 	-- the spawn plate stays but invisible
@@ -425,6 +448,7 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 	end
 	for _, c in { { -30, -30 }, { 30, -30 }, { -30, 30 }, { 30, 30 } } do
 		local base = (cf * CFrame.new(c[1], 0, c[2])).Position
+		flowers(base, 4, 6, plotFolder)
 		pillar(base, 8, plotFolder)
 		crystal(base + Vector3.new(0, 11, 0), 1.6, GLASS, plotFolder)
 	end

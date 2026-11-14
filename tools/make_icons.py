@@ -222,6 +222,22 @@ img = shape(img, lambda d: d.text((512, 500), "$", font=DOLLAR, anchor="mm", fil
 img = shape(img, lambda d: (d.ellipse((200, 350, 280, 430), fill=255), d.ellipse((740, 570, 820, 650), fill=255)), (210, 250, 200), (150, 220, 140), outline=10, gloss=False, shadow=False)
 icons["ui_income"] = save(sparkle(img, 820, 230, 70), "ui_income")
 
+# rebirth: circular arrow
+def rebirth_arrow(d):
+    r, w = 300, 120
+    d.arc((C - r, C - r, C + r, C + r), 70, 330, fill=255, width=w)
+    th = math.radians(330)
+    rm = r - w / 2  # arc centerline radius
+    px, py = C + rm * math.cos(th), C + rm * math.sin(th)
+    tx, ty = -math.sin(th), math.cos(th)  # direction of travel (clockwise on screen)
+    nx, ny = math.cos(th), math.sin(th)
+    tip = (px - tx * 40 + tx * 200, py - ty * 40 + ty * 200)
+    base1 = (px - tx * 40 + nx * 170, py - ty * 40 + ny * 170)
+    base2 = (px - tx * 40 - nx * 170, py - ty * 40 - ny * 170)
+    d.polygon([tip, base1, base2], fill=255)
+img = shape(blank(), rebirth_arrow, (210, 160, 255), (120, 60, 220), outline=30)
+icons["ui_rebirth"] = save(sparkle(img, 512, 512, 90), "ui_rebirth")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

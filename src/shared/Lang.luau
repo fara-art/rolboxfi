@@ -44,7 +44,7 @@ Lang.Strings = {
 		promptPlace = "Place star", promptRemove = "Take star", promptForge = "Forge", promptHole = "Black Hole", pedestal = "Pedestal",
 		rewardsTitle = "ROLL REWARDS", rewards = "REWARDS", rewardsDone = "ROLLS DONE", nextReward = "Next reward",
 		moreRolls = "%s more rolls", allDone = "All rewards reached!", locked = "LOCKED", cashWord = "Cash", luckWord = "Luck", rollsWord = "ROLLS", toastReward = "Reward: %s",
-		settings = "SETTINGS", music = "Music", sfx = "Sounds", on = "ON", off = "OFF", rebirthBig = "REBIRTH!",
+		settings = "SETTINGS", music = "Music", sfx = "Sounds", on = "ON", off = "OFF", rebirthBig = "REBIRTH!", rareBig = "RARE!", legendBig = "LEGENDARY!",
 		langButton = "EN",
 	},
 	ru = {
@@ -87,7 +87,7 @@ Lang.Strings = {
 		promptPlace = "Поставить звезду", promptRemove = "Забрать звезду", promptForge = "Ковать", promptHole = "Чёрная дыра", pedestal = "Постамент",
 		rewardsTitle = "НАГРАДЫ ЗА КРУТКИ", rewards = "НАГРАДЫ", rewardsDone = "КРУТОК СДЕЛАНО", nextReward = "Следующая награда",
 		moreRolls = "ещё %s круток", allDone = "Все награды открыты!", locked = "ЗАКРЫТО", cashWord = "Деньги", luckWord = "Удача", rollsWord = "КРУТОК", toastReward = "Награда: %s",
-		settings = "НАСТРОЙКИ", music = "Музыка", sfx = "Звуки", on = "ВКЛ", off = "ВЫКЛ", rebirthBig = "ПЕРЕРОЖДЕНИЕ!",
+		settings = "НАСТРОЙКИ", music = "Музыка", sfx = "Звуки", on = "ВКЛ", off = "ВЫКЛ", rebirthBig = "ПЕРЕРОЖДЕНИЕ!", rareBig = "РЕДКАЯ!", legendBig = "ЛЕГЕНДАРНАЯ!",
 		langButton = "RU",
 	},
 }

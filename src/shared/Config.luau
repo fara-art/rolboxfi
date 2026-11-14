@@ -107,6 +107,7 @@ Config.UiIcons = {
 	settings = "104579262501708",
 	coins = "", -- ui_coins.png (header cash)
 	income = "", -- ui_income.png (header per second)
+	rebirth = "", -- ui_rebirth.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
