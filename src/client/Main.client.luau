@@ -228,12 +228,7 @@ local function starIcon(star, mutation, props)
 	local holder = make("Frame", props, { make("UIAspectRatioConstraint", { AspectRatio = 1 }) })
 	holder.BackgroundTransparency = 1
 	local id = Config.StarIcons[star.id]
-	if id and id ~= "" then
-		make("ImageLabel", {
-			Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = holder.ZIndex,
-			Image = if string.find(id, "://") then id else "rbxassetid://" .. id, Parent = holder,
-		})
-	else
+	do
 		local disc = make("Frame", {
 			Size = UDim2.new(0.7, 0, 0.7, 0), Position = UDim2.new(0.15, 0, 0.15, 0), BackgroundColor3 = WHITE, ZIndex = holder.ZIndex, Parent = holder,
 		}, {
@@ -242,6 +237,13 @@ local function starIcon(star, mutation, props)
 			stroke(shade(star.color, 0.25), 2),
 		})
 		local _ = disc
+	end
+	if id and id ~= "" then
+		-- the photo covers the disc once it has loaded
+		make("ImageLabel", {
+			Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = holder.ZIndex,
+			Image = if string.find(id, "://") then id else "rbxassetid://" .. id, Parent = holder,
+		})
 	end
 	if mutation and mutation.id ~= "normal" then
 		make("Frame", {
