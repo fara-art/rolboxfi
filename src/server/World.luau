@@ -258,7 +258,7 @@ local function setupLighting()
 		Glare = 0.25, Haze = 1.4, Parent = Lighting,
 	})
 	make("Sky", { CelestialBodiesShown = true, SunAngularSize = 14, StarCount = 0, Parent = Lighting })
-	make("BloomEffect", { Intensity = 0.4, Size = 24, Threshold = 1.6, Parent = Lighting })
+	make("BloomEffect", { Intensity = 0.2, Size = 18, Threshold = 2, Parent = Lighting })
 	make("SunRaysEffect", { Intensity = 0.06, Spread = 0.8, Parent = Lighting })
 	make("ColorCorrectionEffect", { Brightness = 0.03, Contrast = 0.05, Saturation = 0.12, TintColor = Color3.fromRGB(255, 252, 245), Parent = Lighting })
 
@@ -644,7 +644,7 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 	bridge(direction, HUB_RADIUS - 2, RING - PLOT_SIZE / 2 + 1, plotFolder)
 
 	local post = make("Part", { Name = "SignPost", Size = Vector3.new(1, 7, 1), CFrame = cf * CFrame.new(-9, 3.5, -(PLOT_SIZE / 2 - 2)), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
-	local label = worldText(post, "signFree", 6, 18, 5)
+	local label = worldText(post, "signFree", 5, 11, 3.2)
 	label:SetAttribute("Owner", "")
 	label:SetAttribute("Income", 0)
 

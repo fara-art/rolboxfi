@@ -225,9 +225,7 @@ local function inBounds(data, key: any): boolean
 end
 
 local function rollItem(luck: number): string
-	local star = Odds.roll(luck, rng)
-	local mutation = Odds.rollMutation(luck, rng)
-	return Items.key(star.id, mutation.id)
+	return Odds.roll(luck, rng).id -- mutations come from upgrading at the Forge
 end
 
 local function announceIfRare(player: Player, key: string)
@@ -458,6 +456,31 @@ function actions.Forge(player, data, itemKey)
 	if Items.chance(result) >= Config.AnnounceChance then
 		announceAll("annForged", { player.DisplayName, { item = result } }, nextStar.color)
 	end
+end
+
+-- Forge upgrade: N copies of a star -> 1 copy with the next mutation
+function actions.UpgradeMutation(player, data, itemKey)
+	local star, mutation = Items.parse(itemKey)
+	if not star then
+		return
+	end
+	if World.distanceTo(player, World.ForgePosition) > Config.ForgeReach then
+		return toast(player, "toastTooFar")
+	end
+	local nextMutation = Mutations.List[mutation.index + 1]
+	if not nextMutation then
+		return
+	end
+	if (data.inventory[itemKey] or 0) < nextMutation.copies then
+		return toast(player, "toastNeedSame", { nextMutation.copies })
+	end
+	local result = Items.key(star.id, nextMutation.id)
+	if not spend(player, data, Items.income(result) * Config.ForgeCostMult) then
+		return
+	end
+	takeFromInventory(data, itemKey, nextMutation.copies)
+	addToInventory(player, data, result, 1)
+	toast(player, "toastForged", { { item = result } }, nextMutation.color)
 end
 
 function actions.Feed(player, data, itemKey, count)

@@ -1,12 +1,14 @@
--- Mutation rolled separately from the star. Multiplies income.
+-- Mutations are upgrades made at the Star Forge (not rolled).
+-- chance = how much rarer the star becomes (1/100K Shiny -> 1/150K), mult = income multiplier.
+-- copies = how many of the previous tier you combine into one.
 local Mutations = {}
 
 Mutations.List = {
 	{ id = "normal", name = "Normal", chance = 1, mult = 1, color = Color3.fromRGB(255, 255, 255) },
-	{ id = "shiny", name = "Shiny", chance = 20, mult = 2, color = Color3.fromRGB(255, 255, 170) },
-	{ id = "golden", name = "Golden", chance = 150, mult = 5, color = Color3.fromRGB(255, 200, 40) },
-	{ id = "void", name = "Void", chance = 1500, mult = 15, color = Color3.fromRGB(140, 60, 255) },
-	{ id = "celestial", name = "Celestial", chance = 20000, mult = 50, color = Color3.fromRGB(120, 255, 255) },
+	{ id = "shiny", name = "Shiny", chance = 1.5, mult = 1.5, copies = 2, color = Color3.fromRGB(255, 255, 170) },
+	{ id = "golden", name = "Golden", chance = 3, mult = 3, copies = 2, color = Color3.fromRGB(255, 200, 40) },
+	{ id = "void", name = "Void", chance = 10, mult = 10, copies = 3, color = Color3.fromRGB(140, 60, 255) },
+	{ id = "celestial", name = "Celestial", chance = 50, mult = 50, copies = 5, color = Color3.fromRGB(120, 255, 255) },
 }
 
 Mutations.ById = {}

@@ -452,16 +452,190 @@ def infinity():
     c.save("infinity")
 
 
+# ------------------------------------------------------------------ named stars: drawn by kind + color
+import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from star_catalog import NAMED
+
+
+def tint(c, k):
+    return np.clip(np.array(c, np.float32) / 255.0 * k, 0, 2)
+
+
+def hue_shift(c, amount):
+    r, g, b = c
+    return (int(g * (1 - amount) + r * amount), int(b * (1 - amount) + g * amount), int(r * (1 - amount) + b * amount))
+
+
+def kind_sphere(name, c, seed):
+    cv = Canvas(seed)
+    cv.add_halo(0, 0, 0.6, tint(c, 0.9), 0.6)
+    cv.sphere(0, 0, 0.44, tint(c, 1.15) * 0.5 + col(255, 255, 255) * 0.5, tint(c, 0.75), texture=surface(seed, 10, 5), tex_strength=0.28)
+    cv.save(name)
+
+
+def kind_point(name, c, seed):
+    cv = Canvas(seed)
+    cv.add_halo(0, 0, 0.45, tint(c, 0.8), 0.6)
+    rot = (seed % 7) * 0.12
+    cv.spikes(0, 0, 0.55, tint(c, 1.1), 1.4, width=0.009, rot=math.pi / 4 + rot)
+    cv.spikes(0, 0, 0.25, tint(c, 0.9), 0.6, width=0.006, rot=rot)
+    cv.add_glow(0, 0, 0.09, col(255, 255, 255), 6)
+    cv.save(name)
+
+
+def kind_giant(name, c, seed):
+    cv = Canvas(seed)
+    outflow = warp(fbm(seed, 6, 4), seed + 1, 0.2) * np.exp(-((R - 0.7) / 0.18) ** 2)
+    cv.add(np.clip(outflow - 0.4, 0, 1) * 1.8, tint(c, 1))
+    cv.add_halo(0, 0, 0.85, tint(c, 0.8), 0.45)
+    cv.sphere(0, 0, 0.62, tint(c, 1.2) * 0.6 + col(255, 230, 180) * 0.4, tint(c, 0.55), texture=surface(seed + 2, 3, 6), tex_strength=0.45, limb=0.72)
+    cv.save(name)
+
+
+def kind_binary(name, c, seed):
+    cv = Canvas(seed)
+    c2 = hue_shift(c, 0.6)
+    swirl = warp(fbm(seed, 5, 3), seed + 1, 0.15) * np.exp(-((X / 0.8) ** 2 + (Y / 0.4) ** 2))
+    cv.add(swirl * 0.45, tint(c, 0.9))
+    cv.add_halo(-0.27, 0.04, 0.38, tint(c, 0.9), 0.6)
+    cv.add_halo(0.3, -0.05, 0.33, tint(c2, 0.9), 0.6)
+    cv.sphere(-0.27, 0.04, 0.24, tint(c, 1.1) * 0.6 + col(255, 255, 255) * 0.4, tint(c, 0.7), texture=surface(seed + 3, 10, 5), tex_strength=0.2)
+    cv.sphere(0.3, -0.05, 0.17, tint(c2, 1.1) * 0.6 + col(255, 255, 255) * 0.4, tint(c2, 0.7), limb=0.5)
+    cv.save(name)
+
+
+def kind_pulsar(name, c, seed):
+    cv = Canvas(seed)
+    haze = warp(fbm(seed, 6, 3), seed + 1, 0.12) * np.exp(-(R / 0.8) ** 2)
+    cv.add(haze * 0.45, tint(c, 0.8))
+    a = math.radians(50 + (seed % 5) * 15)
+    dx, dy = math.cos(a), math.sin(a)
+    along = X * dx + Y * dy
+    perp = -X * dy + Y * dx
+    beam = np.exp(-(perp / (0.02 + np.abs(along) * 0.12)) ** 2) * np.exp(-np.abs(along) * 0.8)
+    cv.add(beam * 1.6, tint(c, 1.1) * 0.5 + col(255, 255, 255) * 0.5)
+    cv.add_halo(0, 0, 0.25, tint(c, 1), 1.0)
+    cv.add_glow(0, 0, 0.07, col(255, 255, 255), 6)
+    cv.save(name)
+
+
+def kind_blackhole(name, c, seed):
+    cv = Canvas(seed)
+    size = 0.36 + (seed % 3) * 0.04
+    ringf = np.exp(-((R - size) / 0.07) ** 2)
+    doppler = 0.55 + 0.45 * np.clip(Y / 0.5 + 0.2, -1, 1)
+    cv.add(ringf * doppler * 2.6, tint(c, 1))
+    cv.add(np.exp(-((R - size) / 0.025) ** 2) * doppler * 1.5, tint(c, 0.6) + col(255, 255, 255) * 0.4)
+    swirl = fbm(seed + 1, 5, 6)
+    disk = np.exp(-((Y * 3.2) ** 2)) * np.exp(-((R - size * 1.7) / 0.35) ** 2) * (0.6 + swirl * 0.8)
+    cv.add(disk * 0.9, tint(c, 0.9))
+    shadow = np.clip((size * 0.72 - R) / 0.02, 0, 1)
+    cv.L *= (1 - shadow)[..., None]
+    cv.save(name)
+
+
+def kind_magnetar(name, c, seed):
+    cv = Canvas(seed)
+    for k in range(6):
+        a = k * math.pi / 3 + seed * 0.1
+        loop = np.exp(-((R - 0.25 - 0.18 * np.abs(np.cos(ANG - a))) / 0.015) ** 2) * (np.cos(ANG - a) > 0)
+        cv.add(loop * 0.9, tint(c, 1))
+    cv.add_halo(0, 0, 0.35, tint(c, 1), 1.0)
+    cv.add_glow(0, 0, 0.08, col(255, 255, 255), 7)
+    cv.save(name)
+
+
+def kind_nebula(name, c, seed):
+    cv = Canvas(seed)
+    c2 = hue_shift(c, 0.5)
+    gas = warp(fbm(seed, 7, 3), seed + 1, 0.2)
+    gx, gy = np.random.default_rng(seed).uniform(-0.2, 0.2, 2)
+    env = np.exp(-(((X - gx) / 0.75) ** 2 + ((Y - gy) / 0.6) ** 2))
+    cv.add(np.clip(gas - 0.25, 0, 1) * env * 3.2, tint(c, 1))
+    cv.add(np.clip(gas - 0.5, 0, 1) * env * 3.0, tint(c2, 1))
+    dust = warp(fbm(seed + 2, 6, 5), seed + 3, 0.1)
+    cv.L *= (1 - np.clip(dust - 0.6, 0, 1) * 1.6 * env)[..., None]
+    rng = np.random.default_rng(seed + 4)
+    for _ in range(5):
+        x, y = rng.normal(0, 0.25, 2)
+        cv.add_glow(x, y, 0.02, col(255, 255, 255), 2.5)
+    cv.save(name)
+
+
+def kind_remnant(name, c, seed):
+    cv = Canvas(seed)
+    c2 = hue_shift(c, 0.55)
+    fil = warp(fbm(seed, 7, 6), seed + 1, 0.08)
+    radius = 0.45 + (seed % 3) * 0.06
+    shell = np.exp(-((R - radius) / 0.12) ** 2)
+    cv.add(np.clip(fil - 0.4, 0, 1) * shell * 3.4, tint(c, 1))
+    cv.add(np.clip(fil - 0.6, 0, 1) * shell * 3.4, tint(c2, 1))
+    cv.add(np.clip(fil - 0.55, 0, 1) * np.exp(-(R / (radius * 0.8)) ** 2) * 1.2, tint(c, 0.7))
+    cv.add_glow(0, 0, 0.045, col(255, 255, 255), 5)
+    cv.save(name)
+
+
+def kind_galaxy(name, c, seed):
+    cv = Canvas(seed)
+    tilt = 0.35 + (seed % 4) * 0.15
+    rot = seed * 0.37
+    u = X * math.cos(rot) + Y * math.sin(rot)
+    v = (-X * math.sin(rot) + Y * math.cos(rot)) / tilt
+    rr = np.sqrt(u * u + v * v)
+    th = np.arctan2(v, u)
+    arms = 0.5 + 0.5 * np.cos(2 * (th - np.log(rr + 1e-3) * (2 + (seed % 3) * 0.5)))
+    disk_env = np.exp(-(rr / 0.62) ** 2)
+    cv.add(arms ** 2 * disk_env * (0.5 + fbm(seed, 6, 8)) * 1.3, tint(c, 0.9))
+    cv.add(np.exp(-(rr / 0.2) ** 2) * 2.2, col(255, 215, 150))
+    lane = arms ** 6 * disk_env * fbm(seed + 1, 5, 10)
+    cv.L *= (1 - np.clip(lane * 0.5, 0, 0.6))[..., None]
+    cv.add_glow(0, 0, 0.05, col(255, 240, 210), 3)
+    cv.save(name)
+
+
+def kind_lens(name, c, seed):
+    cv = Canvas(seed)
+    ringr = 0.42 + (seed % 3) * 0.05
+    cv.add(np.exp(-((R - ringr) / 0.035) ** 2) * (0.7 + 0.3 * fbm(seed, 4, 6)) * 2.2, tint(c, 1))
+    cv.add(np.exp(-((R - ringr) / 0.12) ** 2) * 0.4, tint(c, 0.8))
+    cv.add(np.exp(-(R / 0.16) ** 2) * 1.8, col(255, 225, 170))
+    cv.save(name)
+
+
+def kind_quasar(name, c, seed):
+    cv = Canvas(seed)
+    ang = -0.3 + (seed % 5) * 0.15
+    d = cv.disk(0, 0, 0.8, 0.22, ang, tint(c, 1), 0.0)
+    cv.add(np.clip(1 - d, 0, 1) ** 1.5 * (0.6 + 0.6 * fbm(seed, 5, 6)) * 1.6, tint(c, 1))
+    cv.add(np.clip(1 - d * 1.8, 0, 1) * 2.2, col(255, 215, 170))
+    a = ang + math.pi / 2
+    dx, dy = math.cos(a), math.sin(a)
+    along = X * dx + Y * dy
+    perp = -X * dy + Y * dx
+    cv.add(np.exp(-(perp / (0.015 + np.abs(along) * 0.05)) ** 2) * np.exp(-np.abs(along) * 1.2) * 1.8, col(200, 210, 255))
+    cv.add_glow(0, 0, 0.07, col(255, 255, 255), 8)
+    cv.save(name)
+
+
+KINDS = {
+    "sphere": kind_sphere, "point": kind_point, "giant": kind_giant, "binary": kind_binary, "pulsar": kind_pulsar,
+    "blackhole": kind_blackhole, "magnetar": kind_magnetar, "nebula": kind_nebula, "remnant": kind_remnant,
+    "galaxy": kind_galaxy, "lens": kind_lens, "quasar": kind_quasar,
+}
+for i, (sid, _en, _ru, kind, color) in enumerate(NAMED):
+    KINDS[kind](sid, color, 1000 + i * 7)
+
 for fn in [dust, spark, browndwarf, red_dwarf, whitedwarf, sun, redgiant, bluegiant, binary, pulsar, wolfrayet,
            neutron, hypergiant, quasar, kilonova, supernova, magnetar, nebula, whitehole, eventhorizon, galaxy,
            darkmatter, cosmic, multiverse, bigbang, cosmicweb, infinity]:
     fn()
 
-names = ["dust", "spark", "browndwarf", "dwarf", "whitedwarf", "sun", "redgiant", "giant", "binary", "pulsar", "wolfrayet",
-         "neutron", "hypergiant", "quasar", "kilonova", "supernova", "magnetar", "nebula", "whitehole", "eventhorizon",
-         "galaxy", "darkmatter", "cosmic", "multiverse", "bigbang", "cosmicweb", "infinity"]
-sheet = Image.new("RGBA", (OUT * 9, OUT * 3), (235, 242, 255, 255))
+import re
+names = re.findall(r'id = "(\w+)"', (root.parent.parent / "src" / "shared" / "Stars.luau").read_text())
+cols = 11
+sheet = Image.new("RGBA", (OUT * cols, OUT * math.ceil(len(names) / cols)), (235, 242, 255, 255))
 for i, n in enumerate(names):
-    sheet.alpha_composite(Image.open(root / f"{n}.png"), ((i % 9) * OUT, (i // 9) * OUT))
+    sheet.alpha_composite(Image.open(root / f"{n}.png"), ((i % cols) * OUT, (i // cols) * OUT))
 sheet.save(root.parent / "stars_preview.png")
 print(len(names), "star icons ->", root)

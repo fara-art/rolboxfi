@@ -64,11 +64,19 @@ Config.RebirthLuckMult = 0.5 -- luck x(1 + rebirths * this)
 Config.AltarReach = 30
 
 -- Star Index: split into tiers; each tier has a row per mutation. A complete row -> permanent luck.
-Config.IndexTiers = {
-	{ id = "near", first = 1, last = 9, luck = 0.25 },
-	{ id = "deep", first = 10, last = 18, luck = 1 },
-	{ id = "legend", first = 19, last = 27, luck = 4 },
-}
+do
+	local Stars = require(script.Parent.Stars)
+	Config.IndexTiers = {}
+	local perTier = 9
+	for first = 1, #Stars.List, perTier do
+		local number = #Config.IndexTiers + 1
+		table.insert(Config.IndexTiers, {
+			first = first,
+			last = math.min(first + perTier - 1, #Stars.List),
+			luck = math.floor(0.25 * 1.8 ^ (number - 1) * 100) / 100,
+		})
+	end
+end
 -- extra luck for a row with a rarer mutation: luck * this
 Config.IndexMutationMult = { normal = 1, shiny = 2, golden = 4, void = 8, celestial = 16 }
 

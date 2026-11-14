@@ -25,6 +25,9 @@ local function part(model: Model, props)
 end
 
 local function orb(model: Model, cf: CFrame, diameter: number, color: Color3, transparency: number?)
+	if transparency and transparency > 0 then
+		transparency = 1 - (1 - transparency) * 0.45 -- glow shells are much fainter
+	end
 	return part(model, {
 		Name = "Orb", Shape = Enum.PartType.Ball, Size = Vector3.one * diameter, CFrame = cf,
 		Material = Enum.Material.Neon, Color = color, Transparency = transparency or 0,
@@ -44,9 +47,9 @@ end
 
 local function particles(parent: BasePart, props)
 	local e = Instance.new("ParticleEmitter")
-	e.LightEmission = 1
+	e.LightEmission = 0.6
 	e.LightInfluence = 0
-	e.Rate = props.Rate or 8
+	e.Rate = (props.Rate or 8) * 1.8
 	e.Lifetime = props.Lifetime or NumberRange.new(1.2, 2.4)
 	e.Speed = props.Speed or NumberRange.new(0.6, 1.6)
 	e.SpreadAngle = props.Spread or Vector2.new(180, 180)
@@ -67,12 +70,13 @@ end
 local function light(parent: BasePart, color: Color3, range: number, brightness: number)
 	local l = Instance.new("PointLight")
 	l.Color = color
-	l.Range = range
-	l.Brightness = brightness
+	l.Range = range * 0.8
+	l.Brightness = brightness * 0.4
 	l.Shadows = false
 	l.Parent = parent
 end
 
+local KIND_BUILDERS -- filled in below
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local WHITE = Color3.new(1, 1, 1)
 
@@ -433,6 +437,12 @@ builders.cosmicweb = function(m, cf, color)
 	return core
 end
 
+-- named stars borrow the look of a type
+KIND_BUILDERS = {
+	sphere = "sun", point = "whitedwarf", giant = "redgiant", binary = "binary", pulsar = "pulsar", blackhole = "eventhorizon",
+	magnetar = "magnetar", nebula = "nebula", remnant = "supernova", galaxy = "galaxy", lens = "whitehole", quasar = "quasar",
+}
+
 -- star, mutation, level -> Model at position
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")
@@ -440,7 +450,7 @@ function StarModels.create(star, mutation, level: number, position: Vector3, par
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- arrives on clients in one piece
 	local scale = 1.3 + (level - 1) * 0.1
 	local cf = CFrame.new(position)
-	local builder = builders[star.id] or builders.dwarf
+	local builder = builders[star.id] or builders[KIND_BUILDERS[star.kind or ""] or ""] or builders.dwarf
 	local core = builder(model, cf, star.color)
 	model.PrimaryPart = core
 

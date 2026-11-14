@@ -606,10 +606,12 @@ local indexTier = 1
 renderers[indexW] = function()
 	local body = indexW.body
 	clear(body)
-	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = tabs })
+	local tabRows = math.ceil(#Config.IndexTiers / 5)
+	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, tabRows * 40), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
+	make("UIGridLayout", { CellSize = UDim2.new(0.2, -5, 0, 34), CellPadding = UDim2.new(0, 5, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = tabs })
 	for number, tier in Config.IndexTiers do
-		btn(if indexTier == number then BLUE else GREY, { Size = UDim2.new(1 / #Config.IndexTiers, -5, 1, 0), Text = t("tier_" .. tier.id), Max = 15, ZIndex = 22, Parent = tabs }, function()
+		local label = t("oneIn", Format.number(Stars.List[tier.first].chance)) .. "–" .. Format.number(Stars.List[tier.last].chance)
+		btn(if indexTier == number then BLUE else GREY, { LayoutOrder = number, Text = label, Max = 13, ZIndex = 22, Parent = tabs }, function()
 			indexTier = number
 			renderers[indexW]()
 		end)
@@ -821,11 +823,13 @@ renderers[oddsW] = function()
 		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if odds[star.id] > 0 then 1 / odds[star.id] else star.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
 	end
 	text({ Size = UDim2.new(1, 0, 0, 28), LayoutOrder = 100, Text = t("mutations"), TextColor3 = BLUE, FontFace = TITLE, Max = 16, ZIndex = 21, Parent = body })
-	local mutationOdds = Odds.exactMutations(luck)
+	text({ Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 101, Text = t("mutationsInfo"), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 14, ZIndex = 21, Parent = body })
 	for i, mutation in Mutations.List do
-		local r = row(body, 100 + i, 40, WHITE)
-		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 12, 0, 0), Text = Lang.mutation(lang, mutation) .. "  x" .. mutation.mult, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
-		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if mutationOdds[mutation.id] > 0 then 1 / mutationOdds[mutation.id] else mutation.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+		if mutation.copies then
+			local r = row(body, 101 + i, 40, WHITE)
+			text({ Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0, 12, 0, 0), Text = Lang.mutation(lang, mutation), FontFace = TITLE, TextColor3 = shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
+			text({ Size = UDim2.new(0.6, -10, 1, 0), Position = UDim2.new(0.4, 0, 0, 0), Text = t("upgradeTo", mutation.copies, Lang.mutation(lang, mutation), mutation.chance), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+		end
 	end
 end
 
@@ -844,9 +848,18 @@ renderers[forgeW] = function()
 		local r = itemRow(body, order, key, sub)
 		if nextStar then
 			local ready = have >= Config.ForgeAmount
-			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 120, 0, 40), Position = UDim2.new(1, -184, 0, 9), ZIndex = 23, Max = 14,
+			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -290, 0, 9), ZIndex = 23, Max = 13,
 				Text = t("forgeBtn", Format.number(nextStar.income * Config.ForgeCostMult)), Parent = r }, function()
 				ActionEv:FireServer("Forge", key)
+			end)
+		end
+		local nextMutation = Mutations.List[mutation.index + 1]
+		if nextMutation then
+			local upgraded = Items.key(star.id, nextMutation.id)
+			local ready = have >= nextMutation.copies
+			btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
+				Text = t("upgradeBtn", Format.number(Items.income(upgraded) * Config.ForgeCostMult)), Parent = r }, function()
+				ActionEv:FireServer("UpgradeMutation", key)
 			end)
 		end
 	end

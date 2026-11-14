@@ -68,11 +68,19 @@ Config.RebirthLuckMult = 0.5 -- luck x(1 + rebirths * this)
 Config.AltarReach = 30
 
 -- Star Index: split into tiers; each tier has a row per mutation. A complete row -> permanent luck.
-Config.IndexTiers = {
-	{ id = "near", first = 1, last = 9, luck = 0.25 },
-	{ id = "deep", first = 10, last = 18, luck = 1 },
-	{ id = "legend", first = 19, last = 27, luck = 4 },
-}
+do
+	local Stars = require(script.Parent.Stars)
+	Config.IndexTiers = {}
+	local perTier = 9
+	for first = 1, #Stars.List, perTier do
+		local number = #Config.IndexTiers + 1
+		table.insert(Config.IndexTiers, {
+			first = first,
+			last = math.min(first + perTier - 1, #Stars.List),
+			luck = math.floor(0.25 * 1.8 ^ (number - 1) * 100) / 100,
+		})
+	end
+end
 -- extra luck for a row with a rarer mutation: luck * this
 Config.IndexMutationMult = { normal = 1, shiny = 2, golden = 4, void = 8, celestial = 16 }
 
@@ -416,7 +424,7 @@ Lang.Strings = {
 		admin = "ADMIN", adminCash = "Give cash", adminStar = "Give star", adminRolls = "Add rolls", adminMass = "Add Black Hole mass",
 		adminEvents = "Events", adminShower = "START STAR SHOWER", adminGlobal = "TEST SERVER ANIMATION", give = "GIVE",
 		amountHint = "e.g. 5Qd or 1e15", countHint = "count", globalFound = "%s found",
-		tier_near = "NEARBY", tier_deep = "DEEP SPACE", tier_legend = "LEGENDS", confirmRemove = "Remove this slab?", rareAlert = "Big reveal from", alertOff = "OFF", farFromPlot = "Go to your plot to build",
+		upgradeBtn = "UPGRADE  %s", upgradeTo = "%d → 1 %s (x%s rarer)", mutationsInfo = "Mutations are not rolled: upgrade stars at the Star Forge.", confirmRemove = "Remove this slab?", rareAlert = "Big reveal from", alertOff = "OFF", farFromPlot = "Go to your plot to build",
 		lbRolls = "TOP ROLLS", lbRebirths = "TOP REBIRTHS", lbCash = "RICHEST", lbRarest = "RAREST FINDS", lbEmpty = "No records yet",
 		build = "BUILD", buildTitle = "BUILD MODE", buildHint = "Pick a slab and tap a free spot on your plot.", removeTool = "REMOVE", exitBuild = "EXIT",
 		slab_stone = "Stone slab", slab_gold = "Gold slab", slab_emerald = "Emerald slab", slab_marble = "Marble slab",
@@ -467,7 +475,7 @@ Lang.Strings = {
 		admin = "АДМИНКА", adminCash = "Выдать деньги", adminStar = "Выдать звезду", adminRolls = "Добавить крутки", adminMass = "Добавить массу дыры",
 		adminEvents = "События", adminShower = "ЗАПУСТИТЬ ЗВЕЗДОПАД", adminGlobal = "ТЕСТ АНИМАЦИИ СЕРВЕРА", give = "ВЫДАТЬ",
 		amountHint = "напр. 5Qd или 1e15", countHint = "кол-во", globalFound = "%s нашёл",
-		tier_near = "БЛИЖНИЕ", tier_deep = "ГЛУБОКИЙ КОСМОС", tier_legend = "ЛЕГЕНДЫ", confirmRemove = "Убрать эту плиту?", rareAlert = "Большая анимация от", alertOff = "ВЫКЛ", farFromPlot = "Подойди к своему участку",
+		upgradeBtn = "УЛУЧШИТЬ  %s", upgradeTo = "%d → 1 %s (в %s раза реже)", mutationsInfo = "Мутации не выпадают: улучшай звёзды в Звёздной кузне.", confirmRemove = "Убрать эту плиту?", rareAlert = "Большая анимация от", alertOff = "ВЫКЛ", farFromPlot = "Подойди к своему участку",
 		lbRolls = "ТОП КРУТОК", lbRebirths = "ТОП ПЕРЕРОЖДЕНИЙ", lbCash = "САМЫЕ БОГАТЫЕ", lbRarest = "САМЫЕ РЕДКИЕ", lbEmpty = "Пока пусто",
 		build = "СТРОИТЬ", buildTitle = "СТРОИТЕЛЬСТВО", buildHint = "Выбери плиту и нажми на свободное место участка.", removeTool = "УБРАТЬ", exitBuild = "ВЫЙТИ",
 		slab_stone = "Каменная плита", slab_gold = "Золотая плита", slab_emerald = "Изумрудная плита", slab_marble = "Мраморная плита",
@@ -485,6 +493,56 @@ Lang.StarNames = {
 		browndwarf = "Коричневый карлик", whitedwarf = "Белый карлик", redgiant = "Красный гигант", binary = "Звёзды-близнецы",
 		wolfrayet = "Звезда Вольфа-Райе", hypergiant = "Гипергигант", kilonova = "Килоновая", eventhorizon = "Горизонт событий",
 		darkmatter = "Звезда тёмной материи", multiverse = "Мультивселенная", cosmicweb = "Космическая паутина",
+		proxima = "Проксима Центавра",
+		sirius = "Сириус",
+		vega = "Вега",
+		altair = "Альтаир",
+		procyon = "Процион",
+		arcturus = "Арктур",
+		aldebaran = "Альдебаран",
+		capella = "Капелла",
+		spica = "Спика",
+		polaris = "Полярная звезда",
+		algol = "Алголь",
+		mira = "Мира",
+		achernar = "Ахернар",
+		canopus = "Канопус",
+		antares = "Антарес",
+		rigel = "Ригель",
+		deneb = "Денеб",
+		betelgeuse = "Бетельгейзе",
+		tabby = "Звезда Табби",
+		przybylski = "Звезда Пшибыльского",
+		vela = "Пульсар Паруса",
+		crabpulsar = "Пульсар Краба",
+		cygnusx1 = "Лебедь X-1",
+		sgr1806 = "SGR 1806-20",
+		etacarinae = "Эта Киля",
+		vycma = "VY Большого Пса",
+		uyscuti = "UY Щита",
+		stephenson = "Стивенсон 2-18",
+		r136a1 = "R136a1",
+		ringneb = "Туманность Кольцо",
+		helix = "Туманность Улитка",
+		catseye = "Кошачий Глаз",
+		crab = "Крабовидная туманность",
+		sn1987a = "Сверхновая 1987A",
+		tycho = "Сверхновая Тихо",
+		kepler = "Сверхновая Кеплера",
+		orion = "Туманность Ориона",
+		eagle = "Туманность Орёл",
+		horsehead = "Конская Голова",
+		lagoon = "Туманность Лагуна",
+		tarantula = "Туманность Тарантул",
+		triangulum = "Галактика Треугольника",
+		whirlpool = "Галактика Водоворот",
+		sombrero = "Галактика Сомбреро",
+		andromeda = "Галактика Андромеды",
+		hoag = "Объект Хога",
+		einstein = "Кольцо Эйнштейна",
+		quasar3c273 = "Квазар 3C 273",
+		sgra = "Стрелец A*",
+		ton618 = "TON 618",
 	},
 }
 
@@ -558,15 +616,17 @@ end
 
 return Lang
 ]]></ProtectedString></Properties></Item>
-<Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">Mutations</string><ProtectedString name="Source"><![CDATA[-- Mutation rolled separately from the star. Multiplies income.
+<Item class="ModuleScript" referent="RBX7"><Properties><string name="Name">Mutations</string><ProtectedString name="Source"><![CDATA[-- Mutations are upgrades made at the Star Forge (not rolled).
+-- chance = how much rarer the star becomes (1/100K Shiny -> 1/150K), mult = income multiplier.
+-- copies = how many of the previous tier you combine into one.
 local Mutations = {}
 
 Mutations.List = {
 	{ id = "normal", name = "Normal", chance = 1, mult = 1, color = Color3.fromRGB(255, 255, 255) },
-	{ id = "shiny", name = "Shiny", chance = 20, mult = 2, color = Color3.fromRGB(255, 255, 170) },
-	{ id = "golden", name = "Golden", chance = 150, mult = 5, color = Color3.fromRGB(255, 200, 40) },
-	{ id = "void", name = "Void", chance = 1500, mult = 15, color = Color3.fromRGB(140, 60, 255) },
-	{ id = "celestial", name = "Celestial", chance = 20000, mult = 50, color = Color3.fromRGB(120, 255, 255) },
+	{ id = "shiny", name = "Shiny", chance = 1.5, mult = 1.5, copies = 2, color = Color3.fromRGB(255, 255, 170) },
+	{ id = "golden", name = "Golden", chance = 3, mult = 3, copies = 2, color = Color3.fromRGB(255, 200, 40) },
+	{ id = "void", name = "Void", chance = 10, mult = 10, copies = 3, color = Color3.fromRGB(140, 60, 255) },
+	{ id = "celestial", name = "Celestial", chance = 50, mult = 50, copies = 5, color = Color3.fromRGB(120, 255, 255) },
 }
 
 Mutations.ById = {}
@@ -758,6 +818,7 @@ return Sky
 ]]></ProtectedString></Properties></Item>
 <Item class="ModuleScript" referent="RBX10"><Properties><string name="Name">Stars</string><ProtectedString name="Source"><![CDATA[-- chance = "1 in N", income = cash per second while placed on the sky
 -- evolvesTo = what it can explode into at max evolution level
+-- kind = which look (icon + 3D model) a named star borrows
 local Stars = {}
 
 Stars.List = {
@@ -775,12 +836,62 @@ Stars.List = {
 	{ id = "neutron", name = "Neutron Star", chance = 10000, income = 9000, color = Color3.fromRGB(90, 255, 220) },
 	{ id = "hypergiant", name = "Hypergiant", chance = 30000, income = 28000, color = Color3.fromRGB(255, 100, 40) },
 	{ id = "quasar", name = "Quasar", chance = 100000, income = 100000, color = Color3.fromRGB(255, 80, 200), evolvesTo = "supernova" },
+	{ id = "proxima", name = "Proxima Centauri", chance = 120000, income = 150000, color = Color3.fromRGB(255, 110, 80), kind = "sphere" },
+	{ id = "sirius", name = "Sirius", chance = 140000, income = 180000, color = Color3.fromRGB(200, 225, 255), kind = "point" },
+	{ id = "vega", name = "Vega", chance = 170000, income = 220000, color = Color3.fromRGB(190, 210, 255), kind = "point" },
+	{ id = "altair", name = "Altair", chance = 210000, income = 280000, color = Color3.fromRGB(235, 240, 255), kind = "sphere" },
+	{ id = "procyon", name = "Procyon", chance = 250000, income = 340000, color = Color3.fromRGB(255, 245, 210), kind = "sphere" },
 	{ id = "kilonova", name = "Kilonova", chance = 300000, income = 350000, color = Color3.fromRGB(255, 190, 90) },
+	{ id = "arcturus", name = "Arcturus", chance = 300000, income = 410000, color = Color3.fromRGB(255, 170, 90), kind = "giant" },
+	{ id = "aldebaran", name = "Aldebaran", chance = 360000, income = 500000, color = Color3.fromRGB(255, 140, 70), kind = "giant" },
+	{ id = "capella", name = "Capella", chance = 430000, income = 610000, color = Color3.fromRGB(255, 230, 150), kind = "binary" },
+	{ id = "spica", name = "Spica", chance = 520000, income = 740000, color = Color3.fromRGB(150, 190, 255), kind = "binary" },
+	{ id = "polaris", name = "Polaris", chance = 620000, income = 900000, color = Color3.fromRGB(255, 250, 220), kind = "point" },
+	{ id = "algol", name = "Algol", chance = 740000, income = 1100000, color = Color3.fromRGB(190, 210, 255), kind = "binary" },
+	{ id = "mira", name = "Mira", chance = 890000, income = 1300000, color = Color3.fromRGB(255, 90, 70), kind = "giant" },
 	{ id = "supernova", name = "Supernova", chance = 1000000, income = 1500000, color = Color3.fromRGB(255, 255, 255) },
+	{ id = "achernar", name = "Achernar", chance = 1100000, income = 1700000, color = Color3.fromRGB(150, 190, 255), kind = "sphere" },
+	{ id = "canopus", name = "Canopus", chance = 1300000, income = 2000000, color = Color3.fromRGB(255, 250, 235), kind = "point" },
+	{ id = "antares", name = "Antares", chance = 1500000, income = 2300000, color = Color3.fromRGB(255, 80, 50), kind = "giant" },
+	{ id = "rigel", name = "Rigel", chance = 1800000, income = 2800000, color = Color3.fromRGB(160, 200, 255), kind = "point" },
+	{ id = "deneb", name = "Deneb", chance = 2200000, income = 3500000, color = Color3.fromRGB(230, 240, 255), kind = "point" },
+	{ id = "betelgeuse", name = "Betelgeuse", chance = 2700000, income = 4300000, color = Color3.fromRGB(255, 100, 50), kind = "giant" },
+	{ id = "tabby", name = "Tabby's Star", chance = 3200000, income = 5200000, color = Color3.fromRGB(255, 220, 160), kind = "sphere" },
+	{ id = "przybylski", name = "Przybylski's Star", chance = 3800000, income = 6300000, color = Color3.fromRGB(210, 255, 230), kind = "sphere" },
+	{ id = "vela", name = "Vela Pulsar", chance = 4600000, income = 7700000, color = Color3.fromRGB(150, 200, 255), kind = "pulsar" },
 	{ id = "magnetar", name = "Magnetar", chance = 5000000, income = 8000000, color = Color3.fromRGB(110, 200, 255) },
+	{ id = "crabpulsar", name = "Crab Pulsar", chance = 5500000, income = 9300000, color = Color3.fromRGB(255, 170, 230), kind = "pulsar" },
+	{ id = "cygnusx1", name = "Cygnus X-1", chance = 6600000, income = 11000000, color = Color3.fromRGB(120, 180, 255), kind = "blackhole" },
+	{ id = "sgr1806", name = "SGR 1806-20", chance = 7900000, income = 14000000, color = Color3.fromRGB(130, 220, 255), kind = "magnetar" },
+	{ id = "etacarinae", name = "Eta Carinae", chance = 9500000, income = 17000000, color = Color3.fromRGB(255, 170, 120), kind = "nebula" },
+	{ id = "vycma", name = "VY Canis Majoris", chance = 11000000, income = 19000000, color = Color3.fromRGB(255, 70, 40), kind = "giant" },
+	{ id = "uyscuti", name = "UY Scuti", chance = 14000000, income = 25000000, color = Color3.fromRGB(255, 120, 60), kind = "giant" },
+	{ id = "stephenson", name = "Stephenson 2-18", chance = 16000000, income = 29000000, color = Color3.fromRGB(230, 60, 50), kind = "giant" },
+	{ id = "r136a1", name = "R136a1", chance = 20000000, income = 37000000, color = Color3.fromRGB(140, 180, 255), kind = "point" },
+	{ id = "ringneb", name = "Ring Nebula", chance = 24000000, income = 44000000, color = Color3.fromRGB(120, 220, 200), kind = "remnant" },
 	{ id = "nebula", name = "Nebula Heart", chance = 25000000, income = 45000000, color = Color3.fromRGB(255, 140, 230) },
+	{ id = "helix", name = "Helix Nebula", chance = 28000000, income = 52000000, color = Color3.fromRGB(90, 200, 255), kind = "remnant" },
+	{ id = "catseye", name = "Cat's Eye Nebula", chance = 34000000, income = 64000000, color = Color3.fromRGB(140, 255, 190), kind = "remnant" },
+	{ id = "crab", name = "Crab Nebula", chance = 41000000, income = 78000000, color = Color3.fromRGB(255, 140, 90), kind = "remnant" },
+	{ id = "sn1987a", name = "SN 1987A", chance = 49000000, income = 94000000, color = Color3.fromRGB(255, 220, 170), kind = "remnant" },
+	{ id = "tycho", name = "Tycho's Supernova", chance = 59000000, income = 110000000, color = Color3.fromRGB(255, 120, 120), kind = "remnant" },
+	{ id = "kepler", name = "Kepler's Supernova", chance = 70000000, income = 140000000, color = Color3.fromRGB(255, 190, 90), kind = "remnant" },
+	{ id = "orion", name = "Orion Nebula", chance = 84000000, income = 170000000, color = Color3.fromRGB(255, 120, 170), kind = "nebula" },
 	{ id = "whitehole", name = "White Hole", chance = 100000000, income = 200000000, color = Color3.fromRGB(235, 248, 255) },
+	{ id = "eagle", name = "Eagle Nebula", chance = 100000000, income = 200000000, color = Color3.fromRGB(230, 190, 120), kind = "nebula" },
+	{ id = "horsehead", name = "Horsehead Nebula", chance = 120000000, income = 240000000, color = Color3.fromRGB(255, 90, 110), kind = "nebula" },
+	{ id = "lagoon", name = "Lagoon Nebula", chance = 150000000, income = 310000000, color = Color3.fromRGB(255, 110, 150), kind = "nebula" },
+	{ id = "tarantula", name = "Tarantula Nebula", chance = 170000000, income = 350000000, color = Color3.fromRGB(190, 120, 255), kind = "nebula" },
+	{ id = "triangulum", name = "Triangulum Galaxy", chance = 210000000, income = 440000000, color = Color3.fromRGB(170, 200, 255), kind = "galaxy" },
+	{ id = "whirlpool", name = "Whirlpool Galaxy", chance = 250000000, income = 520000000, color = Color3.fromRGB(200, 180, 255), kind = "galaxy" },
 	{ id = "eventhorizon", name = "Event Horizon", chance = 300000000, income = 650000000, color = Color3.fromRGB(255, 150, 60) },
+	{ id = "sombrero", name = "Sombrero Galaxy", chance = 300000000, income = 640000000, color = Color3.fromRGB(255, 225, 170), kind = "galaxy" },
+	{ id = "andromeda", name = "Andromeda Galaxy", chance = 360000000, income = 770000000, color = Color3.fromRGB(210, 210, 255), kind = "galaxy" },
+	{ id = "hoag", name = "Hoag's Object", chance = 430000000, income = 930000000, color = Color3.fromRGB(255, 230, 150), kind = "lens" },
+	{ id = "einstein", name = "Einstein Ring", chance = 520000000, income = 1100000000, color = Color3.fromRGB(170, 210, 255), kind = "lens" },
+	{ id = "quasar3c273", name = "Quasar 3C 273", chance = 630000000, income = 1400000000, color = Color3.fromRGB(255, 160, 210), kind = "quasar" },
+	{ id = "sgra", name = "Sagittarius A*", chance = 750000000, income = 1700000000, color = Color3.fromRGB(255, 160, 70), kind = "blackhole" },
+	{ id = "ton618", name = "TON 618", chance = 900000000, income = 2000000000, color = Color3.fromRGB(255, 120, 60), kind = "blackhole" },
 	{ id = "galaxy", name = "Galaxy Core", chance = 1000000000, income = 2500000000, color = Color3.fromRGB(255, 205, 110) },
 	{ id = "darkmatter", name = "Dark Matter Star", chance = 3000000000, income = 8000000000, color = Color3.fromRGB(150, 90, 220) },
 	{ id = "cosmic", name = "Cosmic String", chance = 10000000000, income = 30000000000, color = Color3.fromRGB(130, 255, 200) },
@@ -1027,9 +1138,7 @@ local function inBounds(data, key: any): boolean
 end
 
 local function rollItem(luck: number): string
-	local star = Odds.roll(luck, rng)
-	local mutation = Odds.rollMutation(luck, rng)
-	return Items.key(star.id, mutation.id)
+	return Odds.roll(luck, rng).id -- mutations come from upgrading at the Forge
 end
 
 local function announceIfRare(player: Player, key: string)
@@ -1260,6 +1369,31 @@ function actions.Forge(player, data, itemKey)
 	if Items.chance(result) >= Config.AnnounceChance then
 		announceAll("annForged", { player.DisplayName, { item = result } }, nextStar.color)
 	end
+end
+
+-- Forge upgrade: N copies of a star -> 1 copy with the next mutation
+function actions.UpgradeMutation(player, data, itemKey)
+	local star, mutation = Items.parse(itemKey)
+	if not star then
+		return
+	end
+	if World.distanceTo(player, World.ForgePosition) > Config.ForgeReach then
+		return toast(player, "toastTooFar")
+	end
+	local nextMutation = Mutations.List[mutation.index + 1]
+	if not nextMutation then
+		return
+	end
+	if (data.inventory[itemKey] or 0) < nextMutation.copies then
+		return toast(player, "toastNeedSame", { nextMutation.copies })
+	end
+	local result = Items.key(star.id, nextMutation.id)
+	if not spend(player, data, Items.income(result) * Config.ForgeCostMult) then
+		return
+	end
+	takeFromInventory(data, itemKey, nextMutation.copies)
+	addToInventory(player, data, result, 1)
+	toast(player, "toastForged", { { item = result } }, nextMutation.color)
 end
 
 function actions.Feed(player, data, itemKey, count)
@@ -1877,6 +2011,9 @@ local function part(model: Model, props)
 end
 
 local function orb(model: Model, cf: CFrame, diameter: number, color: Color3, transparency: number?)
+	if transparency and transparency > 0 then
+		transparency = 1 - (1 - transparency) * 0.45 -- glow shells are much fainter
+	end
 	return part(model, {
 		Name = "Orb", Shape = Enum.PartType.Ball, Size = Vector3.one * diameter, CFrame = cf,
 		Material = Enum.Material.Neon, Color = color, Transparency = transparency or 0,
@@ -1896,9 +2033,9 @@ end
 
 local function particles(parent: BasePart, props)
 	local e = Instance.new("ParticleEmitter")
-	e.LightEmission = 1
+	e.LightEmission = 0.6
 	e.LightInfluence = 0
-	e.Rate = props.Rate or 8
+	e.Rate = (props.Rate or 8) * 1.8
 	e.Lifetime = props.Lifetime or NumberRange.new(1.2, 2.4)
 	e.Speed = props.Speed or NumberRange.new(0.6, 1.6)
 	e.SpreadAngle = props.Spread or Vector2.new(180, 180)
@@ -1919,12 +2056,13 @@ end
 local function light(parent: BasePart, color: Color3, range: number, brightness: number)
 	local l = Instance.new("PointLight")
 	l.Color = color
-	l.Range = range
-	l.Brightness = brightness
+	l.Range = range * 0.8
+	l.Brightness = brightness * 0.4
 	l.Shadows = false
 	l.Parent = parent
 end
 
+local KIND_BUILDERS -- filled in below
 local SPARKLE = "rbxasset://textures/particles/sparkles_main.dds"
 local WHITE = Color3.new(1, 1, 1)
 
@@ -2285,6 +2423,12 @@ builders.cosmicweb = function(m, cf, color)
 	return core
 end
 
+-- named stars borrow the look of a type
+KIND_BUILDERS = {
+	sphere = "sun", point = "whitedwarf", giant = "redgiant", binary = "binary", pulsar = "pulsar", blackhole = "eventhorizon",
+	magnetar = "magnetar", nebula = "nebula", remnant = "supernova", galaxy = "galaxy", lens = "whitehole", quasar = "quasar",
+}
+
 -- star, mutation, level -> Model at position
 function StarModels.create(star, mutation, level: number, position: Vector3, parent: Instance): Model
 	local model = Instance.new("Model")
@@ -2292,7 +2436,7 @@ function StarModels.create(star, mutation, level: number, position: Vector3, par
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- arrives on clients in one piece
 	local scale = 1.3 + (level - 1) * 0.1
 	local cf = CFrame.new(position)
-	local builder = builders[star.id] or builders.dwarf
+	local builder = builders[star.id] or builders[KIND_BUILDERS[star.kind or ""] or ""] or builders.dwarf
 	local core = builder(model, cf, star.color)
 	model.PrimaryPart = core
 
@@ -2584,7 +2728,7 @@ local function setupLighting()
 		Glare = 0.25, Haze = 1.4, Parent = Lighting,
 	})
 	make("Sky", { CelestialBodiesShown = true, SunAngularSize = 14, StarCount = 0, Parent = Lighting })
-	make("BloomEffect", { Intensity = 0.4, Size = 24, Threshold = 1.6, Parent = Lighting })
+	make("BloomEffect", { Intensity = 0.2, Size = 18, Threshold = 2, Parent = Lighting })
 	make("SunRaysEffect", { Intensity = 0.06, Spread = 0.8, Parent = Lighting })
 	make("ColorCorrectionEffect", { Brightness = 0.03, Contrast = 0.05, Saturation = 0.12, TintColor = Color3.fromRGB(255, 252, 245), Parent = Lighting })
 
@@ -2970,7 +3114,7 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 	bridge(direction, HUB_RADIUS - 2, RING - PLOT_SIZE / 2 + 1, plotFolder)
 
 	local post = make("Part", { Name = "SignPost", Size = Vector3.new(1, 7, 1), CFrame = cf * CFrame.new(-9, 3.5, -(PLOT_SIZE / 2 - 2)), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
-	local label = worldText(post, "signFree", 6, 18, 5)
+	local label = worldText(post, "signFree", 5, 11, 3.2)
 	label:SetAttribute("Owner", "")
 	label:SetAttribute("Income", 0)
 
@@ -3853,10 +3997,12 @@ local indexTier = 1
 renderers[indexW] = function()
 	local body = indexW.body
 	clear(body)
-	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = tabs })
+	local tabRows = math.ceil(#Config.IndexTiers / 5)
+	local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, tabRows * 40), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 21, Parent = body })
+	make("UIGridLayout", { CellSize = UDim2.new(0.2, -5, 0, 34), CellPadding = UDim2.new(0, 5, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = tabs })
 	for number, tier in Config.IndexTiers do
-		btn(if indexTier == number then BLUE else GREY, { Size = UDim2.new(1 / #Config.IndexTiers, -5, 1, 0), Text = t("tier_" .. tier.id), Max = 15, ZIndex = 22, Parent = tabs }, function()
+		local label = t("oneIn", Format.number(Stars.List[tier.first].chance)) .. "–" .. Format.number(Stars.List[tier.last].chance)
+		btn(if indexTier == number then BLUE else GREY, { LayoutOrder = number, Text = label, Max = 13, ZIndex = 22, Parent = tabs }, function()
 			indexTier = number
 			renderers[indexW]()
 		end)
@@ -4068,11 +4214,13 @@ renderers[oddsW] = function()
 		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if odds[star.id] > 0 then 1 / odds[star.id] else star.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
 	end
 	text({ Size = UDim2.new(1, 0, 0, 28), LayoutOrder = 100, Text = t("mutations"), TextColor3 = BLUE, FontFace = TITLE, Max = 16, ZIndex = 21, Parent = body })
-	local mutationOdds = Odds.exactMutations(luck)
+	text({ Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 101, Text = t("mutationsInfo"), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 14, ZIndex = 21, Parent = body })
 	for i, mutation in Mutations.List do
-		local r = row(body, 100 + i, 40, WHITE)
-		text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 12, 0, 0), Text = Lang.mutation(lang, mutation) .. "  x" .. mutation.mult, FontFace = TITLE, TextColor3 = if mutation.id == "normal" then TEXT else shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
-		text({ Size = UDim2.new(0.45, -10, 1, 0), Position = UDim2.new(0.55, 0, 0, 0), Text = t("oneIn", Format.number(if mutationOdds[mutation.id] > 0 then 1 / mutationOdds[mutation.id] else mutation.chance)), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+		if mutation.copies then
+			local r = row(body, 101 + i, 40, WHITE)
+			text({ Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0, 12, 0, 0), Text = Lang.mutation(lang, mutation), FontFace = TITLE, TextColor3 = shade(mutation.color, 0.25), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, ZIndex = 22, Parent = r })
+			text({ Size = UDim2.new(0.6, -10, 1, 0), Position = UDim2.new(0.4, 0, 0, 0), Text = t("upgradeTo", mutation.copies, Lang.mutation(lang, mutation), mutation.chance), TextColor3 = MUTED, FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Right, Max = 14, ZIndex = 22, Parent = r })
+		end
 	end
 end
 
@@ -4091,9 +4239,18 @@ renderers[forgeW] = function()
 		local r = itemRow(body, order, key, sub)
 		if nextStar then
 			local ready = have >= Config.ForgeAmount
-			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 120, 0, 40), Position = UDim2.new(1, -184, 0, 9), ZIndex = 23, Max = 14,
+			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -290, 0, 9), ZIndex = 23, Max = 13,
 				Text = t("forgeBtn", Format.number(nextStar.income * Config.ForgeCostMult)), Parent = r }, function()
 				ActionEv:FireServer("Forge", key)
+			end)
+		end
+		local nextMutation = Mutations.List[mutation.index + 1]
+		if nextMutation then
+			local upgraded = Items.key(star.id, nextMutation.id)
+			local ready = have >= nextMutation.copies
+			btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
+				Text = t("upgradeBtn", Format.number(Items.income(upgraded) * Config.ForgeCostMult)), Parent = r }, function()
+				ActionEv:FireServer("UpgradeMutation", key)
 			end)
 		end
 	end
