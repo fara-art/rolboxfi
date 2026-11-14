@@ -219,15 +219,17 @@ end
 ---------------------------------------------------------------- Header
 local header = panelFrame({ Size = UDim2.new(0.5, 0, 0, 58), Position = UDim2.new(0.25, 0, 0, 8), Parent = gui })
 make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0.01, 0), Parent = header })
-local function readout(key: string, color: Color3)
+local function readout(key: string, color: Color3, iconKey: string?)
 	local box = make("Frame", { Size = UDim2.new(0.19, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
 	bind(text({ Size = UDim2.new(1, 0, 0.36, 0), TextColor3 = MUTED, FontFace = BODY, Max = 12, Parent = box }), key)
-	return text({ Size = UDim2.new(1, 0, 0.64, 0), Position = UDim2.new(0, 0, 0.36, 0), Text = "0", TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0.4, FontFace = TITLE, Max = 26, Parent = box })
+	local icon = iconKey and uiIcon(iconKey, { Size = UDim2.new(0, 26, 0, 26), Position = UDim2.new(0, 0, 0.36, -2), Parent = box })
+	local offset = if icon then 28 else 0
+	return text({ Size = UDim2.new(1, -offset, 0.64, 0), Position = UDim2.new(0, offset, 0.36, 0), Text = "0", TextColor3 = color, TextStrokeColor3 = INK, TextStrokeTransparency = 0.4, FontFace = TITLE, Max = 26, Parent = box })
 end
-local cashValue = readout("cash", Color3.fromRGB(230, 150, 20))
+local cashValue = readout("cash", Color3.fromRGB(230, 150, 20), "cash")
 local incomeValue = readout("perSec", MINT)
-local luckValue = readout("luck", BLUE)
-local rollsValue = readout("rolls", LILAC)
+local luckValue = readout("luck", BLUE, "luck")
+local rollsValue = readout("rolls", LILAC, "rolls")
 local rebirthValue = readout("rebirths", TEXT)
 
 local showerBanner = text({ Size = UDim2.new(0.4, 0, 0, 22), Position = UDim2.new(0.3, 0, 0, 70), Text = "", TextColor3 = BLUE, FontFace = TITLE, TextStrokeColor3 = WHITE, TextStrokeTransparency = 0, Max = 18, Parent = gui })
@@ -266,7 +268,7 @@ end)
 local settingsButton -- created after windows exist
 
 ---------------------------------------------------------------- Telescope (left)
-local telescope = panelFrame({ Size = UDim2.new(0.17, 0, 0.42, 0), Position = UDim2.new(0, 16, 0.2, 0), Parent = gui })
+local telescope = panelFrame({ Size = UDim2.new(0.17, 0, 0.4, 0), Position = UDim2.new(0, 16, 0, 164), Parent = gui }) -- below Roblox buttons, language and settings
 bind(text({ Size = UDim2.new(1, 0, 0.08, 0), TextColor3 = BLUE, FontFace = TITLE, Max = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = telescope }), "telescope")
 local resultName = bind(text({ Size = UDim2.new(1, 0, 0.16, 0), Position = UDim2.new(0, 0, 0.1, 0), FontFace = TITLE, Max = 24, Parent = telescope }), "rollHint")
 local resultChance = text({ Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, 0.26, 0), Text = "", TextColor3 = MUTED, Max = 15, Parent = telescope })
@@ -338,7 +340,7 @@ local function open(w, force: boolean?)
 end
 
 ---------------------------------------------------------------- Tip card (closable)
-local tip = panelFrame({ Size = UDim2.new(0.17, 0, 0.14, 0), Position = UDim2.new(0, 16, 0.64, 0), Parent = gui })
+local tip = panelFrame({ Size = UDim2.new(0.17, 0, 0.14, 0), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -80), Parent = gui }) -- just above the dock
 bind(text({ Size = UDim2.new(1, -30, 1, 0), TextColor3 = TEXT, FontFace = BODY_SEMI, Max = 15, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Parent = tip }), "tip")
 btn(RED, { Size = UDim2.new(0, 24, 0, 24), Position = UDim2.new(1, -24, 0, -2), Text = "X", Max = 14, Parent = tip }, function()
 	tip.Visible = false

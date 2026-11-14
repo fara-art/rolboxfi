@@ -81,30 +81,30 @@ Config.GamePasses = {
 -- Star icons: upload assets/icons/*.png to Roblox and paste the image IDs here.
 -- Empty = drawn fallback circle.
 Config.StarIcons = {
-	dust = "",
-	spark = "",
-	dwarf = "",
-	sun = "",
-	giant = "",
-	pulsar = "",
-	neutron = "",
-	quasar = "",
-	supernova = "",
+	dust = "137463131576979",
+	spark = "98740470842740",
+	dwarf = "84619811109337",
+	sun = "98365759201014",
+	giant = "129052977820044",
+	pulsar = "114269138207453",
+	neutron = "101194309009316",
+	quasar = "74183692232117",
+	supernova = "113026952245040",
 }
 
 -- UI icons (assets/icons/ui_*.png). Same as StarIcons: paste uploaded image IDs.
 Config.UiIcons = {
-	catalogue = "",
-	sky = "",
-	upgrades = "",
-	index = "",
-	constellations = "",
-	odds = "",
-	rewards = "",
-	cash = "",
-	luck = "",
-	rolls = "",
-	settings = "",
+	catalogue = "107402829607762",
+	sky = "104272326719626",
+	upgrades = "76865058340757",
+	index = "93310774370747",
+	constellations = "129859327315009",
+	odds = "89101290443368",
+	rewards = "88325511755224",
+	cash = "98757200307701",
+	luck = "137487992289485",
+	rolls = "97966246674669",
+	settings = "104579262501708",
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
