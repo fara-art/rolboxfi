@@ -367,7 +367,7 @@ do
 		ruButton.BackgroundColor3 = if lang == "ru" then BLUE else PANEL_2
 		ruButton.TextColor3 = if lang == "ru" then WHITE else MUTED
 		if render then
-			render()
+			render(true) -- new language: every open window redraws
 		end
 	end
 	enButton = btn(BLUE, { Size = UDim2.new(0.48, 0, 1, 0), Text = "EN", Max = 16, Parent = langFrame }, function()
@@ -438,7 +438,7 @@ do
 	forgeW = window("forgeTitle", "center", centerProps())
 	holeW = window("holeTitle", "center", centerProps())
 	elevatorW = window("elevatorTitle", "center", { Size = UDim2.new(0.26, 0, 0.5, 0), Position = UDim2.new(0.37, 0, 0.22, 0) })
-	shopW = window("shop", "center", { Size = UDim2.new(0.8, 0, 0.84, 0), Position = UDim2.new(0.1, 0, 0.08, 0) })
+	shopW = window("shop", "center", { Size = UDim2.new(0.66, 0, 0.72, 0), Position = UDim2.new(0.17, 0, 0.15, 0) })
 	giftW = window("giftTo", "center", { Size = UDim2.new(0.3, 0, 0.5, 0), Position = UDim2.new(0.35, 0, 0.25, 0) })
 	tradeW = window("tradeTitle", "center", { Size = UDim2.new(0.76, 0, 0.82, 0), Position = UDim2.new(0.12, 0, 0.09, 0) })
 	playersW = window("tradePlayers", "center", { Size = UDim2.new(0.3, 0, 0.5, 0), Position = UDim2.new(0.35, 0, 0.25, 0) })
@@ -600,6 +600,7 @@ end
 ---------------------------------------------------------------- Catalogue
 do
 	local sell1Button, sellAllButton, petButton
+	local petPicked: number? = nil -- pet slot whose info card is shown
 	renderers[catalogueW] = function()
 		local body = catalogueW.body
 		clear(body)
@@ -610,7 +611,10 @@ do
 		local pets = state.pets or {}
 		local slots = Pets.slots(state)
 		local petLuck, petSpeed = Pets.totals(pets)
-		local panel = make("Frame", { Size = UDim2.new(1, 0, 0, 104), LayoutOrder = 0, BackgroundColor3 = Color3.fromRGB(44, 34, 80), ZIndex = 21, Parent = body }, { corner(12), stroke(INK, 2.5) })
+		if petPicked and not pets[petPicked] then
+			petPicked = nil
+		end
+		local panel = make("Frame", { Size = UDim2.new(1, 0, 0, if petPicked then 150 else 104), LayoutOrder = 0, BackgroundColor3 = Color3.fromRGB(44, 34, 80), ZIndex = 21, Parent = body }, { corner(12), stroke(INK, 2.5) })
 		local head = text({ Size = UDim2.new(1, -16, 0, 26), Position = UDim2.new(0, 8, 0, 4), Text = t("petsTitle", #pets, slots, math.floor(petLuck * 100 + 0.5), math.floor(petSpeed * 100 + 0.5)), FontFace = TITLE, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 22, Parent = panel })
 		make("UIStroke", { Color = INK, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = head })
 		local row = make("Frame", { Size = UDim2.new(1, -16, 0, 62), Position = UDim2.new(0, 8, 0, 34), BackgroundTransparency = 1, ZIndex = 22, Parent = panel })
@@ -625,10 +629,24 @@ do
 				if star then
 					starIcon(star, mutation, { Size = UDim2.new(0.86, 0, 0.86, 0), Position = UDim2.new(0.07, 0, 0.07, 0), ZIndex = 24, Parent = cell })
 				end
+				if petPicked == slot then
+					stroke(Color3.fromRGB(120, 255, 150), 4).Parent = cell
+				end
 				cell.Activated:Connect(function()
-					ActionEv:FireServer("PetUnequip", slot)
+					petPicked = if petPicked == slot then nil else slot
+					renderers[catalogueW]()
 				end)
 			end
+		end
+		if petPicked then
+			local key = pets[petPicked]
+			local info = text({ Size = UDim2.new(1, -150, 0, 36), Position = UDim2.new(0, 8, 0, 104), Text = Lang.item(lang, key) .. "   " .. t("petInfo", math.floor(Pets.luck(key) * 100 + 0.5), math.floor(Pets.speed(key) * 100 + 0.5)), FontFace = TITLE, TextColor3 = Color3.fromRGB(255, 225, 120), TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, Max = 15, ZIndex = 22, Parent = panel })
+			make("UIStroke", { Color = INK, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = info })
+			local slotToRemove = petPicked
+			btn(RED, { Size = UDim2.new(0, 130, 0, 36), Position = UDim2.new(1, -138, 0, 104), Text = t("petUnequip"), Max = 18, ZIndex = 23, Parent = panel }, function()
+				petPicked = nil
+				ActionEv:FireServer("PetUnequip", slotToRemove)
+			end)
 		end
 		if #pets == 0 then
 			text({ Size = UDim2.new(1, -16, 0, 20), Position = UDim2.new(0, 8, 1, -22), Text = t("petsHint"), TextColor3 = Color3.fromRGB(190, 180, 230), FontFace = BODY_SEMI, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, Max = 12, ZIndex = 22, Parent = panel })
@@ -750,13 +768,18 @@ do
 			local sub = text({ Size = UDim2.new(1, -16, 0, 40), Position = UDim2.new(0, 8, 0, 128), Text = desc, FontFace = TITLE, TextColor3 = WHITE, TextWrapped = true, Max = 18, ZIndex = 24, Parent = card })
 			make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = sub })
 			btn(if maxed then GREY else Color3.fromRGB(80, 210, 90), {
-				Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 1, -60), ZIndex = 24, Max = 24,
+				Size = UDim2.new(if maxed then 1 else 0.68, if maxed then -20 else -14, 0, 50), Position = UDim2.new(0, 10, 1, -60), ZIndex = 24, Max = 24,
 				Text = if maxed then t("upMax") else "$" .. Format.number(cost), Parent = card,
 			}, function()
 				if not maxed then
 					ActionEv:FireServer(action)
 				end
 			end)
+			if not maxed then
+				btn(Color3.fromRGB(255, 170, 40), { Size = UDim2.new(0.32, -12, 0, 50), Position = UDim2.new(0.68, 2, 1, -60), Text = t("upMaxBtn"), Max = 20, ZIndex = 24, Parent = card }, function()
+					ActionEv:FireServer("BuyMax", action)
+				end)
+			end
 		end
 		local luckNow = 1 + state.luckLevel * Config.LuckPerLevel
 		upgrade(1, "upLuck", "luck", t("upLuckDesc", luckNow, luckNow + Config.LuckPerLevel), state.luckLevel >= Config.MaxLuckLevel, Config.LuckCost(state.luckLevel), "BuyLuck", Color3.fromRGB(110, 235, 120), Color3.fromRGB(30, 150, 70))
@@ -931,7 +954,7 @@ do
 				return starIcon(star, mutation, props)
 			end
 		end
-		local key = if milestone.cash then "cash" else "luck"
+		local key = if milestone.cash then "coins_small" else "boost_luck"
 		local icon = uiIcon(key, props)
 		if icon then
 			return icon
@@ -1032,7 +1055,17 @@ for i, milestone in Config.RollMilestones do
 end
 
 ---------------------------------------------------------------- Constellation book
+-- one floating tooltip for the constellation stars (hover on PC, tap on phones)
+local setTip = text({ Size = UDim2.new(0, 220, 0, 40), Text = "", FontFace = TITLE, TextColor3 = WHITE, BackgroundColor3 = Color3.fromRGB(20, 18, 44), BackgroundTransparency = 0.1, Visible = false, Max = 16, ZIndex = 300, Parent = gui })
+corner(8).Parent = setTip
+stroke(Color3.fromRGB(255, 220, 90), 2).Parent = setTip
+local function showSetTip(slot: GuiObject, star)
+	setTip.Text = Lang.star(lang, star) .. "  " .. t("oneIn", Format.number(star.chance))
+	setTip.Position = UDim2.new(0, slot.AbsolutePosition.X + slot.AbsoluteSize.X / 2 - 110, 0, slot.AbsolutePosition.Y - 46)
+	setTip.Visible = true
+end
 renderers[bookW] = function()
+	setTip.Visible = false
 	local body = bookW.body
 	clear(body)
 	body.BackgroundColor3 = Color3.fromRGB(26, 24, 60)
@@ -1058,7 +1091,7 @@ renderers[bookW] = function()
 		})
 		local name = text({ Size = UDim2.new(0.6, 0, 0, 30), Position = UDim2.new(0, 12, 0, 6), Text = t("set_" .. set.id), FontFace = TITLE, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = card })
 		make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = name })
-		local bonus = text({ Size = UDim2.new(0.4, -12, 0, 30), Position = UDim2.new(0.6, 0, 0, 6), Text = (if on then t("setActive") .. "  " else "") .. t("setBonus", math.floor(set.bonus * 100 + 0.5)), FontFace = TITLE, TextColor3 = if on then Color3.fromRGB(255, 220, 90) else Color3.fromRGB(180, 180, 210), TextXAlignment = Enum.TextXAlignment.Right, Max = 18, ZIndex = 22, Parent = card })
+		local bonus = text({ Size = UDim2.new(0.42, -26, 0, 30), Position = UDim2.new(0.58, 0, 0, 6), Text = (if on then t("setActive") .. "  " else "") .. t("setBonus", math.floor(set.bonus * 100 + 0.5)), FontFace = TITLE, TextColor3 = if on then Color3.fromRGB(255, 220, 90) else Color3.fromRGB(180, 180, 210), TextXAlignment = Enum.TextXAlignment.Right, Max = 18, ZIndex = 22, Parent = card })
 		make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = bonus })
 		local strip = make("Frame", { Size = UDim2.new(1, -20, 0, 70), Position = UDim2.new(0, 10, 0, 40), BackgroundTransparency = 1, ZIndex = 22, Parent = card })
 		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center, Parent = strip })
@@ -1066,10 +1099,24 @@ renderers[bookW] = function()
 			local star = Stars.ById[id]
 			if star then
 				local have = placed[id] == true
-				local slot = make("Frame", { Size = UDim2.new(0, 64, 0, 64), LayoutOrder = k, BackgroundColor3 = Color3.fromRGB(20, 18, 44), BackgroundTransparency = 0.2, ZIndex = 23, Parent = strip }, {
+				local slot = make("TextButton", { Size = UDim2.new(0, 64, 0, 64), LayoutOrder = k, Text = "", AutoButtonColor = false, BackgroundColor3 = Color3.fromRGB(20, 18, 44), BackgroundTransparency = 0.2, ZIndex = 23, Parent = strip }, {
 					make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(if have then Color3.fromRGB(120, 255, 150) else Color3.fromRGB(90, 90, 120), 2.5),
 				})
 				local icon = starIcon(star, nil, { Size = UDim2.new(0.84, 0, 0.84, 0), Position = UDim2.new(0.08, 0, 0.08, 0), ZIndex = 24, Parent = slot })
+				slot.MouseEnter:Connect(function()
+					showSetTip(slot, star)
+				end)
+				slot.MouseLeave:Connect(function()
+					setTip.Visible = false
+				end)
+				slot.Activated:Connect(function()
+					showSetTip(slot, star)
+					task.delay(2, function()
+						if setTip.Text == Lang.star(lang, star) .. "  " .. t("oneIn", Format.number(star.chance)) then
+							setTip.Visible = false
+						end
+					end)
+				end)
 				if not have then
 					for _, d in icon:GetDescendants() do
 						if d:IsA("ImageLabel") then
@@ -1148,7 +1195,7 @@ renderers[forgeW] = function()
 			end)
 		end
 		local nextMutation = Mutations.List[mutation.index + 1]
-		if nextMutation then
+		if nextMutation and not star.season then
 			local upgraded = Items.key(star.id, nextMutation.id)
 			local ready = have >= nextMutation.copies
 			btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
@@ -1169,8 +1216,8 @@ renderers[holeW] = function()
 	local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = PANEL_2, LayoutOrder = 2, ZIndex = 21, Parent = body }, { corner(9), stroke(LINE, 1.5) })
 	make("Frame", { Size = UDim2.new(progress, 0, 1, 0), BackgroundColor3 = LILAC, BorderSizePixel = 0, ZIndex = 22, Parent = bar }, { corner(9) })
 	local lines = {
-		t("holeNow", 1 + state.rebirths * Config.RebirthIncomeBonus, 1 + state.rebirths * Config.RebirthLuckMult),
-		t("holeNext", 1 + (state.rebirths + 1) * Config.RebirthIncomeBonus, 1 + (state.rebirths + 1) * Config.RebirthLuckMult),
+		t("holeNow", 1 + state.rebirths * Config.RebirthIncomeBonus, Config.RebirthLuck(state.rebirths)),
+		t("holeNext", 1 + (state.rebirths + 1) * Config.RebirthIncomeBonus, Config.RebirthLuck(state.rebirths + 1)),
 		t("holeWarn"),
 	}
 	for i, line in lines do
@@ -2195,7 +2242,41 @@ local function renderTelescope()
 	end
 end
 
-render = function()
+-- windows are redrawn only when the data they show changed (not for every cash tick), and never while a
+-- finger / mouse button is held down: rebuilding a button between press and release swallowed the click
+local windowSig: { [any]: string } = {}
+local pointerDown = false
+local pendingRender = false
+UserInputService.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		pointerDown = true
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		pointerDown = false
+		if pendingRender then
+			pendingRender = false
+			task.delay(0.05, function()
+				if render then
+					render()
+				end
+			end)
+		end
+	end
+end)
+local function stateSignature(): string
+	if not state then
+		return ""
+	end
+	local copy = table.clone(state)
+	copy.cash = nil -- changes every second, no window draws it
+	copy.seasonLeft = nil
+	local ok, encoded = pcall(HttpService.JSONEncode, HttpService, copy)
+	return if ok then encoded else tostring(os.clock())
+end
+
+render = function(force: boolean?)
 	if not state then
 		return
 	end
@@ -2236,8 +2317,14 @@ render = function()
 	end
 	indexBadge.Visible = rowReady
 
+	if pointerDown and not force then
+		pendingRender = true -- redraw the windows once the click is finished
+		return
+	end
+	local sig = stateSignature()
 	for _, w in windows do
-		if w.frame.Visible and renderers[w] then
+		if w.frame.Visible and renderers[w] and (force or windowSig[w] ~= sig) then
+			windowSig[w] = sig
 			local scroll = w.body.CanvasPosition
 			local ok, err = pcall(renderers[w])
 			if not ok then
@@ -2259,7 +2346,7 @@ showRare = function(key: string)
 end
 
 -- roll reel: a strip at the top centre, stars fly right → left and stop on what you got
-local reelHolder = make("Frame", { Size = UDim2.new(0, 560, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 62), BackgroundTransparency = 1, ZIndex = 60, Parent = gui }, {
+local reelHolder = make("Frame", { Size = UDim2.new(0, 560, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 165), BackgroundTransparency = 1, ZIndex = 60, Parent = gui }, {
 	make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
 })
 local reelToken = 0
@@ -2277,12 +2364,12 @@ local function playReel(results, duration: number)
 			continue
 		end
 		local rowFrame = make("CanvasGroup", {
-			Size = UDim2.new(0, WIDTH, 0, cell), LayoutOrder = r, BackgroundColor3 = Color3.fromRGB(24, 20, 48), BackgroundTransparency = 0.3, ZIndex = 60, Parent = reelHolder,
+			Size = UDim2.new(0, WIDTH, 0, cell + 26), LayoutOrder = r, BackgroundColor3 = Color3.fromRGB(24, 20, 48), BackgroundTransparency = 0.3, ZIndex = 60, Parent = reelHolder,
 		}, {
 			corner(12),
 			make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.14, 0), NumberSequenceKeypoint.new(0.86, 0), NumberSequenceKeypoint.new(1, 1) }) }),
 		})
-		local strip = make("Frame", { Size = UDim2.new(0, SLOTS * cell, 1, 0), Position = UDim2.new(0, WIDTH, 0, 0), BackgroundTransparency = 1, ZIndex = 61, Parent = rowFrame })
+		local strip = make("Frame", { Size = UDim2.new(0, SLOTS * cell, 0, cell), Position = UDim2.new(0, WIDTH, 0, 0), BackgroundTransparency = 1, ZIndex = 61, Parent = rowFrame })
 		local finalIcon = nil
 		for i = 1, SLOTS do
 			local s, m = star, mutation
@@ -2310,16 +2397,13 @@ local function playReel(results, duration: number)
 				local pop = make("UIScale", { Scale = 1.35, Parent = finalIcon })
 				TweenService:Create(pop, TweenInfo.new(0.3, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 			end
+			-- name and odds under the star
 			local name = text({
-				Size = UDim2.new(0, WIDTH / 2 - cell / 2 - 14, 0.5, 0), Position = UDim2.new(0.5, cell / 2 + 8, 0, 2), Text = Lang.item(lang, key), FontFace = TITLE,
-				TextColor3 = if mutation and mutation.id ~= "normal" then mutation.color else star.color:Lerp(WHITE, 0.35), TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 65, Parent = rowFrame,
+				Size = UDim2.new(0, WIDTH - 40, 0, 24), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, cell + 1),
+				Text = Lang.item(lang, key) .. "   " .. t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE,
+				TextColor3 = if mutation and mutation.id ~= "normal" then mutation.color else star.color:Lerp(WHITE, 0.35), Max = 20, ZIndex = 65, Parent = rowFrame,
 			})
 			make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = name })
-			local odds = text({
-				Size = UDim2.new(0, WIDTH / 2 - cell / 2 - 14, 0.4, 0), Position = UDim2.new(0.5, cell / 2 + 8, 0.52, 0), Text = t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE,
-				TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 65, Parent = rowFrame,
-			})
-			make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = odds })
 		end)
 	end
 	task.delay(duration + 1.6, function()
@@ -2933,11 +3017,11 @@ do
 			local owned = state.passes and state.passes[pass.key]
 			local card = gradientCard(grid, { LayoutOrder = i }, pass.top, pass.bottom)
 			titleText(card, t("pass_" .. pass.key), { Size = UDim2.new(1, -12, 0, 34), Position = UDim2.new(0, 6, 0, 8), Max = 26 })
-			local holder = make("Frame", { Size = UDim2.new(0, 110, 0, 110), Position = UDim2.new(0.5, -55, 0, 44), BackgroundColor3 = Color3.fromRGB(30, 30, 50), BackgroundTransparency = 0.35, ZIndex = 23, Parent = card }, {
+			local holder = make("Frame", { Size = UDim2.new(0, 98, 0, 98), Position = UDim2.new(0.5, -49, 0, 42), BackgroundColor3 = Color3.fromRGB(30, 30, 50), BackgroundTransparency = 0.35, ZIndex = 23, Parent = card }, {
 				make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(WHITE, 3),
 			})
 			uiIcon(pass.icon, { Size = UDim2.new(1.08, 0, 1.08, 0), Position = UDim2.new(-0.04, 0, -0.04, 0), ZIndex = 24, Parent = holder })
-			titleText(card, t("passDesc_" .. pass.key), { Size = UDim2.new(1, -12, 0, 22), Position = UDim2.new(0, 6, 0, 156), Max = 17 })
+			titleText(card, t("passDesc_" .. pass.key), { Size = UDim2.new(1, -12, 0, 22), Position = UDim2.new(0, 6, 0, 146), Max = 17 })
 			if owned then
 				btn(GREY, { Size = UDim2.new(0.7, 0, 0, 40), Position = UDim2.new(0.15, 0, 1, -48), Text = t("owned"), Max = 20, ZIndex = 24, Parent = card })
 			else
@@ -3051,7 +3135,15 @@ do
 			return
 		end
 		local y = section.AbsolutePosition.Y - body.AbsolutePosition.Y + body.CanvasPosition.Y
-		TweenService:Create(body, TweenInfo.new(0.35, Enum.EasingStyle.Quint), { CanvasPosition = Vector2.new(0, math.max(0, y - 4)) }):Play()
+		local maxY = math.max(0, body.AbsoluteCanvasSize.Y - body.AbsoluteWindowSize.Y)
+		TweenService:Create(body, TweenInfo.new(0.35, Enum.EasingStyle.Quint), { CanvasPosition = Vector2.new(0, math.clamp(y - 4, 0, maxY)) }):Play()
+		for tabId, b in railButtons do -- highlight the pressed tab right away
+			for _, entry in SHOP_TABS do
+				if entry.id == tabId then
+					b.BackgroundColor3 = if tabId == id then entry.color else Color3.fromRGB(90, 96, 120)
+				end
+			end
+		end
 	end
 	local function highlightRail()
 		local body = shopW.body
@@ -3093,6 +3185,8 @@ do
 			sections[tab.id] = section
 			renderShopTab[tab.id](section)
 		end
+		-- empty space at the end: lets the last sections (codes) scroll up to the top too
+		make("Frame", { Size = UDim2.new(1, 0, 0, math.max(200, shopW.body.AbsoluteSize.Y - 160)), LayoutOrder = #SHOP_TABS + 1, BackgroundTransparency = 1, Parent = body })
 		highlightRail()
 		if shopTab then -- opened for a specific section (e.g. from the crate ring)
 			local target = shopTab

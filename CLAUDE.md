@@ -43,7 +43,7 @@ working branch `claude/wizardly-pascal-g6tfoq`. Commit + push after every finish
 ## Code map
 - `src/shared/Stars.luau` — 77 stars ordered by rarity (`chance` = 1 in N, `income`/s, `kind` for named stars).
 - `Mutations.luau` — Shiny/Golden/Void/Celestial: NOT rolled, crafted at the Forge
-  (copies 2/2/3/5, rarity & income x1.5/x3/x10/x50).
+  (every upgrade takes 5 of the same star, rarity & income x1.5/x3/x10/x50).
 - `Items.luau` — item key `"starId"` or `"starId|mutationId"`.
 - `Config.luau` — all balance: luck, roll speed, multi roll, slabs, museum floors, themes, rebirth,
   index tiers (9 stars each, auto-built), roll milestones, alert thresholds, icon/sound IDs, admins.
@@ -63,7 +63,7 @@ working branch `claude/wizardly-pascal-g6tfoq`. Commit + push after every finish
 Rolls (auto unlocks at 50 rolls, speed + multi-roll upgrades) · 77 stars up to 1/1T · catalogue with odds ·
 museum plot (claim by walking in, stands bought in build mode: stone/gold/emerald/marble = x1/x1.5/x2.5/x4,
 themes Sky/Hell/Cosmos/Ice/Emerald, floors) · Star Forge (5 same → next star, mutation upgrades) ·
-Black Hole (feed stars → rebirth: income x(1+2r), luck x(1+0.5r)) · 9 Star Index tiers with luck rewards ·
+Black Hole (feed stars → rebirth: income x(1+2r), ALL luck x2r (Config.RebirthLuck); pets + expedition reset) · 9 Star Index tiers with luck rewards ·
 roll rewards per rebirth · x2-luck roll every 50 rolls · rarest find over heads · global leaderboards · server-wide cinematic for 1/1B+ finds, personal one from a
 threshold in settings, ultra black-screen reveal from 1/500K · star shower event · music/sfx and day/night
 toggles · RU/EN · admin panel for the owner · Robux shop · glass museums that appear only when claimed.
@@ -102,6 +102,11 @@ ProcessReceipt is idempotent (data.receipts).
   `LB_likes_w<week>`, 5th tablet "likes", top 3 of last week get 3/2/1 rebirth tokens on join.
 - Seasonal stars (`Stars.Seasonal`, 3 seasons x 5, 2 weeks each): rolled only in their season (Odds.list(season)),
   index after the normal stars, not in Index tiers / Forge. Icons: `assets/seasonal_upload.zip`.
+
+- Windows redraw only when the state (minus cash) changed and never while the pointer is down (fixed
+  "buttons need two clicks"). render(true) forces a redraw (language change).
+- Offline income: data.lastIncome/lastSeen, paid on join (`Config.OfflineMaxHours`, `OfflineShare`).
+- Upgrades have a MAX button (action BuyMax). Inventory sorted by real odds (Items.rank).
 
 ## Ideas agreed / next up
 - Daily rewards with streaks, codes (`/code`), first-minutes tutorial, group bonus, invite bonus.

@@ -44,10 +44,10 @@ function Items.chance(key: string): number
 	return if star then star.chance * mutation.chance else 0
 end
 
--- for sorting: rarer first
+-- for sorting: rarer first (real odds incl. mutation; ties by star order so the list never jumps)
 function Items.rank(key: string): number
 	local star, mutation = Items.parse(key)
-	return if star then star.index * 100 + mutation.index else 0
+	return if star then Items.chance(key) * 1000 + star.index + mutation.index * 0.01 else 0
 end
 
 return Items

@@ -11,13 +11,13 @@ function Pets.slots(data): number
 	return Pets.BaseSlots + Config.RebirthUp(data, "pets")
 end
 
--- extra luck share of one pet: 1/100 -> +10%, 1/1M -> +30%, 1/1B -> +45%
+-- extra luck share of one pet, rarer = more: 1/2 -> +12%, 1/100 -> +20%, 1/1M -> +40%, 1/1B -> +55%
 function Pets.luck(key: string): number
 	local chance = Items.chance(key)
-	if chance <= 1 then
+	if chance < 1 then
 		return 0
 	end
-	return math.floor(math.log10(chance) * 5 + 0.5) / 100
+	return math.floor((0.1 + 0.05 * math.log10(chance)) * 100 + 0.5) / 100
 end
 
 -- roll speed share: Shiny 5%, Golden 10%, Void 15%, Celestial 20%

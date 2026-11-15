@@ -82,7 +82,7 @@ local function isShower(): boolean
 end
 
 local function getLuck(player: Player, data): number
-	local luck = (1 + data.luckLevel * Config.LuckPerLevel + data.bonusLuck) * (1 + data.rebirths * Config.RebirthLuckMult)
+	local luck = 1 + data.luckLevel * Config.LuckPerLevel + data.bonusLuck
 	if sessions[player].passes.Luck2x then
 		luck *= 2
 	end
@@ -95,7 +95,7 @@ local function getLuck(player: Player, data): number
 	if isShower() then
 		luck *= Config.ShowerLuck
 	end
-	return luck
+	return luck * Config.RebirthLuck(data.rebirths) -- rebirths multiply everything
 end
 
 -- constellation sets that are complete in the museum right now
@@ -407,6 +407,15 @@ Players.PlayerAdded:Connect(function(player)
 	showBest(player, data)
 
 	refreshPets(player, data)
+	-- money the museum made while you were away
+	local away = os.time() - (data.lastSeen or 0)
+	if (data.lastSeen or 0) > 0 and away > 60 and (data.lastIncome or 0) > 0 then
+		local seconds = math.min(away, Config.OfflineMaxHours * 3600)
+		local earned = math.floor(data.lastIncome * seconds * Config.OfflineShare)
+		setCash(player, data, data.cash + earned)
+		task.delay(4, toast, player, "offlineEarned", { Format.time(seconds), Format.number(earned) }, Color3.fromRGB(90, 200, 140))
+	end
+	data.lastSeen = os.time()
 	recompute(player, data)
 	pushState(player)
 	task.spawn(checkLikeReward, player, data)
@@ -598,7 +607,7 @@ function actions.UpgradeMutation(player, data, itemKey)
 		return
 	end
 	if star.season then
-		return -- seasonal stars can't be upgraded
+		return toast(player, "toastSeasonalNoUpgrade") -- seasonal stars can't be upgraded
 	end
 	if (data.inventory[itemKey] or 0) < nextMutation.copies then
 		return toast(player, "toastNeedSame", { nextMutation.copies })
@@ -829,6 +838,9 @@ function actions.Rebirth(player, data)
 	end
 	data.rebirths += 1
 	data.rebirthTokens = math.max(0, data.rebirthTokens or 0) + 1
+	data.pets = {} -- pets and stars on an expedition are lost like the inventory
+	refreshPets(player, data)
+	data.expedition = false
 	data.mass = 0
 	data.inventory = {}
 	data.grid = {}
@@ -870,6 +882,42 @@ function actions.BuyFloor(player, data)
 	if data.floors < Config.MaxFloors and spend(player, data, Config.FloorCost(data.floors + 1)) then
 		data.floors += 1
 		recompute(player, data)
+	end
+end
+
+-- "MAX": buy as many levels of one upgrade as the cash allows
+local upgradeCosts = {
+	BuyLuck = function(data)
+		return if data.luckLevel < Config.MaxLuckLevel then Config.LuckCost(data.luckLevel) else nil
+	end,
+	BuySpeed = function(data)
+		return if data.rollSpeedLevel < Config.MaxRollSpeedLevel then Config.RollSpeedCost(data.rollSpeedLevel) else nil
+	end,
+	BuyMulti = function(data)
+		return if data.multiRollLevel < Config.MaxMultiRollLevel then Config.MultiRollCost(data.multiRollLevel) else nil
+	end,
+	BuyFloor = function(data)
+		return if data.floors < Config.MaxFloors then Config.FloorCost(data.floors + 1) else nil
+	end,
+}
+function actions.BuyMax(player, data, kind)
+	local costOf = type(kind) == "string" and upgradeCosts[kind]
+	if not costOf then
+		return
+	end
+	local bought = 0
+	for _ = 1, 1000 do
+		local cost = costOf(data)
+		if not cost or data.cash < cost then
+			break
+		end
+		actions[kind](player, data)
+		bought += 1
+	end
+	if bought == 0 then
+		actions[kind](player, data) -- shows "not enough cash" / max
+	else
+		toast(player, "toastBoughtLevels", { bought }, Color3.fromRGB(90, 200, 140))
 	end
 end
 
@@ -1075,7 +1123,10 @@ local function tickPlayer(player: Player, session)
 		pushState(player)
 	end
 
-	setCash(player, data, data.cash + incomePerSecond(player, data))
+	local perSecond = incomePerSecond(player, data)
+	setCash(player, data, data.cash + perSecond)
+	data.lastIncome = perSecond
+	data.lastSeen = os.time()
 end
 
 task.spawn(function()

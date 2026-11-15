@@ -86,7 +86,13 @@ function Config.RebirthCost(rebirths: number): number
 	return math.floor(100000 * 10 ^ rebirths)
 end
 Config.RebirthIncomeBonus = 2 -- income x(1 + rebirths * this)
-Config.RebirthLuckMult = 0.5 -- luck x(1 + rebirths * this)
+Config.RebirthLuckMult = 0.5 -- (old formula, unused)
+-- ALL luck (passes, pets, upgrades, boosts...) is multiplied by this: 1st rebirth x2, 2nd x4, 3rd x6 ...
+function Config.RebirthLuck(rebirths: number): number
+	return if rebirths > 0 then 2 * rebirths else 1
+end
+Config.OfflineMaxHours = 12 -- income while away is paid up to this long
+Config.OfflineShare = 0.5 -- ... at this share of the normal income
 
 -- Rebirth tokens: +1 per rebirth, spent on permanent upgrades (they survive rebirths)
 Config.RebirthUpgrades = {
@@ -101,7 +107,7 @@ Config.RebirthUpgrades = {
 Config.Expedition = {
 	hours = { 1, 2, 4, 8 },
 	maxStars = 5,
-	cashFactor = 0.5, -- cash = income/s of the sent stars * seconds away * this
+	cashFactor = 0.125, -- cash = income/s of the sent stars * seconds away * this (1 h pays like 15 min of income)
 	tokenPerHour = 0.03, -- chance of a rebirth token (8 h = 24%)
 	mutatePerHour = 0.025, -- chance per star to come back one mutation higher (8 h = 20%)
 	reach = 24,
