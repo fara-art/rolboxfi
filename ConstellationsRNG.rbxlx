@@ -306,7 +306,7 @@ Config.UiIcons = {
 	income = "128510907463165", -- ui_income.png (header per second)
 	rebirth = "73756458949010", -- ui_rebirth.png
 	build = "81422090060014", -- ui_build.png
-	codes = "", -- ui_codes.png
+	codes = "135556107125294", -- ui_codes.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
