@@ -565,6 +565,25 @@ function actions.Feed(player, data, itemKey, count)
 	end
 end
 
+-- "My museum" button: teleport to the door of your own museum (2 s cooldown)
+local lastHome: { [Player]: number } = {}
+function actions.GoHome(player, data)
+	if os.clock() - (lastHome[player] or 0) < 2 then
+		return
+	end
+	lastHome[player] = os.clock()
+	if not World.plotOf(player) then
+		return toast(player, "buildNoPlot")
+	end
+	local character = player.Character
+	if character then
+		character:PivotTo(World.spawnCFrame(player))
+	end
+end
+Players.PlayerRemoving:Connect(function(player)
+	lastHome[player] = nil
+end)
+
 function actions.BuyRebirthUp(player, data, upgradeId)
 	for _, upgrade in Config.RebirthUpgrades do
 		if upgrade.id == upgradeId then

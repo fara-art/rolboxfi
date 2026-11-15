@@ -2044,6 +2044,8 @@ do
 			local b = iconButton(entry[4], entry[1], entry[3], { Size = UDim2.new(0, BUTTON, 0, BUTTON), LayoutOrder = order, Parent = parent }, function()
 				if entry[2] == "build" then
 					setBuildMode(not buildMode)
+				elseif entry[2] == "home" then
+					ActionEv:FireServer("GoHome")
 				else
 					open(entry[2])
 				end
@@ -2053,10 +2055,11 @@ do
 	end
 
 	-- left side: roll rewards + index
-	local leftColumn = buttonGroup(2, false, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.45, 0), Parent = gui })
+	local leftColumn = buttonGroup(3, false, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.45, 0), Parent = gui })
 	addButtons(leftColumn, {
 		{ "rewards", rewardsW, RED, "rewards" },
 		{ "index", indexW, LILAC, "index" },
+		{ "home", "home", Color3.fromRGB(90, 190, 255), "museum" },
 	})
 	-- right side: everything else (codes live at the bottom of the shop now)
 	local rightColumn = buttonGroup(4, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })

@@ -80,7 +80,7 @@ Lang.Strings = {
 		lbRolls = "TOP ROLLS", lbRebirths = "TOP REBIRTHS", lbCash = "RICHEST", lbRarest = "RAREST FINDS", lbEmpty = "No records yet",
 		build = "BUILD", buildTitle = "BUILD MODE", buildHint = "Pick a slab and tap a free spot on your plot.", removeTool = "REMOVE", exitBuild = "EXIT",
 		slab_stone = "Stone slab", slab_gold = "Gold slab", slab_emerald = "Emerald slab", slab_marble = "Marble slab",
-		onPlot = "+%d on plot", needSlab = "Build a slab here first", buildNoPlot = "Claim a plot first",
+		onPlot = "+%d on plot", needSlab = "Build a slab here first", buildNoPlot = "Claim a plot first", home = "MY MUSEUM",
 		langButton = "EN",
 	},
 	ru = {
@@ -159,7 +159,7 @@ Lang.Strings = {
 		lbRolls = "ТОП КРУТОК", lbRebirths = "ТОП ПЕРЕРОЖДЕНИЙ", lbCash = "САМЫЕ БОГАТЫЕ", lbRarest = "САМЫЕ РЕДКИЕ", lbEmpty = "Пока пусто",
 		build = "СТРОИТЬ", buildTitle = "СТРОИТЕЛЬСТВО", buildHint = "Выбери плиту и нажми на свободное место участка.", removeTool = "УБРАТЬ", exitBuild = "ВЫЙТИ",
 		slab_stone = "Каменная плита", slab_gold = "Золотая плита", slab_emerald = "Изумрудная плита", slab_marble = "Мраморная плита",
-		onPlot = "+%d на участке", needSlab = "Сначала построй тут плиту", buildNoPlot = "Сначала займи участок",
+		onPlot = "+%d на участке", needSlab = "Сначала построй тут плиту", buildNoPlot = "Сначала займи участок", home = "МОЙ МУЗЕЙ",
 		langButton = "RU",
 	},
 }
