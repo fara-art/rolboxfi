@@ -191,6 +191,7 @@ Config.ShowerLuck = 2
 
 Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
 Config.GlobalRareChance = 1000000000 -- 1 in a billion and rarer: cinematic for the whole server
+Config.ChatAllServersChance = 50000000 -- 1 in 50M and rarer: a chat message on EVERY server of the game
 Config.UltraRevealChance = 500000 -- 1 in 500K and rarer: the long black-screen ultra reveal
 
 -- ================= Daily chest (7-day streak). Cash grows with the player's income.

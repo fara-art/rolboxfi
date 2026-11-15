@@ -321,6 +321,7 @@ Config.ShowerLuck = 2
 
 Config.AnnounceChance = 10000 -- announce items rarer than 1 in N
 Config.GlobalRareChance = 1000000000 -- 1 in a billion and rarer: cinematic for the whole server
+Config.ChatAllServersChance = 50000000 -- 1 in 50M and rarer: a chat message on EVERY server of the game
 Config.UltraRevealChance = 500000 -- 1 in 500K and rarer: the long black-screen ultra reveal
 
 -- ================= Daily chest (7-day streak). Cash grows with the player's income.
@@ -888,7 +889,7 @@ Lang.Strings = {
 		bookTitle = "CONSTELLATION BOOK", unknown = "Unknown", nStars = "%d stars", incomeX = "income x%s",
 		bookHint = "Place stars on pedestals in exactly this shape, with no extra neighbours (diagonals count). All stars of one kind: another x%s.",
 		shower = "STAR SHOWER  x%s LUCK  %s",
-		annDiscover = "%s discovered %s (x%s)", annRolled = "%s rolled %s (1/%s)", annForged = "%s forged %s",
+		annDiscover = "%s discovered %s (x%s)", annRolled = "%s rolled %s (1/%s)", chatRareHere = "⭐ %s just rolled %s (1 in %s)!", chatRareGlobal = "🌌 [GLOBAL] %s rolled %s (1 in %s) on another server!", annForged = "%s forged %s",
 		annExploded = "%s's %s exploded into %s!", annRebirth = "%s was reborn from the Black Hole (rebirth %s)",
 		annShower = "STAR SHOWER! x%s luck for %s",
 		toastForged = "Forged %s", toastNeedCash = "Need %s cash", toastNeedSame = "Need %d of the same star",
@@ -990,7 +991,7 @@ Lang.Strings = {
 		bookTitle = "КНИГА СОЗВЕЗДИЙ", unknown = "Неизвестно", nStars = "звёзд: %d", incomeX = "доход x%s",
 		bookHint = "Ставь звёзды на постаменты ровно такой фигурой, без лишних соседей (диагонали тоже считаются). Все звёзды одного вида: ещё x%s.",
 		shower = "ЗВЕЗДОПАД  x%s УДАЧИ  %s",
-		annDiscover = "%s открыл созвездие %s (x%s)", annRolled = "%s выбил %s (1/%s)", annForged = "%s выковал %s",
+		annDiscover = "%s открыл созвездие %s (x%s)", annRolled = "%s выбил %s (1/%s)", chatRareHere = "⭐ %s выбил %s (1 к %s)!", chatRareGlobal = "🌌 [ГЛОБАЛЬНО] %s выбил %s (1 к %s) на другом сервере!", annForged = "%s выковал %s",
 		annExploded = "У %s звезда %s взорвалась в %s!", annRebirth = "%s переродился из Чёрной дыры (перерождение %s)",
 		annShower = "ЗВЕЗДОПАД! x%s удачи на %s",
 		toastForged = "Выковано: %s", toastNeedCash = "Нужно %s денег", toastNeedSame = "Нужно %d одинаковых звёзд",
@@ -1639,6 +1640,7 @@ local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
 local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
 local CrateEv = remote("RemoteEvent", "CrateResult") -- ({ itemKey })
 local TradeEv = remote("RemoteEvent", "Trade") -- (kind, info)
+local RareChatEv = remote("RemoteEvent", "RareChat") -- (playerName, itemKey, chance, sameServer)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -1945,8 +1947,27 @@ local function rollItem(luck: number): string
 	return Odds.roll(luck, rng, Stars.season(os.time())).id -- mutations come from upgrading at the Forge
 end
 
+-- 1/50M+ finds: chat message on this server and (through MessagingService) on every other server
+local MessagingService = game:GetService("MessagingService")
+local RARE_TOPIC = "StarRNG_RareFind"
+task.spawn(function()
+	pcall(MessagingService.SubscribeAsync, MessagingService, RARE_TOPIC, function(message)
+		local info = message.Data
+		if type(info) == "table" and info.job ~= game.JobId and type(info.key) == "string" and Items.parse(info.key) then
+			RareChatEv:FireAllClients(tostring(info.name), info.key, Items.chance(info.key), false)
+		end
+	end)
+end)
+local function shareRareFind(player: Player, key: string)
+	RareChatEv:FireAllClients(player.DisplayName, key, Items.chance(key), true)
+	task.spawn(pcall, MessagingService.PublishAsync, MessagingService, RARE_TOPIC, { name = player.DisplayName, key = key, job = game.JobId })
+end
+
 local function announceIfRare(player: Player, key: string)
 	local chance = Items.chance(key)
+	if chance >= Config.ChatAllServersChance then
+		shareRareFind(player, key)
+	end
 	if chance >= Config.GlobalRareChance then
 		-- whole server sees a cinematic + a pillar of light over the lucky player
 		GlobalRareEv:FireAllClients(player.DisplayName, key, chance)
@@ -5851,6 +5872,7 @@ local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
 local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
 local CrateEv = Remotes:WaitForChild("CrateResult")
+local RareChatEv = Remotes:WaitForChild("RareChat")
 local TradeEv = Remotes:WaitForChild("Trade")
 
 local state = nil
@@ -10011,6 +10033,28 @@ do
 					unionW.frame.Visible = false
 				end
 			end
+		end
+	end)
+end
+
+---------------------------------------------------------------- Chat: super-rare finds (this server and every other server)
+do
+	local TextChatService = game:GetService("TextChatService")
+	local StarterGui = game:GetService("StarterGui")
+	RareChatEv.OnClientEvent:Connect(function(name: string, key: string, chance: number, sameServer: boolean)
+		local star, mutation = Items.parse(key)
+		if not star then
+			return
+		end
+		local color = if mutation and mutation.id ~= "normal" then mutation.color else star.color
+		local message = Lang.t(lang, if sameServer then "chatRareHere" else "chatRareGlobal", name, Lang.item(lang, key), Format.number(chance))
+		local hex = string.format("#%02X%02X%02X", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
+		local ok = pcall(function()
+			local channel = TextChatService:WaitForChild("TextChannels", 5):WaitForChild("RBXGeneral", 5)
+			channel:DisplaySystemMessage('<font color="' .. hex .. '"><b>' .. message .. '</b></font>')
+		end)
+		if not ok then -- legacy chat
+			pcall(StarterGui.SetCore, StarterGui, "ChatMakeSystemMessage", { Text = message, Color = color, Font = Enum.Font.GothamBold })
 		end
 	end)
 end

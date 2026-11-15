@@ -33,6 +33,7 @@ local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
 local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
 local CrateEv = Remotes:WaitForChild("CrateResult")
+local RareChatEv = Remotes:WaitForChild("RareChat")
 local TradeEv = Remotes:WaitForChild("Trade")
 
 local state = nil
@@ -4193,6 +4194,28 @@ do
 					unionW.frame.Visible = false
 				end
 			end
+		end
+	end)
+end
+
+---------------------------------------------------------------- Chat: super-rare finds (this server and every other server)
+do
+	local TextChatService = game:GetService("TextChatService")
+	local StarterGui = game:GetService("StarterGui")
+	RareChatEv.OnClientEvent:Connect(function(name: string, key: string, chance: number, sameServer: boolean)
+		local star, mutation = Items.parse(key)
+		if not star then
+			return
+		end
+		local color = if mutation and mutation.id ~= "normal" then mutation.color else star.color
+		local message = Lang.t(lang, if sameServer then "chatRareHere" else "chatRareGlobal", name, Lang.item(lang, key), Format.number(chance))
+		local hex = string.format("#%02X%02X%02X", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
+		local ok = pcall(function()
+			local channel = TextChatService:WaitForChild("TextChannels", 5):WaitForChild("RBXGeneral", 5)
+			channel:DisplaySystemMessage('<font color="' .. hex .. '"><b>' .. message .. '</b></font>')
+		end)
+		if not ok then -- legacy chat
+			pcall(StarterGui.SetCore, StarterGui, "ChatMakeSystemMessage", { Text = message, Color = color, Font = Enum.Font.GothamBold })
 		end
 	end)
 end

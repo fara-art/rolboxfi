@@ -37,6 +37,7 @@ local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
 local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
 local CrateEv = remote("RemoteEvent", "CrateResult") -- ({ itemKey })
 local TradeEv = remote("RemoteEvent", "Trade") -- (kind, info)
+local RareChatEv = remote("RemoteEvent", "RareChat") -- (playerName, itemKey, chance, sameServer)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -343,8 +344,27 @@ local function rollItem(luck: number): string
 	return Odds.roll(luck, rng, Stars.season(os.time())).id -- mutations come from upgrading at the Forge
 end
 
+-- 1/50M+ finds: chat message on this server and (through MessagingService) on every other server
+local MessagingService = game:GetService("MessagingService")
+local RARE_TOPIC = "StarRNG_RareFind"
+task.spawn(function()
+	pcall(MessagingService.SubscribeAsync, MessagingService, RARE_TOPIC, function(message)
+		local info = message.Data
+		if type(info) == "table" and info.job ~= game.JobId and type(info.key) == "string" and Items.parse(info.key) then
+			RareChatEv:FireAllClients(tostring(info.name), info.key, Items.chance(info.key), false)
+		end
+	end)
+end)
+local function shareRareFind(player: Player, key: string)
+	RareChatEv:FireAllClients(player.DisplayName, key, Items.chance(key), true)
+	task.spawn(pcall, MessagingService.PublishAsync, MessagingService, RARE_TOPIC, { name = player.DisplayName, key = key, job = game.JobId })
+end
+
 local function announceIfRare(player: Player, key: string)
 	local chance = Items.chance(key)
+	if chance >= Config.ChatAllServersChance then
+		shareRareFind(player, key)
+	end
 	if chance >= Config.GlobalRareChance then
 		-- whole server sees a cinematic + a pillar of light over the lucky player
 		GlobalRareEv:FireAllClients(player.DisplayName, key, chance)

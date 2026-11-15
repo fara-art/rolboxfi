@@ -115,6 +115,8 @@ ProcessReceipt is idempotent (data.receipts).
 - Offline income: data.lastIncome/lastSeen, paid on join (`Config.OfflineMaxHours`, `OfflineShare`).
 - Upgrades have a MAX button (action BuyMax). Inventory sorted by real odds (Items.rank).
 
+- Super-rare finds (>= Config.ChatAllServersChance = 1/50M): chat system message on this server + every server via
+  MessagingService topic "StarRNG_RareFind" (remote RareChat, client uses TextChatService RBXGeneral).
 - Falling stars: every 2.5–4.5 min one lands on the hub (World.dropStar), first to catch rolls with luck x10.
 - Fusion (Forge window, FUSION tab): two different stars -> hybrid (`Stars.Hybrids`, 12 secret recipes, not rollable,
   no mutations); data.fusions; icons `assets/hybrid_upload.zip`. Rarest board moved to `LB_rarest_v3` (index > 99).
