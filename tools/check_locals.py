@@ -5,7 +5,7 @@ import re, sys
 
 LIMIT = 180
 bad = False
-for path in sys.argv[1:]:
+for path in [a for a in sys.argv[1:] if not a.startswith("-")]:
     count = 0
     for line in open(path, encoding="utf-8"):
         if line.startswith("local function "):

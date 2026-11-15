@@ -274,10 +274,10 @@ end
 ---------------------------------------------------------------- Header
 local readout, cashValue, incomeValue, luckValue, rollsValue, rebirthValue, luckyBar, luckyFill, luckyText, showerBanner, showToast
 do
-	local header = panelFrame({ Size = UDim2.new(0.5, 0, 0, 58), Position = UDim2.new(0.25, 0, 0, 8), Parent = gui })
+	local header = panelFrame({ Size = UDim2.new(0, 380, 0, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Parent = gui })
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0.01, 0), Parent = header })
 	readout = function(key: string, color: Color3, iconKey: string?, fallbackIcon: string?)
-		local box = make("Frame", { Size = UDim2.new(0.19, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
+		local box = make("Frame", { Size = UDim2.new(0.32, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
 		bind(text({ Size = UDim2.new(1, 0, 0.36, 0), TextColor3 = MUTED, FontFace = BODY, Max = 12, Parent = box }), key)
 		-- icon + number as one centered group
 		local line = make("Frame", { Size = UDim2.new(1, 0, 0.64, 0), Position = UDim2.new(0, 0, 0.36, 0), BackgroundTransparency = 1, Parent = box })
@@ -346,6 +346,8 @@ end
 
 ---------------------------------------------------------------- Language toggle (top-left)
 local setLang
+local render
+local settingsButton
 do
 	local langFrame = panelFrame({ Size = UDim2.new(0, 112, 0, 44), Position = UDim2.new(0, 16, 0, 64), Parent = gui })
 	local enButton, ruButton
@@ -373,7 +375,7 @@ do
 		setLang("ru")
 	end)
 
-	local settingsButton -- created after windows exist
+	-- created after windows exist
 end
 
 ---------------------------------------------------------------- Telescope (left)
@@ -489,11 +491,12 @@ end
 
 ---------------------------------------------------------------- Tutorial card (first visit only, closable)
 local tutorialCard, tutorialTitle, tutorialText, tutorialStep, tutorialClosed, TUTORIAL_STEPS
+local tutorialNext
 do
-	tutorialCard = panelFrame({ Size = UDim2.new(0, 330, 0, 150), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.42, 0), Visible = false, ZIndex = 40, Parent = gui })
+	tutorialCard = panelFrame({ Size = UDim2.new(0, 330, 0, 150), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 104, 0.42, 0), Visible = false, ZIndex = 40, Parent = gui })
 	tutorialTitle = text({ Size = UDim2.new(1, -40, 0, 24), Text = "", FontFace = TITLE, TextColor3 = BLUE, TextXAlignment = Enum.TextXAlignment.Left, Max = 18, ZIndex = 41, Parent = tutorialCard })
 	tutorialText = text({ Size = UDim2.new(1, 0, 0, 62), Position = UDim2.new(0, 0, 0, 28), Text = "", FontFace = BODY, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 41, Parent = tutorialCard })
-	local tutorialNext -- button, created below
+	-- button, created below
 	tutorialStep = 1
 	tutorialClosed = false
 	TUTORIAL_STEPS = 5
@@ -533,6 +536,22 @@ local function sortedInventory(filter: ((string) -> boolean)?): { string }
 	return keys
 end
 
+-- shimmering rainbow text: every UIGradient tagged "RainbowFx" gets the moving rainbow
+task.spawn(function()
+	while true do
+		local phase = (os.clock() * 0.25) % 1
+		local points = {}
+		for i = 0, 6 do
+			table.insert(points, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV((phase + i / 6 * 0.6) % 1, 0.75, 1)))
+		end
+		local sequence = ColorSequence.new(points)
+		for _, gradient in CollectionService:GetTagged("RainbowFx") do
+			gradient.Color = sequence
+		end
+		task.wait(0.05)
+	end
+end)
+
 -- one inventory row: icon, bold name, subtext, count. Returns the row (a TextButton).
 local function itemRow(parent: Instance, order: number, key: string, subText: string, highlighted: boolean?)
 	local star, mutation = Items.parse(key)
@@ -541,7 +560,11 @@ local function itemRow(parent: Instance, order: number, key: string, subText: st
 		BackgroundColor3 = if highlighted then Color3.fromRGB(220, 236, 255) else WHITE, Parent = parent,
 	}, { corner(12), stroke(if highlighted then BLUE else LINE, if highlighted then 2.5 else 1.5) })
 	starIcon(star, mutation, { Size = UDim2.new(0, 46, 0, 46), Position = UDim2.new(0, 6, 0, 6), ZIndex = 22, Parent = r })
-	text({ Size = UDim2.new(1, -120, 0, 26), Position = UDim2.new(0, 58, 0, 6), Text = Lang.item(lang, key), FontFace = TITLE, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
+	text({ Size = UDim2.new(1, -220, 0, 26), Position = UDim2.new(0, 58, 0, 6), Text = Lang.item(lang, key), FontFace = TITLE, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
+	-- the odds shimmer in rainbow colours
+	local odds = text({ Size = UDim2.new(0, 150, 0, 26), Position = UDim2.new(1, -214, 0, 6), Text = t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Right, Max = 20, ZIndex = 22, Parent = r })
+	make("UIStroke", { Color = INK, Thickness = 1.6, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = odds })
+	CollectionService:AddTag(make("UIGradient", { Parent = odds }), "RainbowFx")
 	text({ Size = UDim2.new(1, -120, 0, 18), Position = UDim2.new(0, 58, 0, 33), Text = subText, FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = r })
 	text({ Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -60, 0, 0), Text = "x" .. (state.inventory[key] or 0), FontFace = TITLE, TextColor3 = if mutation.id ~= "normal" then shade(mutation.color, 0.2) else BLUE, Max = 20, ZIndex = 22, Parent = r })
 	return r
@@ -556,7 +579,7 @@ local function itemSubText(key: string): string
 			end
 		end
 	end
-	return t("oneIn", Format.number(Items.chance(key))) .. "  ·  " .. t("perSecShort", Format.number(Items.income(key)))
+	return t("perSecShort", Format.number(Items.income(key)))
 		.. "  ·  " .. t("sellsFor", Format.number(Items.income(key) * Config.SellMultiplier))
 		.. (if onPlot > 0 then "  ·  " .. t("onPlot", onPlot) else "")
 end
@@ -658,45 +681,111 @@ renderers[pickerW] = function()
 end
 
 ---------------------------------------------------------------- Upgrades
-renderers[upgradesW] = function()
-	local body = upgradesW.body
-	clear(body)
-	body.BackgroundColor3 = Color3.fromRGB(46, 40, 78)
-	local grid = make("Frame", { Size = UDim2.new(1, 0, 0, 2 * 236 + 10), BackgroundTransparency = 1, ZIndex = 21, Parent = body })
-	make("UIGridLayout", { CellSize = UDim2.new(0.5, -6, 0, 236), CellPadding = UDim2.new(0, 10, 0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
-	local function upgrade(order: number, nameKey: string, iconKey: string, desc: string, maxed: boolean, cost: number, action: string, top: Color3, bottom: Color3)
-		local card = make("Frame", { LayoutOrder = order, BackgroundColor3 = WHITE, ZIndex = 22, Parent = grid }, {
-			corner(14), stroke(INK, 3.5),
-			make("UIGradient", { Color = ColorSequence.new(top, bottom), Rotation = 90 }),
-		})
-		-- soft shine on the upper half
-		make("Frame", { Size = UDim2.new(1, -12, 0.35, 0), Position = UDim2.new(0, 6, 0, 6), BackgroundColor3 = WHITE, BackgroundTransparency = 0.82, ZIndex = 22, Parent = card }, { corner(10) })
-		local icon = uiIcon(iconKey, { Size = UDim2.new(0, 84, 0, 84), Position = UDim2.new(0.5, -42, 0, 10), ZIndex = 24, Parent = card })
-			or uiIcon(if iconKey == "bolt" then "rolls" else "upgrades", { Size = UDim2.new(0, 84, 0, 84), Position = UDim2.new(0.5, -42, 0, 10), ZIndex = 24, Parent = card })
-		if not icon then
-			text({ Size = UDim2.new(0, 84, 0, 84), Position = UDim2.new(0.5, -42, 0, 10), Text = string.sub(t(nameKey), 1, 1), FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 60, ZIndex = 24, Parent = card })
-		end
-		local title = text({ Size = UDim2.new(1, -12, 0, 30), Position = UDim2.new(0, 6, 0, 98), Text = t(nameKey), FontFace = TITLE, TextColor3 = WHITE, Max = 24, ZIndex = 24, Parent = card })
-		make("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = title })
-		local sub = text({ Size = UDim2.new(1, -16, 0, 40), Position = UDim2.new(0, 8, 0, 128), Text = desc, FontFace = TITLE, TextColor3 = WHITE, TextWrapped = true, Max = 18, ZIndex = 24, Parent = card })
-		make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = sub })
-		btn(if maxed then GREY else Color3.fromRGB(80, 210, 90), {
-			Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 1, -60), ZIndex = 24, Max = 24,
-			Text = if maxed then t("upMax") else "$" .. Format.number(cost), Parent = card,
-		}, function()
-			if not maxed then
-				ActionEv:FireServer(action)
+do
+	local upgradesTab = "cash"
+	local function cashUpgrades(body)
+		local grid = make("Frame", { Size = UDim2.new(1, 0, 0, 2 * 236 + 10), LayoutOrder = 2, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+		make("UIGridLayout", { CellSize = UDim2.new(0.5, -6, 0, 236), CellPadding = UDim2.new(0, 10, 0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+		local function upgrade(order: number, nameKey: string, iconKey: string, desc: string, maxed: boolean, cost: number, action: string, top: Color3, bottom: Color3)
+			local card = make("Frame", { LayoutOrder = order, BackgroundColor3 = WHITE, ZIndex = 22, Parent = grid }, {
+				corner(14), stroke(INK, 3.5),
+				make("UIGradient", { Color = ColorSequence.new(top, bottom), Rotation = 90 }),
+			})
+			-- soft shine on the upper half
+			make("Frame", { Size = UDim2.new(1, -12, 0.35, 0), Position = UDim2.new(0, 6, 0, 6), BackgroundColor3 = WHITE, BackgroundTransparency = 0.82, ZIndex = 22, Parent = card }, { corner(10) })
+			local icon = uiIcon(iconKey, { Size = UDim2.new(0, 84, 0, 84), Position = UDim2.new(0.5, -42, 0, 10), ZIndex = 24, Parent = card })
+				or uiIcon(if iconKey == "bolt" then "rolls" else "upgrades", { Size = UDim2.new(0, 84, 0, 84), Position = UDim2.new(0.5, -42, 0, 10), ZIndex = 24, Parent = card })
+			if not icon then
+				text({ Size = UDim2.new(0, 84, 0, 84), Position = UDim2.new(0.5, -42, 0, 10), Text = string.sub(t(nameKey), 1, 1), FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 60, ZIndex = 24, Parent = card })
 			end
-		end)
+			local title = text({ Size = UDim2.new(1, -12, 0, 30), Position = UDim2.new(0, 6, 0, 98), Text = t(nameKey), FontFace = TITLE, TextColor3 = WHITE, Max = 24, ZIndex = 24, Parent = card })
+			make("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = title })
+			local sub = text({ Size = UDim2.new(1, -16, 0, 40), Position = UDim2.new(0, 8, 0, 128), Text = desc, FontFace = TITLE, TextColor3 = WHITE, TextWrapped = true, Max = 18, ZIndex = 24, Parent = card })
+			make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = sub })
+			btn(if maxed then GREY else Color3.fromRGB(80, 210, 90), {
+				Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 1, -60), ZIndex = 24, Max = 24,
+				Text = if maxed then t("upMax") else "$" .. Format.number(cost), Parent = card,
+			}, function()
+				if not maxed then
+					ActionEv:FireServer(action)
+				end
+			end)
+		end
+		local luckNow = 1 + state.luckLevel * Config.LuckPerLevel
+		upgrade(1, "upLuck", "luck", t("upLuckDesc", luckNow, luckNow + Config.LuckPerLevel), state.luckLevel >= Config.MaxLuckLevel, Config.LuckCost(state.luckLevel), "BuyLuck", Color3.fromRGB(110, 235, 120), Color3.fromRGB(30, 150, 70))
+		local speedNow = math.floor(Config.RollCooldown(state.rollSpeedLevel) * 100) / 100
+		local speedNext = math.floor(Config.RollCooldown(state.rollSpeedLevel + 1) * 100) / 100
+		upgrade(2, "upSpeed", "bolt", t("upSpeedDesc", speedNow, speedNext), state.rollSpeedLevel >= Config.MaxRollSpeedLevel, Config.RollSpeedCost(state.rollSpeedLevel), "BuySpeed", Color3.fromRGB(110, 200, 255), Color3.fromRGB(40, 90, 220))
+		upgrade(3, "upMulti", "dice2", t("upMultiDesc", 1 + state.multiRollLevel, 2 + state.multiRollLevel), state.multiRollLevel >= Config.MaxMultiRollLevel, Config.MultiRollCost(state.multiRollLevel), "BuyMulti", Color3.fromRGB(220, 140, 255), Color3.fromRGB(120, 50, 200))
+		local floors = state.floors or 1
+		upgrade(4, "upFloor", "build", t("upFloorDesc", floors, floors + 1), floors >= Config.MaxFloors, Config.FloorCost(floors + 1), "BuyFloor", Color3.fromRGB(255, 220, 100), Color3.fromRGB(230, 130, 30))
 	end
-	local luckNow = 1 + state.luckLevel * Config.LuckPerLevel
-	upgrade(1, "upLuck", "luck", t("upLuckDesc", luckNow, luckNow + Config.LuckPerLevel), state.luckLevel >= Config.MaxLuckLevel, Config.LuckCost(state.luckLevel), "BuyLuck", Color3.fromRGB(110, 235, 120), Color3.fromRGB(30, 150, 70))
-	local speedNow = math.floor(Config.RollCooldown(state.rollSpeedLevel) * 100) / 100
-	local speedNext = math.floor(Config.RollCooldown(state.rollSpeedLevel + 1) * 100) / 100
-	upgrade(2, "upSpeed", "bolt", t("upSpeedDesc", speedNow, speedNext), state.rollSpeedLevel >= Config.MaxRollSpeedLevel, Config.RollSpeedCost(state.rollSpeedLevel), "BuySpeed", Color3.fromRGB(110, 200, 255), Color3.fromRGB(40, 90, 220))
-	upgrade(3, "upMulti", "dice2", t("upMultiDesc", 1 + state.multiRollLevel, 2 + state.multiRollLevel), state.multiRollLevel >= Config.MaxMultiRollLevel, Config.MultiRollCost(state.multiRollLevel), "BuyMulti", Color3.fromRGB(220, 140, 255), Color3.fromRGB(120, 50, 200))
-	local floors = state.floors or 1
-	upgrade(4, "upFloor", "build", t("upFloorDesc", floors, floors + 1), floors >= Config.MaxFloors, Config.FloorCost(floors + 1), "BuyFloor", Color3.fromRGB(255, 220, 100), Color3.fromRGB(230, 130, 30))
+
+	-- permanent upgrades bought with rebirth tokens
+	local function rebirthUpgrades(body)
+		local tokens = math.max(0, state.rebirthTokens or 0)
+		local info = make("Frame", { Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, BackgroundColor3 = Color3.fromRGB(120, 70, 220), ZIndex = 22, Parent = body }, { corner(12), stroke(INK, 3) })
+		uiIcon("rebirth", { Size = UDim2.new(0, 38, 0, 38), Position = UDim2.new(0, 8, 0, 3), ZIndex = 23, Parent = info })
+		local label = text({ Size = UDim2.new(1, -60, 1, 0), Position = UDim2.new(0, 52, 0, 0), Text = t("rebirthTokens", tokens), FontFace = TITLE, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 24, ZIndex = 23, Parent = info })
+		make("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = label })
+		local grid = make("Frame", { Size = UDim2.new(1, 0, 0, 2 * 236 + 10), LayoutOrder = 2, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+		make("UIGridLayout", { CellSize = UDim2.new(0.5, -6, 0, 236), CellPadding = UDim2.new(0, 10, 0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+		local colors = {
+			luck = { Color3.fromRGB(110, 235, 120), Color3.fromRGB(30, 150, 70) },
+			cash = { Color3.fromRGB(255, 220, 100), Color3.fromRGB(230, 130, 30) },
+			speed = { Color3.fromRGB(110, 200, 255), Color3.fromRGB(40, 90, 220) },
+			multi = { Color3.fromRGB(220, 140, 255), Color3.fromRGB(120, 50, 200) },
+		}
+		for order, upgrade in Config.RebirthUpgrades do
+			local level = Config.RebirthUp(state, upgrade.id)
+			local maxed = level >= upgrade.max
+			local cost = Config.RebirthUpCost(level)
+			local c = colors[upgrade.id] or colors.luck
+			local card = make("Frame", { LayoutOrder = order, BackgroundColor3 = WHITE, ZIndex = 22, Parent = grid }, {
+				corner(14), stroke(INK, 3.5), make("UIGradient", { Color = ColorSequence.new(c[1], c[2]), Rotation = 90 }),
+			})
+			uiIcon(upgrade.icon, { Size = UDim2.new(0, 80, 0, 80), Position = UDim2.new(0.5, -40, 0, 10), ZIndex = 24, Parent = card })
+			local title = text({ Size = UDim2.new(1, -12, 0, 30), Position = UDim2.new(0, 6, 0, 94), Text = t("rup_" .. upgrade.id) .. "  " .. level .. "/" .. upgrade.max, FontFace = TITLE, TextColor3 = WHITE, Max = 22, ZIndex = 24, Parent = card })
+			make("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = title })
+			local function mult(l: number): string
+				return if upgrade.id == "multi" then "+" .. l else "x" .. math.floor((1 + upgrade.per * l) * 100 + 0.5) / 100
+			end
+			local now, after = mult(level), mult(level + 1)
+			local desc = text({ Size = UDim2.new(1, -16, 0, 40), Position = UDim2.new(0, 8, 0, 126), Text = if maxed then now else now .. "  →  " .. after, FontFace = TITLE, TextColor3 = WHITE, Max = 24, ZIndex = 24, Parent = card })
+			make("UIStroke", { Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = desc })
+			btn(if maxed then GREY elseif tokens >= cost then Color3.fromRGB(150, 90, 255) else Color3.fromRGB(110, 100, 140), {
+				Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 1, -60), ZIndex = 24, Max = 22,
+				Text = if maxed then t("upMax") else t("tokensCost", cost), Parent = card,
+			}, function()
+				if not maxed and tokens >= cost then
+					ActionEv:FireServer("BuyRebirthUp", upgrade.id)
+				end
+			end)
+		end
+	end
+
+	renderers[upgradesW] = function()
+		local body = upgradesW.body
+		clear(body)
+		body.BackgroundColor3 = Color3.fromRGB(46, 40, 78)
+		local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 50), LayoutOrder = 0, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+		for i, tab in { { id = "cash", key = "upTabCash", color = Color3.fromRGB(80, 210, 90) }, { id = "rebirth", key = "upTabRebirth", color = Color3.fromRGB(150, 90, 255) } } do
+			local b = btn(if upgradesTab == tab.id then tab.color else Color3.fromRGB(100, 104, 130), {
+				Size = UDim2.new(0.5, -5, 1, 0), Position = UDim2.new((i - 1) * 0.5, if i == 2 then 5 else 0, 0, 0), Text = t(tab.key), Max = 20, ZIndex = 22, Parent = tabs,
+			}, function()
+				upgradesTab = tab.id
+				renderers[upgradesW]()
+			end)
+			if tab.id == "rebirth" and (state.rebirthTokens or 0) > 0 then
+				badge(b).Visible = true
+			end
+		end
+		if upgradesTab == "rebirth" then
+			rebirthUpgrades(body)
+		else
+			cashUpgrades(body)
+		end
+	end
 end
 
 ---------------------------------------------------------------- Star Index (+ roll rewards)
@@ -849,14 +938,13 @@ do
 		end
 
 		-- right: one card per milestone
-		local h = math.max(160, rewardsBody.AbsoluteSize.Y - 14)
-		local w = math.floor(h * 0.66)
-		for i, milestone in Config.RollMilestones do
+for i, milestone in Config.RollMilestones do
 			local claimed = state.milestones[tostring(i)] == true
 			local ready = rolls >= milestone.rolls and not claimed
 			local card = make("Frame", {
-				Size = UDim2.new(0, w, 0, h), LayoutOrder = i, ZIndex = 21, Parent = rewardsBody, BackgroundColor3 = WHITE,
+				Size = UDim2.new(0, 0, 1, -14), LayoutOrder = i, ZIndex = 21, Parent = rewardsBody, BackgroundColor3 = WHITE,
 			}, {
+				make("UIAspectRatioConstraint", { AspectRatio = 0.66, DominantAxis = Enum.DominantAxis.Height }),
 				corner(14), stroke(if ready then NEON else INK, if ready then 4 else 3),
 				make("UIGradient", {
 					Color = if claimed then ColorSequence.new(Color3.fromRGB(70, 80, 90), Color3.fromRGB(40, 46, 56))
@@ -1626,13 +1714,14 @@ end
 
 ---------------------------------------------------------------- Build mode: buy slabs and put them on your plot
 local buildMode, myPlotFolder, refreshMarkers, renderBuildPanel, nearMyPlot
+local setBuildMode
 do
 	buildMode = false
 	local buildTool: string? = Config.Slabs[1].id -- slab id, "remove", or nil (nothing selected)
 	local pendingRemove: string? = nil -- slab waiting for the ✓ confirmation
 	local pendingPlace: string? = nil -- phones: spot waiting for the ✓ confirmation
 	local hoverKey: string? = nil -- PC: spot under the mouse
-	local setBuildMode -- defined below (the panel's EXIT button needs it)
+	-- defined below (the panel's EXIT button needs it)
 	local buildPanel = panelFrame({ Size = UDim2.new(0, 380, 0, 440), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.55, 0), Visible = false, ZIndex = 30, Parent = gui })
 	buildPanel.BackgroundColor3 = Color3.fromRGB(70, 78, 108)
 	buildPanel.BackgroundTransparency = 0
@@ -1947,18 +2036,19 @@ do
 		end
 	end
 
-	local bottomRow = buttonGroup(3, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16 - 72 - 12, 0.5, 0), Parent = gui }) -- second column on the right
-	addButtons(bottomRow, {
+	-- left side: roll rewards + index
+	local leftColumn = buttonGroup(2, false, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.45, 0), Parent = gui })
+	addButtons(leftColumn, {
 		{ "rewards", rewardsW, RED, "rewards" },
-		{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
-		{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
+		{ "index", indexW, LILAC, "index" },
 	})
+	-- right side: everything else (codes live at the bottom of the shop now)
 	local rightColumn = buttonGroup(4, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
 	addButtons(rightColumn, {
-		{ "index", indexW, LILAC, "index" },
+		{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
+		{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
 		{ "odds", oddsW, GOLD, "odds" },
-		{ "codes", codesW, Color3.fromRGB(80, 170, 240), "codes" },
-		{ "trade", playersW, Color3.fromRGB(255, 140, 60), "dice2" },
+		{ "trade", playersW, Color3.fromRGB(255, 140, 60), "trade" },
 	})
 	rewardsBadge = badge(dockButtons.rewards)
 	indexBadge = badge(dockButtons.index)
@@ -2629,18 +2719,58 @@ do
 		{ id = "money", key = "shopMoney", color = Color3.fromRGB(70, 200, 90), icon = "coins" },
 		{ id = "luckspeed", key = "shopLuckSpeed", color = Color3.fromRGB(70, 160, 255), icon = "luck" },
 		{ id = "boosts", key = "shopBoosts", color = Color3.fromRGB(255, 100, 140), icon = "bolt" },
+		{ id = "codes", key = "codes", color = Color3.fromRGB(80, 170, 240), icon = "codes" },
 	}
+
+	-- slowly spinning light rays behind the featured crate
+	local spinning = {}
+	RunService.RenderStepped:Connect(function(dt)
+		for ray in spinning do
+			if ray.Parent then
+				ray.Rotation = (ray.Rotation + dt * 12) % 360
+			else
+				spinning[ray] = nil
+			end
+		end
+	end)
+	local function sunburst(parent: GuiObject, center: UDim2, color: Color3, z: number)
+		for k = 0, 11 do
+			local ray = make("Frame", {
+				Size = UDim2.new(0, 46, 0, 900), AnchorPoint = Vector2.new(0.5, 0.5), Position = center, Rotation = k * 15,
+				BackgroundColor3 = color, BackgroundTransparency = 0.86, BorderSizePixel = 0, ZIndex = z, Parent = parent,
+			}, {
+				make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) }), Rotation = 90 }),
+			})
+			spinning[ray] = true
+		end
+	end
 
 	local renderShopTab = {}
 
 	renderShopTab.featured = function(body)
 		sectionTitle(body, 1, "shopFeatured")
 		local crate = Config.Shop.crate
-		local card = gradientCard(body, { Size = UDim2.new(1, -8, 0, 330), LayoutOrder = 2 }, Color3.fromRGB(150, 80, 255), Color3.fromRGB(40, 20, 100))
-		local badge = make("Frame", { Size = UDim2.new(0, 110, 0, 34), Position = UDim2.new(0, 14, 0, 12), BackgroundColor3 = WHITE, ZIndex = 24, Parent = card }, {
-			corner(8), stroke(INK, 2.5), make("UIGradient", { Color = RAINBOW }),
+		local card = gradientCard(body, { Size = UDim2.new(1, -8, 0, 330), LayoutOrder = 2, ClipsDescendants = true }, Color3.fromRGB(150, 80, 255), Color3.fromRGB(40, 20, 100))
+		rgbStroke(card, 5)
+		local paintedBg = Config.UiIcons.crateBg
+		if paintedBg and paintedBg ~= "" then
+			make("ImageLabel", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Image = "rbxassetid://" .. paintedBg, ScaleType = Enum.ScaleType.Crop, ZIndex = 22, Parent = card }, { corner(16) })
+		end
+		sunburst(card, UDim2.new(0, 80, 0, 150), Color3.fromRGB(255, 230, 255), 22)
+		for k = 1, 14 do -- twinkling little stars
+			local dot = make("Frame", {
+				Size = UDim2.new(0, 6, 0, 6), Position = UDim2.new(math.random(), 0, math.random() * 0.75, 0), Rotation = 45,
+				BackgroundColor3 = WHITE, BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 23, Parent = card,
+			})
+			TweenService:Create(dot, TweenInfo.new(0.6 + math.random() * 1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, math.random() * 1.5), { BackgroundTransparency = 1, Size = UDim2.new(0, 2, 0, 2) }):Play()
+		end
+		local badge = make("Frame", { Size = UDim2.new(0, 110, 0, 34), Position = UDim2.new(0, 14, 0, 12), Rotation = -6, BackgroundColor3 = WHITE, ZIndex = 24, Parent = card }, {
+			corner(8), stroke(INK, 2.5),
 		})
+		CollectionService:AddTag(make("UIGradient", { Parent = badge }), "RainbowFx")
 		titleText(badge, t("newBadge"), { Size = UDim2.new(1, 0, 1, 0), Max = 20, ZIndex = 25 })
+		local pulse = make("UIScale", { Parent = badge })
+		TweenService:Create(pulse, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Scale = 1.1 }):Play()
 		titleText(card, t("crateName"), { Size = UDim2.new(0.6, 0, 0, 44), Position = UDim2.new(0, 134, 0, 8), TextColor3 = Color3.fromRGB(255, 225, 80), TextXAlignment = Enum.TextXAlignment.Left, Max = 36 })
 		text({ Size = UDim2.new(0.6, 0, 0, 20), Position = UDim2.new(0, 136, 0, 52), Text = t("crateOdds"), FontFace = BODY, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, Max = 15, ZIndex = 24, Parent = card })
 		uiIcon("crate", { Size = UDim2.new(0, 150, 0, 150), Position = UDim2.new(0, 6, 0, 70), ZIndex = 24, Parent = card })
@@ -2778,21 +2908,90 @@ do
 		end
 	end
 
-	renderers[shopW] = function()
-		-- rail
-		clear(shopRail)
-		for order, tab in SHOP_TABS do
-			local b = btn(if shopTab == tab.id then tab.color else Color3.fromRGB(90, 96, 120), { Size = UDim2.new(1, 0, 0, 64), LayoutOrder = order, Text = t(tab.key), Max = 15, ZIndex = 22, Parent = shopRail }, function()
-				shopTab = tab.id
-				renderers[shopW]()
-			end)
-			if shopTab == tab.id then
-				rgbStroke(b, 3)
+	local codesSection = make("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 22 }, {
+		make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	do
+		titleText(codesSection, "— " .. t("codes") .. " —", { Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 1, TextColor3 = Color3.fromRGB(255, 205, 60), Max = 30, ZIndex = 22 })
+		local card = gradientCard(codesSection, { Size = UDim2.new(1, -8, 0, 96), LayoutOrder = 2 }, Color3.fromRGB(110, 190, 255), Color3.fromRGB(40, 90, 210))
+		uiIcon("codes", { Size = UDim2.new(0, 76, 0, 76), Position = UDim2.new(0, 10, 0.5, -38), ZIndex = 24, Parent = card })
+		local holder = make("Frame", { Size = UDim2.new(1, -320, 0, 54), Position = UDim2.new(0, 96, 0.5, -27), BackgroundColor3 = WHITE, ZIndex = 24, Parent = card }, { corner(14), stroke(INK, 2.5) })
+		local box = make("TextBox", {
+			Size = UDim2.new(1, -24, 1, -12), Position = UDim2.new(0, 12, 0, 6), BackgroundTransparency = 1, PlaceholderText = t("codeHint"), Text = "",
+			TextColor3 = TEXT, FontFace = TITLE, TextScaled = true, ClearTextOnFocus = false, ZIndex = 25, Parent = holder,
+		}, { make("UITextSizeConstraint", { MaxTextSize = 24 }) })
+		btn(Color3.fromRGB(70, 210, 80), { Size = UDim2.new(0, 200, 0, 54), Position = UDim2.new(1, -212, 0.5, -27), Text = t("redeem"), Max = 22, ZIndex = 24, Parent = card }, function()
+			if box.Text ~= "" then
+				ActionEv:FireServer("RedeemCode", box.Text)
+				box.Text = ""
+			end
+		end)
+	end
+	renderShopTab.codes = function(body)
+		codesSection.Parent = body
+	end
+
+	-- one long column; the rail on the right just scrolls to a section
+	local sections = {}
+	local railButtons = {}
+	local function jumpTo(id: string)
+		local section = sections[id]
+		local body = shopW.body
+		if not section then
+			return
+		end
+		local y = section.AbsolutePosition.Y - body.AbsolutePosition.Y + body.CanvasPosition.Y
+		TweenService:Create(body, TweenInfo.new(0.35, Enum.EasingStyle.Quint), { CanvasPosition = Vector2.new(0, math.max(0, y - 4)) }):Play()
+	end
+	local function highlightRail()
+		local body = shopW.body
+		local current = SHOP_TABS[1].id
+		for _, tab in SHOP_TABS do
+			local section = sections[tab.id]
+			if section and section.AbsolutePosition.Y - body.AbsolutePosition.Y <= 60 then
+				current = tab.id
 			end
 		end
+		for id, b in railButtons do
+			local tab = nil
+			for _, entry in SHOP_TABS do
+				if entry.id == id then
+					tab = entry
+				end
+			end
+			b.BackgroundColor3 = if id == current and tab then tab.color else Color3.fromRGB(90, 96, 120)
+		end
+	end
+	shopW.body:GetPropertyChangedSignal("CanvasPosition"):Connect(highlightRail)
+
+	renderers[shopW] = function()
+		clear(shopRail)
+		railButtons = {}
+		for order, tab in SHOP_TABS do
+			railButtons[tab.id] = btn(Color3.fromRGB(90, 96, 120), { Size = UDim2.new(1, 0, 0, 56), LayoutOrder = order, Text = t(tab.key), Max = 15, ZIndex = 22, Parent = shopRail }, function()
+				jumpTo(tab.id)
+			end)
+		end
 		local body = shopW.body
+		codesSection.Parent = nil -- survives the clear (keeps what you typed)
 		clear(body)
-		renderShopTab[shopTab](body)
+		sections = {}
+		for order, tab in SHOP_TABS do
+			local section = make("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = order, BackgroundTransparency = 1, ZIndex = 21, Parent = body }, {
+				make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+			})
+			sections[tab.id] = section
+			renderShopTab[tab.id](section)
+		end
+		highlightRail()
+		if shopTab then -- opened for a specific section (e.g. from the crate ring)
+			local target = shopTab
+			shopTab = nil
+			task.defer(function()
+				RunService.RenderStepped:Wait()
+				jumpTo(target)
+			end)
+		end
 	end
 end
 
@@ -2872,12 +3071,18 @@ do
 		if not tradeState then
 			return
 		end
+		body.BackgroundColor3 = Color3.fromRGB(40, 44, 66)
 		local function column(order: number, title: string, ready: boolean, offer, mine: boolean)
-			local col = make("Frame", { Size = UDim2.new(0.5, -6, 1, 0), Position = UDim2.new(if order == 1 then 0 else 0.5, if order == 1 then 0 else 6, 0, 0), BackgroundColor3 = PANEL_2, ZIndex = 22 }, {
-				corner(14), stroke(if ready then MINT else INK, if ready then 4 else 2.5),
+			local top = if order == 1 then Color3.fromRGB(90, 210, 110) else Color3.fromRGB(90, 160, 255)
+			local col = make("Frame", { Size = UDim2.new(0.43, 0, 1, 0), Position = UDim2.new(if order == 1 then 0 else 0.57, 0, 0, 0), BackgroundColor3 = WHITE, ZIndex = 22 }, {
+				corner(14), stroke(if ready then Color3.fromRGB(90, 255, 120) else INK, if ready then 5 else 3),
+				make("UIGradient", { Color = ColorSequence.new(top, top:Lerp(Color3.new(0, 0, 0), 0.55)), Rotation = 90 }),
 			})
-			titleText(col, title .. "   " .. (if ready then t("tradeReady") else t("tradeNotReady")), { Size = UDim2.new(1, -12, 0, 30), Position = UDim2.new(0, 6, 0, 4), TextColor3 = if ready then MINT else WHITE, Max = 20 })
-			local grid = make("Frame", { Size = UDim2.new(1, -12, 1, -40), Position = UDim2.new(0, 6, 0, 36), BackgroundTransparency = 1, ZIndex = 22, Parent = col })
+			-- name plate + ready tick
+			local plate = make("Frame", { Size = UDim2.new(1, -12, 0, 38), Position = UDim2.new(0, 6, 0, 6), BackgroundColor3 = Color3.fromRGB(20, 24, 40), BackgroundTransparency = 0.35, ZIndex = 23, Parent = col }, { corner(10) })
+			titleText(plate, title, { Size = UDim2.new(1, -56, 1, 0), Position = UDim2.new(0, 10, 0, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 22 })
+			titleText(plate, if ready then "✓" else "…", { Size = UDim2.new(0, 40, 1, 0), Position = UDim2.new(1, -44, 0, 0), FontFace = Font.fromEnum(Enum.Font.SourceSansBold), TextColor3 = if ready then Color3.fromRGB(90, 255, 120) else Color3.fromRGB(200, 200, 210), Max = 32 })
+			local grid = make("Frame", { Size = UDim2.new(1, -12, 1, -54), Position = UDim2.new(0, 6, 0, 50), BackgroundTransparency = 1, ZIndex = 22, Parent = col })
 			make("UIGridLayout", { CellSize = UDim2.new(0, 110, 0, 108), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
 			local keys = {}
 			for key in offer do
@@ -2893,9 +3098,17 @@ do
 			end
 			return col
 		end
-		local top = make("Frame", { Size = UDim2.new(1, -8, 0, 270), LayoutOrder = 1, BackgroundTransparency = 1, ZIndex = 22, Parent = body })
+		local top = make("Frame", { Size = UDim2.new(1, -8, 0, 290), LayoutOrder = 1, BackgroundTransparency = 1, ZIndex = 22, Parent = body })
 		column(1, t("tradeYou"), tradeState.myReady, tradeState.mine, true).Parent = top
 		column(2, tradeState.partner, tradeState.theirReady, tradeState.theirs, false).Parent = top
+		-- two arrows in the middle: the swap
+		local middle = make("Frame", { Size = UDim2.new(0.14, 0, 1, 0), Position = UDim2.new(0.43, 0, 0, 0), BackgroundTransparency = 1, ZIndex = 23, Parent = top })
+		if not uiIcon("trade", { Size = UDim2.new(1, -8, 0, 120), Position = UDim2.new(0, 4, 0.5, -60), ZIndex = 24, Parent = middle }) then
+			for k, info in { { "→", Color3.fromRGB(90, 230, 110), -56 }, { "←", Color3.fromRGB(90, 170, 255), 6 } } do
+				local arrow = titleText(middle, info[1], { Size = UDim2.new(1, 0, 0, 56), Position = UDim2.new(0, 0, 0.5, info[3]), FontFace = Font.fromEnum(Enum.Font.SourceSansBold), TextColor3 = info[2], Max = 64, ZIndex = 24 })
+				TweenService:Create(arrow, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0, if k == 1 then 6 else -6, 0.5, info[3]) }):Play()
+			end
+		end
 
 		-- info about the selected star
 		local info = if tradeInfoKey and Items.parse(tradeInfoKey) then t("tradeInfo", Lang.item(lang, tradeInfoKey), Format.number(Items.chance(tradeInfoKey)), Format.number(Items.income(tradeInfoKey)), Format.number(Items.income(tradeInfoKey) * Config.SellMultiplier)) else ""
@@ -3220,10 +3433,10 @@ do
 							tag.gui:Destroy()
 						end
 						local billboard = make("BillboardGui", {
-							Adornee = head, Size = UDim2.new(0, 220, 0, 26), StudsOffset = Vector3.new(0, 2.4, 0), MaxDistance = 70,
+							Adornee = head, Size = UDim2.new(5, 0, 0.55, 0), StudsOffset = Vector3.new(0, 2.2, 0), MaxDistance = 60,
 							LightInfluence = 0, ResetOnSpawn = false, Parent = player:WaitForChild("PlayerGui"),
 						})
-						tag = { gui = billboard, label = text({ Size = UDim2.new(1, 0, 1, 0), Text = "", FontFace = TITLE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 18, Parent = billboard }), best = nil }
+						tag = { gui = billboard, label = text({ Size = UDim2.new(1, 0, 1, 0), Text = "", FontFace = TITLE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 14, Parent = billboard }), best = nil }
 						headTags[other] = tag
 					end
 					if tag.best ~= best .. lang .. tostring(other:GetAttribute("VIP")) then

@@ -6,6 +6,8 @@ local Lang = {}
 Lang.Strings = {
 	en = {
 		cash = "CASH", perSec = "PER SEC", luck = "LUCK", rolls = "ROLLS", rebirths = "REBIRTHS",
+		upTabCash = "UPGRADES", upTabRebirth = "REBIRTH", rebirthTokens = "Rebirth tokens: %d", tokensCost = "%d TOKENS",
+		rup_luck = "Luck", rup_cash = "Income", rup_speed = "Roll speed", rup_multi = "Extra star",
 		telescope = "TELESCOPE", rollHint = "Roll for a star", roll = "ROLL!", rollN = "ROLL x%d", inventory = "Inventory", rollAnim = "Roll animation",
 		autoOn = "AUTO: ON", autoOff = "AUTO: OFF", autoLocked = "AUTO  %d/%d",
 		oneIn = "1/%s", andMore = "+%d more", totalRolls = "Total rolls: %s",
@@ -83,6 +85,8 @@ Lang.Strings = {
 	},
 	ru = {
 		cash = "ДЕНЬГИ", perSec = "В СЕКУНДУ", luck = "УДАЧА", rolls = "КРУТКИ", rebirths = "ПЕРЕРОЖД.",
+		upTabCash = "УЛУЧШЕНИЯ", upTabRebirth = "ПЕРЕРОЖДЕНИЕ", rebirthTokens = "Токены перерождения: %d", tokensCost = "%d ТОКЕН(ОВ)",
+		rup_luck = "Удача", rup_cash = "Доход", rup_speed = "Скорость ролла", rup_multi = "Доп. звезда",
 		telescope = "ТЕЛЕСКОП", rollHint = "Крути звезду", roll = "КРУТИТЬ!", rollN = "КРУТИТЬ x%d", inventory = "Инвентарь", rollAnim = "Анимация ролла",
 		autoOn = "АВТО: ВКЛ", autoOff = "АВТО: ВЫКЛ", autoLocked = "АВТО  %d/%d",
 		oneIn = "1/%s", andMore = "ещё +%d", totalRolls = "Всего круток: %s",

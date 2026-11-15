@@ -19,7 +19,8 @@ working branch `claude/wizardly-pascal-g6tfoq`. Commit + push after every finish
   src/server → ServerScriptService.Server, src/client → StarterPlayerScripts.Client.
 - No Luau compiler here (running downloaded binaries is blocked). Before shipping always run
   `python3 tools/check_forward_refs.py src/client/*.luau src/server/*.luau src/shared/*.luau`
-  and `python3 tools/check_locals.py src/*/*.luau` (Roblox limit: 200 locals/registers per chunk —
+  and `python3 tools/check_scopes.py src/*/*.luau` (finds names used outside the scope they live in —
+  caught a dead build button / dead world loop once) and `python3 tools/check_locals.py src/*/*.luau` (Roblox limit: 200 locals/registers per chunk —
   Main.client hit it once and the whole UI died; new sections go inside `do ... end`),
   and re-read edited code. Past bugs worth remembering:
   - a local function used before its `local` declaration → nil global at runtime;
@@ -80,7 +81,11 @@ ProcessReceipt is idempotent (data.receipts).
 - Trading (server: actions Trade*, 5 s countdown after both ready; client: playersW / tradeReqW / tradeW).
 - Daily chest (`Config.DailyRewards`), codes (`src/server/Codes.luau`, server-only), one-time tutorial.
 - Loading screen: `src/first/Loading.client.luau` → ReplicatedFirst.
-- UI icons waiting for upload: ui_trash, ui_backpack (inventory), ui_roll (big ROLL dice) (`assets/icons_new.zip`).
+- UI icons waiting for upload: ui_trade (two arrows). Optional `Config.UiIcons.crateBg` = painted backdrop for the featured crate.
+- Rebirth tokens: +1 per rebirth (old saves get one per past rebirth), spent in Upgrades → REBIRTH tab on
+  `Config.RebirthUpgrades` (luck / income / roll speed / extra star), action BuyRebirthUp.
+- Shop is one long column; the right rail only scrolls to sections; codes are the last section (codes button removed).
+- Left button column: roll rewards + index. Right: shop, build, odds, trade. Crate ring left of the forge, daily chest right.
 - Roll reel: strip at the top centre per roll (stars fly right→left), toggle `settings.rollAnim`; rare finds still get the big reveal.
 - Bottom bar: Inventory (backpack) | ROLL! (dice) | Upgrades, auto button above. Upgrade prices are explicit lists
   (`Config.RollSpeedPrices`, `Config.MultiRollPrices`).

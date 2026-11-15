@@ -85,6 +85,7 @@ local function getLuck(player: Player, data): number
 		luck *= 2
 	end
 	luck *= 1 + (data.robuxLuck or 0) -- "double your luck" tiers: x2, x3, x4...
+	luck *= 1 + 0.25 * Config.RebirthUp(data, "luck") -- rebirth token upgrade
 	if (data.boostLuckUntil or 0) > workspace:GetServerTimeNow() then
 		luck *= 2 -- bought x2 luck boost
 	end
@@ -100,6 +101,7 @@ local function incomePerSecond(player: Player, data): number
 		return 0
 	end
 	local mult = (1 + data.rebirths * Config.RebirthIncomeBonus) * (if session.passes.Cash2x then 2 else 1) * (if session.passes.VIP then 1.5 else 1)
+		* (1 + 0.5 * Config.RebirthUp(data, "cash"))
 	return session.eval.income * mult
 end
 
@@ -173,6 +175,8 @@ local function pushState(player: Player)
 		slabs = data.slabs,
 		theme = data.theme,
 		rebirths = data.rebirths,
+		rebirthTokens = data.rebirthTokens,
+		rebirthUps = data.rebirthUps,
 		mass = data.mass,
 		index = data.index,
 		indexClaims = data.indexClaims,
@@ -561,6 +565,23 @@ function actions.Feed(player, data, itemKey, count)
 	end
 end
 
+function actions.BuyRebirthUp(player, data, upgradeId)
+	for _, upgrade in Config.RebirthUpgrades do
+		if upgrade.id == upgradeId then
+			data.rebirthUps = data.rebirthUps or {}
+			local level = data.rebirthUps[upgrade.id] or 0
+			local cost = Config.RebirthUpCost(level)
+			if level >= upgrade.max or (data.rebirthTokens or 0) < cost then
+				return
+			end
+			data.rebirthTokens -= cost
+			data.rebirthUps[upgrade.id] = level + 1
+			recompute(player, data)
+			return
+		end
+	end
+end
+
 function actions.Rebirth(player, data)
 	if World.distanceTo(player, World.AltarPosition) > Config.AltarReach then
 		return toast(player, "toastTooFar")
@@ -569,6 +590,7 @@ function actions.Rebirth(player, data)
 		return
 	end
 	data.rebirths += 1
+	data.rebirthTokens = math.max(0, data.rebirthTokens or 0) + 1
 	data.mass = 0
 	data.inventory = {}
 	data.grid = {}

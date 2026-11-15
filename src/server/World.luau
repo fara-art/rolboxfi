@@ -358,8 +358,8 @@ local function buildHub(folder: Folder)
 		Size = NumberSequence.new(0.35), Parent = wings,
 	})
 	-- ================= daily reward chest (the client opens its lid and the window when you walk up)
-	local C = Vector3.new(-13.5, 0, 35)
-	local chestCf = CFrame.lookAt(C, Vector3.new(-13.5, 0, 0)) -- next to the forge, facing the fountain
+	local C = Vector3.new(-17, 0, 29)
+	local chestCf = CFrame.lookAt(C, Vector3.new(-17, 0, 0)) -- next to the forge, facing the fountain
 	cylinder(CFrame.new(C + Vector3.new(0, 0.1, 0)), 0.2, 16, { Name = "DailyZone", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 200, 90), Transparency = 0.55, CanCollide = false, Parent = folder })
 	local chest = make("Model", { Name = "DailyChest", Parent = folder })
 	local body = make("Part", { Name = "Body", Size = Vector3.new(5, 2.6, 3.4), CFrame = chestCf * CFrame.new(0, 1.5, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 90, 45), Parent = chest })
@@ -380,7 +380,7 @@ local function buildHub(folder: Folder)
 	World.DailyPosition = C
 
 	-- ================= crate zone near spawn (the client opens the crate shop when you step in)
-	local Z = Vector3.new(-10, 0, -18)
+	local Z = Vector3.new(17, 0, 29) -- left of the forge (the daily chest is on the right)
 	cylinder(CFrame.new(Z + Vector3.new(0, 0.1, 0)), 0.2, 16, { Name = "CrateZone", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 225, 60), Transparency = 0.45, CanCollide = false, Parent = folder })
 	cylinder(CFrame.new(Z + Vector3.new(0, 0.12, 0)), 0.2, 14, { Name = "CrateZoneInner", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 245, 170), Transparency = 0.3, CanCollide = false, Parent = folder })
 	local crateBase = cylinder(CFrame.new(Z + Vector3.new(0, 1, 0)), 2, 6, { Name = "CratePedestal", Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
@@ -436,6 +436,9 @@ local function buildHub(folder: Folder)
 	-- trees
 	local leaves = { Color3.fromRGB(255, 205, 225), Color3.fromRGB(190, 240, 205), Color3.fromRGB(255, 230, 190), Color3.fromRGB(215, 205, 255) }
 	for i = 1, 4 do
+		if i == 2 or i == 3 then
+			continue -- the forge side: the daily chest and the crate stand there
+		end
 		local a = math.rad(22.5 + (i - 1) * 45)
 		local base = Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31)
 		tree(base, folder, leaves[i])

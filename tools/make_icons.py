@@ -398,6 +398,12 @@ for cx, cy in ((340, 340), (684, 340), (512, 512), (340, 684), (684, 684)):
     img = shape(img, lambda d, cx=cx, cy=cy: d.ellipse((cx - 62, cy - 62, cx + 62, cy + 62), fill=255), (235, 70, 110), (170, 30, 70), outline=10, gloss=False, shadow=False)
 icons["ui_roll"] = save(sparkle(img, 850, 180, 80), "ui_roll")
 
+# trade: two fat arrows
+img = blank()
+img = shape(img, lambda d: d.polygon([(150, 330), (620, 330), (620, 210), (880, 420), (620, 630), (620, 510), (150, 510)], fill=255), (130, 240, 130), (40, 170, 70), outline=30)
+img = shape(img, lambda d: d.polygon([(874, 600), (404, 600), (404, 480), (144, 690), (404, 900), (404, 780), (874, 780)], fill=255), (130, 200, 255), (40, 110, 230), outline=30)
+icons["ui_trade"] = save(sparkle(img, 840, 180, 60), "ui_trade")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

@@ -63,7 +63,7 @@ Config.SprintSpeed = 30
 Config.LuckPerLevel = 0.5
 Config.MaxLuckLevel = math.huge -- no limit
 function Config.LuckCost(level: number): number
-	return math.floor(150 * 1.6 ^ level)
+	return math.floor(100 * 1.4 ^ level) -- cheaper: luck is the main way to progress
 end
 
 Config.SellMultiplier = 20 -- sell value = income/s * this (also Black Hole mass)
@@ -87,6 +87,20 @@ function Config.RebirthCost(rebirths: number): number
 end
 Config.RebirthIncomeBonus = 2 -- income x(1 + rebirths * this)
 Config.RebirthLuckMult = 0.5 -- luck x(1 + rebirths * this)
+
+-- Rebirth tokens: +1 per rebirth, spent on permanent upgrades (they survive rebirths)
+Config.RebirthUpgrades = {
+	{ id = "luck", icon = "luck", per = 0.25, max = 20 }, -- luck x(1 + 0.25 * level)
+	{ id = "cash", icon = "coins", per = 0.5, max = 20 }, -- income x(1 + 0.5 * level)
+	{ id = "speed", icon = "bolt", per = 0.05, max = 10 }, -- rolls 5% faster per level
+	{ id = "multi", icon = "dice2", per = 1, max = 3 }, -- +1 star per roll
+}
+function Config.RebirthUpCost(level: number): number
+	return level + 1 -- tokens
+end
+function Config.RebirthUp(data, id: string): number
+	return (data and data.rebirthUps and data.rebirthUps[id]) or 0
+end
 Config.AltarReach = 30
 
 -- Star Index: split into tiers; each tier has a row per mutation. A complete row -> permanent luck.
@@ -211,7 +225,7 @@ function Config.CoinPack(pack, income: number): number
 end
 
 function Config.EffectiveCooldown(data, now: number, passes): number
-	local cooldown = Config.RollCooldown(data.rollSpeedLevel or 0) / Config.RobuxSpeedMult(data.robuxSpeed or 0)
+	local cooldown = Config.RollCooldown(data.rollSpeedLevel or 0) / Config.RobuxSpeedMult(data.robuxSpeed or 0) / (1 + 0.05 * Config.RebirthUp(data, "speed"))
 	if (data.boostSpeedUntil or 0) > now then
 		cooldown *= 0.5
 	end
@@ -222,7 +236,7 @@ function Config.EffectiveCooldown(data, now: number, passes): number
 end
 
 function Config.RollsPerClick(data, passes): number
-	return 1 + (data.multiRollLevel or 0) + (data.robuxMulti or 0) + (if passes and passes.ExtraRoll then 1 else 0)
+	return 1 + (data.multiRollLevel or 0) + (data.robuxMulti or 0) + Config.RebirthUp(data, "multi") + (if passes and passes.ExtraRoll then 1 else 0)
 end
 
 function Config.LuckyEvery(passes): number
@@ -269,7 +283,7 @@ Config.StarIcons = {
 	binary = "136388952276344",
 	wolfrayet = "106037066020635",
 	hypergiant = "73599949491582",
-	kilonova = "",
+	kilonova = "125795733153500",
 	eventhorizon = "130974260909735",
 	darkmatter = "119288797918952",
 	multiverse = "82842345020371",
@@ -351,9 +365,11 @@ Config.UiIcons = {
 	bolt = "82339824773311", -- ui_bolt.png
 	dice2 = "136163108916637", -- ui_dice2.png
 	target = "137226022006314", -- ui_target.png
-	trash = "", -- ui_trash.png
-	backpack = "", -- ui_backpack.png (inventory)
-	roll = "", -- ui_roll.png (big ROLL dice)
+	trash = "104917106609924", -- ui_trash.png
+	backpack = "72074171084419", -- ui_backpack.png (inventory)
+	roll = "128516275355024", -- ui_roll.png (big ROLL dice)
+	trade = "", -- ui_trade.png (two arrows)
+	crateBg = "", -- optional painted background for the featured crate (shop)
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

@@ -50,6 +50,8 @@ local function default()
 		codes = {}, -- redeemed codes
 		tutorialDone = false,
 		theme = "sky",
+		rebirthTokens = -1, -- -1 = old save: gets one token per rebirth already done
+		rebirthUps = {}, -- [upgrade id] = level (permanent)
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}
 end
@@ -59,6 +61,9 @@ local function reconcile(data)
 		if data[key] == nil then
 			data[key] = value
 		end
+	end
+	if data.rebirthTokens < 0 then
+		data.rebirthTokens = data.rebirths or 0
 	end
 	-- v1 saves stored grid cells as plain star ids
 	for key, cell in data.grid do
