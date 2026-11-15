@@ -423,12 +423,12 @@ end
 -- Game pass IDs. 0 = not created yet
 -- Game passes (one-time Robux purchases). id = 0 -> not created yet (free test in Studio)
 Config.Passes = {
-	{ key = "ExtraRoll", id = 0, price = 699, icon = "pass_extraroll", top = Color3.fromRGB(80, 200, 255), bottom = Color3.fromRGB(30, 90, 230) },
-	{ key = "FastRolls", id = 0, price = 199, icon = "pass_fastrolls", top = Color3.fromRGB(255, 190, 80), bottom = Color3.fromRGB(240, 90, 30) },
-	{ key = "VIP", id = 0, price = 199, icon = "pass_vip", top = Color3.fromRGB(255, 240, 120), bottom = Color3.fromRGB(240, 170, 20) },
-	{ key = "Luck2x", id = 0, price = 480, icon = "pass_luck2x", top = Color3.fromRGB(130, 240, 140), bottom = Color3.fromRGB(30, 160, 80) },
-	{ key = "Cash2x", id = 0, price = 330, icon = "pass_cash2x", top = Color3.fromRGB(255, 220, 110), bottom = Color3.fromRGB(220, 140, 20) },
-	{ key = "LuckyHunter", id = 0, price = 640, icon = "pass_luckyhunter", top = Color3.fromRGB(200, 120, 255), bottom = Color3.fromRGB(90, 40, 200) },
+	{ key = "ExtraRoll", id = 2088094362, price = 699, icon = "pass_extraroll", top = Color3.fromRGB(80, 200, 255), bottom = Color3.fromRGB(30, 90, 230) },
+	{ key = "FastRolls", id = 2088490284, price = 199, icon = "pass_fastrolls", top = Color3.fromRGB(255, 190, 80), bottom = Color3.fromRGB(240, 90, 30) },
+	{ key = "VIP", id = 2088880261, price = 199, icon = "pass_vip", top = Color3.fromRGB(255, 240, 120), bottom = Color3.fromRGB(240, 170, 20) },
+	{ key = "Luck2x", id = 2088598327, price = 480, icon = "pass_luck2x", top = Color3.fromRGB(130, 240, 140), bottom = Color3.fromRGB(30, 160, 80) },
+	{ key = "Cash2x", id = 2089006388, price = 330, icon = "pass_cash2x", top = Color3.fromRGB(255, 220, 110), bottom = Color3.fromRGB(220, 140, 20) },
+	{ key = "LuckyHunter", id = 2089078390, price = 640, icon = "pass_luckyhunter", top = Color3.fromRGB(200, 120, 255), bottom = Color3.fromRGB(90, 40, 200) },
 }
 Config.GamePasses = {}
 for _, pass in Config.Passes do
