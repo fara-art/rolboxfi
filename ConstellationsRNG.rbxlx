@@ -6390,9 +6390,12 @@ local function itemRow(parent: Instance, order: number, key: string, subText: st
 		BackgroundColor3 = if highlighted then Color3.fromRGB(220, 236, 255) else WHITE, Parent = parent,
 	}, { corner(12), stroke(if highlighted then BLUE else LINE, if highlighted then 2.5 else 1.5) })
 	starIcon(star, mutation, { Size = UDim2.new(0, 46, 0, 46), Position = UDim2.new(0, 6, 0, 6), ZIndex = 22, Parent = r })
-	text({ Size = UDim2.new(1, -220, 0, 26), Position = UDim2.new(0, 58, 0, 6), Text = Lang.item(lang, key), FontFace = TITLE, TextColor3 = TEXT, TextXAlignment = Enum.TextXAlignment.Left, Max = 19, ZIndex = 22, Parent = r })
-	-- the odds shimmer in rainbow colours
-	local odds = text({ Size = UDim2.new(0, 150, 0, 26), Position = UDim2.new(1, -214, 0, 6), Text = t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Right, Max = 20, ZIndex = 22, Parent = r })
+	-- name, then the shimmering odds right after it (left side, never under the buttons)
+	local head = make("Frame", { Size = UDim2.new(1, -120, 0, 26), Position = UDim2.new(0, 58, 0, 6), BackgroundTransparency = 1, ZIndex = 22, Parent = r }, {
+		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	make("TextLabel", { Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 1, BackgroundTransparency = 1, Text = Lang.item(lang, key), FontFace = TITLE, TextSize = 19, TextColor3 = TEXT, ZIndex = 22, Parent = head })
+	local odds = make("TextLabel", { Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2, BackgroundTransparency = 1, Text = t("oneIn", Format.number(Items.chance(key))), FontFace = TITLE, TextSize = 18, TextColor3 = WHITE, ZIndex = 22, Parent = head })
 	make("UIStroke", { Color = INK, Thickness = 1.6, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = odds })
 	CollectionService:AddTag(make("UIGradient", { Parent = odds }), "RainbowFx")
 	text({ Size = UDim2.new(1, -120, 0, 18), Position = UDim2.new(0, 58, 0, 33), Text = subText, FontFace = BODY_SEMI, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 22, Parent = r })
