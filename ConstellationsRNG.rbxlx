@@ -354,30 +354,30 @@ Config.Shop = {
 	-- permanent, bought one after another, each tier much pricier
 	-- "DOUBLE your LUCK / SPEED": every tier adds one more x, every tier costs more
 	luckTiers = {
-		{ id = 0, price = 3 }, { id = 0, price = 8 }, { id = 0, price = 25 }, { id = 0, price = 50 },
-		{ id = 0, price = 99 }, { id = 0, price = 199 }, { id = 0, price = 399 }, { id = 0, price = 799 },
+		{ id = 3731864213, price = 3 }, { id = 3731864249, price = 8 }, { id = 3731864441, price = 25 }, { id = 3731864483, price = 50 },
+		{ id = 3731864524, price = 99 }, { id = 3731864551, price = 199 }, { id = 3731864582, price = 399 }, { id = 3731864619, price = 799 },
 	},
 	speedTiers = {
-		{ id = 0, price = 5 }, { id = 0, price = 15 }, { id = 0, price = 45 },
-		{ id = 0, price = 99 }, { id = 0, price = 249 }, { id = 0, price = 599 },
+		{ id = 3731864795, price = 5 }, { id = 3731864829, price = 15 }, { id = 3731864854, price = 45 },
+		{ id = 3731864881, price = 99 }, { id = 3731864918, price = 249 }, { id = 3731864947, price = 599 },
 	},
 	-- coin packs: you get at least `base`, or `minutes` of your income if that is more
 	coins = {
-		{ id = 0, price = 25, base = 10000, minutes = 10, key = "coinSmall" },
-		{ id = 0, price = 125, base = 50000, minutes = 45, key = "coinMedium" },
-		{ id = 0, price = 600, base = 300000, minutes = 240, key = "coinBig" },
-		{ id = 0, price = 2250, base = 1200000, minutes = 900, key = "coinMega" },
-		{ id = 0, price = 6750, base = 5000000, minutes = 2880, key = "coinGigantic" },
+		{ id = 3731865493, price = 25, base = 10000, minutes = 10, key = "coinSmall" },
+		{ id = 3731865531, price = 125, base = 50000, minutes = 45, key = "coinMedium" },
+		{ id = 3731865573, price = 600, base = 300000, minutes = 240, key = "coinBig" },
+		{ id = 3731865603, price = 2250, base = 1200000, minutes = 900, key = "coinMega" },
+		{ id = 3731865632, price = 6750, base = 5000000, minutes = 2880, key = "coinGigantic" },
 	},
 	multiTiers = {
-		{ id = 0, price = 99 }, { id = 0, price = 299 }, { id = 0, price = 899 },
-		{ id = 0, price = 2499 }, { id = 0, price = 6999 },
+		{ id = 3731865114, price = 99 }, { id = 3731865155, price = 299 }, { id = 3731865195, price = 899 },
+		{ id = 3731865244, price = 2499 }, { id = 3731865287, price = 6999 },
 	},
-	luckBoosts = { { id = 0, price = 49, minutes = 15 }, { id = 0, price = 89, minutes = 30 }, { id = 0, price = 149, minutes = 60 } },
-	speedBoosts = { { id = 0, price = 39, minutes = 15 }, { id = 0, price = 69, minutes = 30 }, { id = 0, price = 119, minutes = 60 } },
+	luckBoosts = { { id = 3731865923, price = 49, minutes = 15 }, { id = 3731865967, price = 89, minutes = 30 }, { id = 3731866009, price = 149, minutes = 60 } },
+	speedBoosts = { { id = 3731866057, price = 39, minutes = 15 }, { id = 3731866091, price = 69, minutes = 30 }, { id = 3731866125, price = 119, minutes = 60 } },
 	-- paid random item: the odds are always shown before buying (Roblox rule)
 	crate = {
-		packs = { { id = 0, price = 99, count = 1 }, { id = 0, price = 249, count = 3 }, { id = 0, price = 799, count = 10 }, { id = 0, price = 3499, count = 50, oldPrice = 5959 } },
+		packs = { { id = 3731863670, price = 99, count = 1 }, { id = 3731863974, price = 249, count = 3 }, { id = 3731864148, price = 799, count = 10 }, { id = 3731864184, price = 3499, count = 50, oldPrice = 5959 } },
 		odds = {
 			{ item = "hypergiant", p = 0.39 },
 			{ item = "quasar", p = 0.24 },
