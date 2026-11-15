@@ -246,12 +246,12 @@ end
 -- Game pass IDs. 0 = not created yet
 -- Game passes (one-time Robux purchases). id = 0 -> not created yet (free test in Studio)
 Config.Passes = {
-	{ key = "ExtraRoll", id = 0, price = 699, icon = "dice2", top = Color3.fromRGB(80, 200, 255), bottom = Color3.fromRGB(30, 90, 230) },
-	{ key = "FastRolls", id = 0, price = 199, icon = "bolt", top = Color3.fromRGB(255, 190, 80), bottom = Color3.fromRGB(240, 90, 30) },
-	{ key = "VIP", id = 0, price = 199, icon = "crown", top = Color3.fromRGB(255, 240, 120), bottom = Color3.fromRGB(240, 170, 20) },
-	{ key = "Luck2x", id = 0, price = 480, icon = "luck", top = Color3.fromRGB(130, 240, 140), bottom = Color3.fromRGB(30, 160, 80) },
-	{ key = "Cash2x", id = 0, price = 330, icon = "coins", top = Color3.fromRGB(255, 220, 110), bottom = Color3.fromRGB(220, 140, 20) },
-	{ key = "LuckyHunter", id = 0, price = 640, icon = "target", top = Color3.fromRGB(200, 120, 255), bottom = Color3.fromRGB(90, 40, 200) },
+	{ key = "ExtraRoll", id = 0, price = 699, icon = "pass_extraroll", top = Color3.fromRGB(80, 200, 255), bottom = Color3.fromRGB(30, 90, 230) },
+	{ key = "FastRolls", id = 0, price = 199, icon = "pass_fastrolls", top = Color3.fromRGB(255, 190, 80), bottom = Color3.fromRGB(240, 90, 30) },
+	{ key = "VIP", id = 0, price = 199, icon = "pass_vip", top = Color3.fromRGB(255, 240, 120), bottom = Color3.fromRGB(240, 170, 20) },
+	{ key = "Luck2x", id = 0, price = 480, icon = "pass_luck2x", top = Color3.fromRGB(130, 240, 140), bottom = Color3.fromRGB(30, 160, 80) },
+	{ key = "Cash2x", id = 0, price = 330, icon = "pass_cash2x", top = Color3.fromRGB(255, 220, 110), bottom = Color3.fromRGB(220, 140, 20) },
+	{ key = "LuckyHunter", id = 0, price = 640, icon = "pass_luckyhunter", top = Color3.fromRGB(200, 120, 255), bottom = Color3.fromRGB(90, 40, 200) },
 }
 Config.GamePasses = {}
 for _, pass in Config.Passes do
@@ -370,6 +370,21 @@ Config.UiIcons = {
 	roll = "128516275355024", -- ui_roll.png (big ROLL dice)
 	trade = "134683086824732", -- ui_trade.png (two arrows)
 	crateBg = "", -- optional painted background for the featured crate (shop)
+	-- ChatGPT art (assets/gpt): empty = falls back to the older icon in Config.UiIconFallback
+	coins_small = "", -- coins_small.png
+	coins_big = "", -- coins_big.png
+	boost_luck = "", -- boost_luck.png
+	boost_speed = "", -- boost_speed.png
+	pass_extraroll = "", -- pass_extraroll.png
+	pass_fastrolls = "", -- pass_fastrolls.png
+	pass_vip = "", -- pass_vip.png
+	pass_luck2x = "", -- pass_luck2x.png
+	pass_cash2x = "", -- pass_cash2x.png
+	pass_luckyhunter = "", -- pass_luckyhunter.png
+}
+Config.UiIconFallback = {
+	coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
+	pass_extraroll = "dice2", pass_fastrolls = "bolt", pass_vip = "crown", pass_luck2x = "luck", pass_cash2x = "coins", pass_luckyhunter = "target",
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

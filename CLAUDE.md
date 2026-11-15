@@ -81,7 +81,8 @@ ProcessReceipt is idempotent (data.receipts).
 - Trading (server: actions Trade*, 5 s countdown after both ready; client: playersW / tradeReqW / tradeW).
 - Daily chest (`Config.DailyRewards`), codes (`src/server/Codes.luau`, server-only), one-time tutorial.
 - Loading screen: `src/first/Loading.client.luau` → ReplicatedFirst.
-- UI icons waiting for upload: ui_trade (two arrows). Optional `Config.UiIcons.crateBg` = painted backdrop for the featured crate.
+- ChatGPT art lives in `assets/gpt/` (zip: `assets/upload_all.zip`); keys in Config.UiIcons with `Config.UiIconFallback`
+  to the older icon while the ID is empty. `crateBg` = painted backdrop for the featured crate.
 - Rebirth tokens: +1 per rebirth (old saves get one per past rebirth), spent in Upgrades → REBIRTH tab on
   `Config.RebirthUpgrades` (luck / income / roll speed / extra star), action BuyRebirthUp.
 - Shop is one long column; the right rail only scrolls to sections; codes are the last section (codes button removed).

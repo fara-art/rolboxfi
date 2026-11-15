@@ -122,6 +122,9 @@ end
 -- Uploaded UI icon (Config.UiIcons) or nil when not configured
 local function uiIcon(key: string, props)
 	local id = Config.UiIcons[key]
+	if (not id or id == "") and Config.UiIconFallback[key] then
+		id = Config.UiIcons[Config.UiIconFallback[key]] -- new art not uploaded yet: use the older icon
+	end
 	if not id or id == "" then
 		return nil
 	end
@@ -2839,7 +2842,7 @@ do
 			local holder = make("Frame", { Size = UDim2.new(0, 110, 0, 110), Position = UDim2.new(0.5, -55, 0, 44), BackgroundColor3 = Color3.fromRGB(30, 30, 50), BackgroundTransparency = 0.35, ZIndex = 23, Parent = card }, {
 				make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(WHITE, 3),
 			})
-			uiIcon(pass.icon, { Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.1, 0), ZIndex = 24, Parent = holder })
+			uiIcon(pass.icon, { Size = UDim2.new(1.08, 0, 1.08, 0), Position = UDim2.new(-0.04, 0, -0.04, 0), ZIndex = 24, Parent = holder })
 			titleText(card, t("passDesc_" .. pass.key), { Size = UDim2.new(1, -12, 0, 22), Position = UDim2.new(0, 6, 0, 156), Max = 17 })
 			if owned then
 				btn(GREY, { Size = UDim2.new(0.7, 0, 0, 40), Position = UDim2.new(0.15, 0, 1, -48), Text = t("owned"), Max = 20, ZIndex = 24, Parent = card })
@@ -2857,7 +2860,7 @@ do
 			local pack = Config.Shop.coins[index]
 			local card = gradientCard(parent, { LayoutOrder = order }, Color3.fromRGB(255, 225, 90), Color3.fromRGB(245, 170, 30))
 			titleText(card, t(pack.key), { Size = UDim2.new(1, -60, 0, if big then 34 else 26), Position = UDim2.new(0, 10, 0, 8), TextXAlignment = Enum.TextXAlignment.Left, Max = if big then 28 else 20 })
-			uiIcon("coins", { Size = UDim2.new(0, if big then 130 else 90, 0, if big then 130 else 90), Position = UDim2.new(0, 10, 0, if big then 46 else 40), ZIndex = 24, Parent = card })
+			uiIcon(if big then "coins_big" else "coins_small", { Size = UDim2.new(0, if big then 130 else 90, 0, if big then 130 else 90), Position = UDim2.new(0, 10, 0, if big then 46 else 40), ZIndex = 24, Parent = card })
 			titleText(card, Format.number(Config.CoinPack(pack, state.income or 0)), { Size = UDim2.new(0.55, 0, 0, if big then 60 else 36), Position = UDim2.new(0.42, 0, 0, if big then 60 else 46), Max = if big then 56 else 32 })
 			giftButton(card, { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(1, -48, 0, 8) }, "coins", index, pack)
 			priceButton(card, { Size = UDim2.new(0.5, 0, 0, 40), Position = UDim2.new(0.46, 0, 1, -48), Max = 20 }, pack.price, function()
@@ -2895,19 +2898,19 @@ do
 			end
 		end
 		local luckOwned = state.robuxLuck or 0
-		doubleCard(2, "doubleLuck", "x" .. (1 + luckOwned), "x" .. (2 + luckOwned), Config.Shop.luckTiers, luckOwned, "luckTier", Color3.fromRGB(110, 240, 140), Color3.fromRGB(30, 150, 80), "luck")
+		doubleCard(2, "doubleLuck", "x" .. (1 + luckOwned), "x" .. (2 + luckOwned), Config.Shop.luckTiers, luckOwned, "luckTier", Color3.fromRGB(110, 240, 140), Color3.fromRGB(30, 150, 80), "boost_luck")
 		local speedOwned = state.robuxSpeed or 0
-		doubleCard(3, "doubleSpeed", "x" .. Config.RobuxSpeedMult(speedOwned), "x" .. Config.RobuxSpeedMult(speedOwned + 1), Config.Shop.speedTiers, speedOwned, "speed", Color3.fromRGB(110, 210, 255), Color3.fromRGB(30, 110, 230), "bolt")
+		doubleCard(3, "doubleSpeed", "x" .. Config.RobuxSpeedMult(speedOwned), "x" .. Config.RobuxSpeedMult(speedOwned + 1), Config.Shop.speedTiers, speedOwned, "speed", Color3.fromRGB(110, 210, 255), Color3.fromRGB(30, 110, 230), "boost_speed")
 		local multiOwned = state.robuxMulti or 0
 		local perClick = Config.RollsPerClick(state, state.passes)
-		doubleCard(4, "permMulti", tostring(perClick), tostring(perClick + 1), Config.Shop.multiTiers, multiOwned, "multi", Color3.fromRGB(210, 150, 255), Color3.fromRGB(110, 50, 220), "dice2")
+		doubleCard(4, "permMulti", tostring(perClick), tostring(perClick + 1), Config.Shop.multiTiers, multiOwned, "multi", Color3.fromRGB(210, 150, 255), Color3.fromRGB(110, 50, 220), "pass_extraroll")
 	end
 
 	renderShopTab.boosts = function(body)
 		sectionTitle(body, 1, "shopBoosts")
 		local grid = make("Frame", { Size = UDim2.new(1, -8, 0, 2 * 190), LayoutOrder = 2, BackgroundTransparency = 1, ZIndex = 22, Parent = body })
 		make("UIGridLayout", { CellSize = UDim2.new(1 / 3, -10, 0, 180), CellPadding = UDim2.new(0, 10, 0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
-		for group, info in { { kind = "luckBoost", list = Config.Shop.luckBoosts, title = "luckBoost", top = Color3.fromRGB(110, 240, 140), bottom = Color3.fromRGB(30, 150, 80), icon = "luck" }, { kind = "speedBoost", list = Config.Shop.speedBoosts, title = "speedBoost", top = Color3.fromRGB(110, 210, 255), bottom = Color3.fromRGB(30, 110, 230), icon = "bolt" } } do
+		for group, info in { { kind = "luckBoost", list = Config.Shop.luckBoosts, title = "luckBoost", top = Color3.fromRGB(110, 240, 140), bottom = Color3.fromRGB(30, 150, 80), icon = "boost_luck" }, { kind = "speedBoost", list = Config.Shop.speedBoosts, title = "speedBoost", top = Color3.fromRGB(110, 210, 255), bottom = Color3.fromRGB(30, 110, 230), icon = "boost_speed" } } do
 			for i, boost in info.list do
 				local card = gradientCard(grid, { LayoutOrder = group * 10 + i }, info.top, info.bottom)
 				titleText(card, t(info.title), { Size = UDim2.new(1, -54, 0, 28), Position = UDim2.new(0, 8, 0, 8), TextXAlignment = Enum.TextXAlignment.Left, Max = 22 })
