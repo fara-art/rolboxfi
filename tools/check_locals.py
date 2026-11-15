@@ -17,5 +17,20 @@ for path in [a for a in sys.argv[1:] if not a.startswith("-")]:
     bad = bad or count > LIMIT
     if flag or "-v" in sys.argv:
         print(f"{path}: {count} top-level locals{flag}")
+# a nested "local X" without a value that hides a top-level "local X": the inner one stays nil
+for path in [a for a in sys.argv[1:] if not a.startswith("-")]:
+    lines = open(path, encoding="utf-8").read().split("\n")
+    top = set()
+    for line in lines:
+        m = re.match(r"local ([\w, ]+)\s*(--.*)?$", line)
+        if m:
+            top.update(n.strip() for n in m.group(1).split(","))
+    for i, line in enumerate(lines, 1):
+        m = re.match(r"\s+local ([\w, ]+)\s*(--.*)?$", line)
+        if m:
+            for n in (x.strip() for x in m.group(1).split(",")):
+                if n in top:
+                    print(f"{path}:{i}: nested 'local {n}' hides the top-level one (stays nil)")
+                    bad = True
 print("locals: FAIL" if bad else "locals: ok")
 sys.exit(1 if bad else 0)

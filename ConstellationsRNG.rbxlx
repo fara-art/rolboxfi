@@ -6173,7 +6173,6 @@ local settingsButton
 do
 	local langFrame = panelFrame({ Size = UDim2.new(0, 112, 0, 44), Position = UDim2.new(0, 16, 0, 64), Visible = false, Parent = gui }) -- language lives in the settings now
 	local enButton, ruButton
-	local render -- forward
 
 	setLang = function(newLang: string)
 		lang = newLang
