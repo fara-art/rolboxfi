@@ -40,6 +40,10 @@ local TradeEv = remote("RemoteEvent", "Trade") -- (kind, info)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
+ReplicatedStorage:SetAttribute("UnionPoints", 0)
+ReplicatedStorage:SetAttribute("UnionTarget", 120)
+ReplicatedStorage:SetAttribute("UnionEndsAt", 0) -- server time when the x3 luck ends
+ReplicatedStorage:SetAttribute("UnionReadyAt", 0) -- portal rests until then
 
 World.build()
 
@@ -94,6 +98,9 @@ local function getLuck(player: Player, data): number
 	end
 	if isShower() then
 		luck *= Config.ShowerLuck
+	end
+	if workspace:GetServerTimeNow() < (ReplicatedStorage:GetAttribute("UnionEndsAt") or 0) then
+		luck *= Config.Union.luck -- Star Union portal was filled
 	end
 	return luck * Config.RebirthLuck(data.rebirths) -- rebirths multiply everything
 end
@@ -226,6 +233,7 @@ local function pushState(player: Player)
 		rebirthTokens = data.rebirthTokens,
 		rebirthUps = data.rebirthUps,
 		pets = data.pets,
+		fusions = data.fusions,
 		petSpeed = data.petSpeed,
 		expedition = data.expedition,
 		activeSets = activeSets(data),
@@ -606,8 +614,8 @@ function actions.UpgradeMutation(player, data, itemKey)
 	if not nextMutation then
 		return
 	end
-	if star.season then
-		return toast(player, "toastSeasonalNoUpgrade") -- seasonal stars can't be upgraded
+	if star.season or star.hybrid then
+		return toast(player, "toastSeasonalNoUpgrade") -- seasonal / hybrid stars can't be upgraded
 	end
 	if (data.inventory[itemKey] or 0) < nextMutation.copies then
 		return toast(player, "toastNeedSame", { nextMutation.copies })
@@ -1149,6 +1157,106 @@ task.spawn(function()
 				root.AssemblyLinearVelocity = Vector3.zero
 				character:PivotTo(World.spawnCFrame(player))
 			end
+		end
+	end
+end)
+
+---------------------------------------------------------------- Fusion (at the Star Forge)
+function actions.Fuse(player, data, keyA, keyB)
+	local starA = Items.parse(keyA)
+	local starB = Items.parse(keyB)
+	if not starA or not starB or starA.id == starB.id then
+		return
+	end
+	if World.distanceTo(player, World.ForgePosition) > Config.ForgeReach then
+		return toast(player, "toastTooFar")
+	end
+	if (data.inventory[keyA] or 0) < 1 or (data.inventory[keyB] or 0) < 1 then
+		return
+	end
+	local hybrid = Stars.fusion(starA.id, starB.id)
+	if not hybrid then
+		return toast(player, "fuseNothing", {}, Color3.fromRGB(200, 120, 255))
+	end
+	if not spend(player, data, Config.FusionCost(hybrid)) then
+		return
+	end
+	takeFromInventory(data, keyA, 1)
+	takeFromInventory(data, keyB, 1)
+	addToInventory(player, data, hybrid.id, 1)
+	data.fusions = data.fusions or {}
+	if not data.fusions[hybrid.id] then
+		data.fusions[hybrid.id] = true
+		announceAll("fuseDiscovered", { player.DisplayName, { item = hybrid.id } }, Color3.fromRGB(200, 120, 255))
+	else
+		toast(player, "toastForged", { { item = hybrid.id } }, Color3.fromRGB(200, 120, 255))
+	end
+end
+
+---------------------------------------------------------------- Star Union (portal over the fountain)
+local function pushAll()
+	for player in sessions do
+		pushState(player)
+	end
+end
+
+function actions.UnionGive(player, data, itemKey, count)
+	if not Items.parse(itemKey) then
+		return
+	end
+	local now = workspace:GetServerTimeNow()
+	if now < (ReplicatedStorage:GetAttribute("UnionReadyAt") or 0) then
+		return toast(player, "unionResting", { Format.time(math.ceil(ReplicatedStorage:GetAttribute("UnionReadyAt") - now)) })
+	end
+	if World.distanceTo(player, Vector3.zero) > 36 then
+		return toast(player, "toastTooFar")
+	end
+	count = toCount(count, data.inventory[itemKey] or 0)
+	if count < 1 or not takeFromInventory(data, itemKey, count) then
+		return
+	end
+	local target = Config.Union.perPlayer * math.max(1, #Players:GetPlayers())
+	local points = (ReplicatedStorage:GetAttribute("UnionPoints") or 0) + Config.UnionPoints(Items.chance(itemKey)) * count
+	ReplicatedStorage:SetAttribute("UnionTarget", target)
+	if points >= target then
+		ReplicatedStorage:SetAttribute("UnionPoints", 0)
+		ReplicatedStorage:SetAttribute("UnionEndsAt", now + Config.Union.duration)
+		ReplicatedStorage:SetAttribute("UnionReadyAt", now + Config.Union.duration + Config.Union.rest)
+		World.setPortalActive(true)
+		announceAll("unionFull", { player.DisplayName, Config.Union.luck, Format.time(Config.Union.duration) }, Color3.fromRGB(255, 120, 220))
+		pushAll()
+		task.delay(Config.Union.duration, function()
+			World.setPortalActive(false)
+			pushAll()
+		end)
+	else
+		ReplicatedStorage:SetAttribute("UnionPoints", points)
+	end
+end
+
+World.onUnion = function(player)
+	ReplicatedStorage:SetAttribute("UnionTarget", Config.Union.perPlayer * math.max(1, #Players:GetPlayers()))
+	OpenWindowEv:FireClient(player, "union")
+end
+
+---------------------------------------------------------------- Falling stars (land on the hub, first one to catch it wins)
+task.spawn(function()
+	while true do
+		task.wait(rng:NextInteger(Config.FallingStar.every[1], Config.FallingStar.every[2]))
+		if next(sessions) then
+			announceAll("fallingStar", {}, Color3.fromRGB(255, 220, 120))
+			World.dropStar(Config.FallingStar.lifetime, function(player)
+				local data = DataService.get(player)
+				if not data or not sessions[player] then
+					return false
+				end
+				local key = Odds.roll(getLuck(player, data) * Config.FallingStar.luckMult, rng, Stars.season(os.time())).id
+				addToInventory(player, data, key, 1)
+				announceAll("caughtStar", { player.DisplayName, { item = key }, Format.number(Items.chance(key)) }, Color3.fromRGB(255, 220, 120))
+				announceIfRare(player, key)
+				pushState(player)
+				return true
+			end)
 		end
 	end
 end)

@@ -254,6 +254,21 @@ Config.ConstellationSets = {
 	{ id = "arc", stars = { "triangulum", "whirlpool", "sombrero", "andromeda" }, bonus = 4 },
 }
 
+-- Fusion (Star Forge): two different stars -> a hybrid; cash cost:
+function Config.FusionCost(hybrid): number
+	return math.floor(hybrid.income * 30)
+end
+
+-- Falling stars: every few minutes one lands on the hub; first to catch it rolls with boosted luck
+Config.FallingStar = { every = { 150, 270 }, luckMult = 10, lifetime = 60 }
+
+-- Star Union: everyone on the server throws stars into the portal over the fountain;
+-- when the meter is full the whole server gets x3 luck for 10 minutes, then the portal rests.
+Config.Union = { perPlayer = 120, luck = 3, duration = 600, rest = 1800 }
+function Config.UnionPoints(chance: number): number
+	return math.max(1, math.floor(math.log10(math.max(chance, 1)) * 2))
+end
+
 -- Museum likes: weekly top 3 get rebirth tokens
 Config.LikeRewards = { 3, 2, 1 }
 function Config.RebirthUpCost(level: number): number
@@ -423,6 +438,19 @@ end
 -- Star icons: upload assets/icons/*.png to Roblox and paste the image IDs here.
 -- Empty = drawn fallback circle.
 Config.StarIcons = {
+	-- hybrid stars (fusion, assets/hybrid_upload.zip)
+	twinkle = "",
+	greydwarf = "",
+	crimsonsun = "",
+	violetgiant = "",
+	trinary = "",
+	beacon = "",
+	stormstar = "",
+	blazar = "",
+	goldenkilonova = "",
+	twinlights = "",
+	chimera = "",
+	milkomeda = "",
 	-- seasonal stars (assets/seasonal_upload.zip)
 	frostcomet = "81175787024013",
 	icenova = "135635151967740",
@@ -548,6 +576,8 @@ Config.UiIcons = {
 	forge = "109351671873293", -- ui_forge.png
 	pets = "105949137779821", -- ui_pets.png (pet slots)
 	expedition = "", -- ui_expedition.png (rocket)
+	union = "", -- ui_union.png (Star Union portal)
+	fusion = "", -- ui_fusion.png
 	blackhole = "89016344401227", -- ui_blackhole.png -- ui_trash.png
 	backpack = "86024249124101", -- ui_backpack.png (inventory)
 	roll = "85946183739046", -- ui_roll.png (big ROLL dice)
@@ -566,7 +596,7 @@ Config.UiIcons = {
 	pass_luckyhunter = "98097466780495", -- pass_luckyhunter.png
 }
 Config.UiIconFallback = {
-	pets = "luck", expedition = "rolls", coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
+	pets = "luck", expedition = "rolls", union = "rewards", fusion = "forge", coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
 	pass_extraroll = "dice2", pass_fastrolls = "bolt", pass_vip = "crown", pass_luck2x = "luck", pass_cash2x = "coins", pass_luckyhunter = "target",
 }
 
@@ -799,6 +829,14 @@ Lang.Strings = {
 		likeGot = "%s liked your museum!", likeReward = "Your museum was #%d last week! +%d rebirth tokens",
 		likesShort = "%d likes", lbLikes = "TOP MUSEUMS (WEEK)", seasonLine = "Season: %s, ends in %s",
 		season_frost = "Frost", season_ember = "Ember", season_bloom = "Bloom", seasonTag = "SEASON",
+		forgeTab = "FORGE", fusionTab = "FUSION", fuseHint = "Put two DIFFERENT stars in and press FUSE. Some pairs make a secret hybrid star you can't roll. Wrong pairs cost nothing.",
+		fuseBtn = "FUSE", fuseBtnCost = "FUSE  $%s", fuseFound = "Hybrids found: %d / %d", fusePick = "tap to put on the bench",
+		fuseNothing = "Nothing happened... try another pair", fuseDiscovered = "%s discovered a new hybrid: %s!",
+		unionTitle = "STAR UNION", signUnion = "STAR UNION", promptUnion = "Star Union portal",
+		unionHint = "Everyone on the server throws stars into the portal. When it's full, the WHOLE server gets x%d luck for %s!",
+		unionActive = "x%d LUCK for everyone! %s", unionResting = "The portal is resting: %s", unionPoints = "+%d points", unionAll = "ALL",
+		unionFull = "%s filled the Star Union portal! Everyone: x%d luck for %s!",
+		fallingStar = "A star is falling on the hub! Run and catch it!", caughtStar = "%s caught a falling star: %s (1/%s)!", promptCatch = "Catch the star!",
 		telescope = "TELESCOPE", rollHint = "Roll for a star", roll = "ROLL!", rollN = "ROLL x%d", inventory = "Inventory", rollAnim = "Roll animation",
 		autoOn = "AUTO: ON", autoOff = "AUTO: OFF", autoLocked = "AUTO  %d/%d",
 		oneIn = "1/%s", andMore = "+%d more", totalRolls = "Total rolls: %s",
@@ -893,6 +931,14 @@ Lang.Strings = {
 		likeGot = "%s лайкнул твой музей!", likeReward = "Твой музей занял #%d на прошлой неделе! +%d токенов перерождения",
 		likesShort = "Лайков: %d", lbLikes = "ТОП МУЗЕЕВ НЕДЕЛИ", seasonLine = "Сезон: %s, закончится через %s",
 		season_frost = "Мороз", season_ember = "Пламя", season_bloom = "Цветение", seasonTag = "СЕЗОН",
+		forgeTab = "КУЗНЯ", fusionTab = "СИНТЕЗ", fuseHint = "Положи две РАЗНЫЕ звезды и жми «СИНТЕЗ». Некоторые пары дают секретную гибридную звезду, её не выбить роллом. Неверная пара ничего не стоит.",
+		fuseBtn = "СИНТЕЗ", fuseBtnCost = "СИНТЕЗ  $%s", fuseFound = "Найдено гибридов: %d / %d", fusePick = "нажми, чтобы положить на стол",
+		fuseNothing = "Ничего не вышло... попробуй другую пару", fuseDiscovered = "%s открыл новый гибрид: %s!",
+		unionTitle = "ЗВЁЗДНЫЙ СОЮЗ", signUnion = "ЗВЁЗДНЫЙ СОЮЗ", promptUnion = "Портал Звёздного союза",
+		unionHint = "Все игроки сервера кидают звёзды в портал. Когда он заполнится, ВЕСЬ сервер получит x%d удачи на %s!",
+		unionActive = "x%d УДАЧИ всем! %s", unionResting = "Портал отдыхает: %s", unionPoints = "+%d очков", unionAll = "ВСЕ",
+		unionFull = "%s заполнил портал Звёздного союза! Всем x%d удачи на %s!",
+		fallingStar = "На хаб падает звезда! Беги и лови!", caughtStar = "%s поймал падающую звезду: %s (1/%s)!", promptCatch = "Поймать звезду!",
 		telescope = "ТЕЛЕСКОП", rollHint = "Крути звезду", roll = "КРУТИТЬ!", rollN = "КРУТИТЬ x%d", inventory = "Инвентарь", rollAnim = "Анимация ролла",
 		autoOn = "АВТО: ВКЛ", autoOff = "АВТО: ВЫКЛ", autoLocked = "АВТО  %d/%d",
 		oneIn = "1/%s", andMore = "ещё +%d", totalRolls = "Всего круток: %s",
@@ -972,6 +1018,9 @@ Lang.Strings = {
 
 Lang.StarNames = {
 	ru = {
+		twinkle = "Мерцающая звезда", greydwarf = "Сумеречный карлик", crimsonsun = "Багровое солнце", violetgiant = "Фиолетовый гигант",
+		trinary = "Тройная звезда", beacon = "Космический маяк", stormstar = "Штормовая звезда", blazar = "Блазар",
+		goldenkilonova = "Золотая килоновая", twinlights = "Огни-близнецы", chimera = "Туманность Химера", milkomeda = "Млечномеда",
 		frostcomet = "Морозная комета", icenova = "Ледяная новая", aurorastar = "Звезда сияния", glacierpulsar = "Ледниковый пульсар",
 		wintercrown = "Зимняя корона", embercomet = "Тлеющая комета", phoenixstar = "Звезда феникса", solarflare = "Солнечная вспышка",
 		magmapulsar = "Магмовый пульсар", infernocrown = "Огненная корона", petalcomet = "Лепестковая комета", bloomnova = "Цветущая новая",
@@ -1487,6 +1536,23 @@ Stars.Seasonal = {
 	{ id = "verdantcrown", name = "Verdant Crown", chance = 50000000, income = 60000000, color = Color3.fromRGB(120, 255, 170), kind = "galaxy", season = 3 },
 }
 
+-- Hybrid stars: can't be rolled, only made by FUSION at the Star Forge (two different stars -> one hybrid).
+-- recipe = the two star ids; players discover the recipes themselves.
+Stars.Hybrids = {
+	{ id = "twinkle", name = "Twinkle Star", recipe = { "dust", "spark" }, kind = "point", color = Color3.fromRGB(255, 250, 200) },
+	{ id = "greydwarf", name = "Twilight Dwarf", recipe = { "browndwarf", "whitedwarf" }, kind = "sphere", color = Color3.fromRGB(190, 170, 210) },
+	{ id = "crimsonsun", name = "Crimson Sun", recipe = { "dwarf", "sun" }, kind = "sphere", color = Color3.fromRGB(255, 90, 60) },
+	{ id = "violetgiant", name = "Violet Giant", recipe = { "redgiant", "giant" }, kind = "giant", color = Color3.fromRGB(190, 110, 255) },
+	{ id = "trinary", name = "Trinary Star", recipe = { "sun", "binary" }, kind = "binary", color = Color3.fromRGB(255, 230, 120) },
+	{ id = "beacon", name = "Cosmic Beacon", recipe = { "pulsar", "neutron" }, kind = "pulsar", color = Color3.fromRGB(120, 255, 240) },
+	{ id = "stormstar", name = "Storm Star", recipe = { "wolfrayet", "hypergiant" }, kind = "giant", color = Color3.fromRGB(255, 140, 220) },
+	{ id = "blazar", name = "Blazar", recipe = { "pulsar", "quasar" }, kind = "quasar", color = Color3.fromRGB(255, 120, 255) },
+	{ id = "goldenkilonova", name = "Golden Kilonova", recipe = { "neutron", "kilonova" }, kind = "remnant", color = Color3.fromRGB(255, 210, 90) },
+	{ id = "twinlights", name = "Twin Lights", recipe = { "sirius", "vega" }, kind = "binary", color = Color3.fromRGB(200, 220, 255) },
+	{ id = "chimera", name = "Chimera Nebula", recipe = { "eagle", "horsehead" }, kind = "nebula", color = Color3.fromRGB(255, 150, 120) },
+	{ id = "milkomeda", name = "Milkomeda", recipe = { "whirlpool", "andromeda" }, kind = "galaxy", color = Color3.fromRGB(220, 200, 255) },
+}
+
 Stars.ById = {}
 Stars.ByIndex = {}
 for index, star in Stars.List do
@@ -1498,6 +1564,27 @@ for i, star in Stars.Seasonal do
 	star.index = #Stars.List + i -- after the normal stars (not part of the Index tiers / Forge chain)
 	Stars.ById[star.id] = star
 	Stars.ByIndex[star.index] = star
+end
+
+for i, hybrid in Stars.Hybrids do
+	local a, b = Stars.ById[hybrid.recipe[1]], Stars.ById[hybrid.recipe[2]]
+	hybrid.hybrid = true
+	hybrid.chance = math.max(a.chance, b.chance) * 3 -- counts as rarer than both parents
+	hybrid.income = (a.income + b.income) * 2
+	hybrid.index = #Stars.List + #Stars.Seasonal + i
+	Stars.ById[hybrid.id] = hybrid
+	Stars.ByIndex[hybrid.index] = hybrid
+end
+
+-- hybrid made from two star ids (order doesn't matter), or nil
+function Stars.fusion(a: string, b: string)
+	for _, hybrid in Stars.Hybrids do
+		local r = hybrid.recipe
+		if (r[1] == a and r[2] == b) or (r[1] == b and r[2] == a) then
+			return hybrid
+		end
+	end
+	return nil
 end
 
 -- which season is running (1..#Seasons) and how many seconds are left
@@ -1555,6 +1642,10 @@ local TradeEv = remote("RemoteEvent", "Trade") -- (kind, info)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
+ReplicatedStorage:SetAttribute("UnionPoints", 0)
+ReplicatedStorage:SetAttribute("UnionTarget", 120)
+ReplicatedStorage:SetAttribute("UnionEndsAt", 0) -- server time when the x3 luck ends
+ReplicatedStorage:SetAttribute("UnionReadyAt", 0) -- portal rests until then
 
 World.build()
 
@@ -1609,6 +1700,9 @@ local function getLuck(player: Player, data): number
 	end
 	if isShower() then
 		luck *= Config.ShowerLuck
+	end
+	if workspace:GetServerTimeNow() < (ReplicatedStorage:GetAttribute("UnionEndsAt") or 0) then
+		luck *= Config.Union.luck -- Star Union portal was filled
 	end
 	return luck * Config.RebirthLuck(data.rebirths) -- rebirths multiply everything
 end
@@ -1741,6 +1835,7 @@ local function pushState(player: Player)
 		rebirthTokens = data.rebirthTokens,
 		rebirthUps = data.rebirthUps,
 		pets = data.pets,
+		fusions = data.fusions,
 		petSpeed = data.petSpeed,
 		expedition = data.expedition,
 		activeSets = activeSets(data),
@@ -2121,8 +2216,8 @@ function actions.UpgradeMutation(player, data, itemKey)
 	if not nextMutation then
 		return
 	end
-	if star.season then
-		return toast(player, "toastSeasonalNoUpgrade") -- seasonal stars can't be upgraded
+	if star.season or star.hybrid then
+		return toast(player, "toastSeasonalNoUpgrade") -- seasonal / hybrid stars can't be upgraded
 	end
 	if (data.inventory[itemKey] or 0) < nextMutation.copies then
 		return toast(player, "toastNeedSame", { nextMutation.copies })
@@ -2668,6 +2763,106 @@ task.spawn(function()
 	end
 end)
 
+---------------------------------------------------------------- Fusion (at the Star Forge)
+function actions.Fuse(player, data, keyA, keyB)
+	local starA = Items.parse(keyA)
+	local starB = Items.parse(keyB)
+	if not starA or not starB or starA.id == starB.id then
+		return
+	end
+	if World.distanceTo(player, World.ForgePosition) > Config.ForgeReach then
+		return toast(player, "toastTooFar")
+	end
+	if (data.inventory[keyA] or 0) < 1 or (data.inventory[keyB] or 0) < 1 then
+		return
+	end
+	local hybrid = Stars.fusion(starA.id, starB.id)
+	if not hybrid then
+		return toast(player, "fuseNothing", {}, Color3.fromRGB(200, 120, 255))
+	end
+	if not spend(player, data, Config.FusionCost(hybrid)) then
+		return
+	end
+	takeFromInventory(data, keyA, 1)
+	takeFromInventory(data, keyB, 1)
+	addToInventory(player, data, hybrid.id, 1)
+	data.fusions = data.fusions or {}
+	if not data.fusions[hybrid.id] then
+		data.fusions[hybrid.id] = true
+		announceAll("fuseDiscovered", { player.DisplayName, { item = hybrid.id } }, Color3.fromRGB(200, 120, 255))
+	else
+		toast(player, "toastForged", { { item = hybrid.id } }, Color3.fromRGB(200, 120, 255))
+	end
+end
+
+---------------------------------------------------------------- Star Union (portal over the fountain)
+local function pushAll()
+	for player in sessions do
+		pushState(player)
+	end
+end
+
+function actions.UnionGive(player, data, itemKey, count)
+	if not Items.parse(itemKey) then
+		return
+	end
+	local now = workspace:GetServerTimeNow()
+	if now < (ReplicatedStorage:GetAttribute("UnionReadyAt") or 0) then
+		return toast(player, "unionResting", { Format.time(math.ceil(ReplicatedStorage:GetAttribute("UnionReadyAt") - now)) })
+	end
+	if World.distanceTo(player, Vector3.zero) > 36 then
+		return toast(player, "toastTooFar")
+	end
+	count = toCount(count, data.inventory[itemKey] or 0)
+	if count < 1 or not takeFromInventory(data, itemKey, count) then
+		return
+	end
+	local target = Config.Union.perPlayer * math.max(1, #Players:GetPlayers())
+	local points = (ReplicatedStorage:GetAttribute("UnionPoints") or 0) + Config.UnionPoints(Items.chance(itemKey)) * count
+	ReplicatedStorage:SetAttribute("UnionTarget", target)
+	if points >= target then
+		ReplicatedStorage:SetAttribute("UnionPoints", 0)
+		ReplicatedStorage:SetAttribute("UnionEndsAt", now + Config.Union.duration)
+		ReplicatedStorage:SetAttribute("UnionReadyAt", now + Config.Union.duration + Config.Union.rest)
+		World.setPortalActive(true)
+		announceAll("unionFull", { player.DisplayName, Config.Union.luck, Format.time(Config.Union.duration) }, Color3.fromRGB(255, 120, 220))
+		pushAll()
+		task.delay(Config.Union.duration, function()
+			World.setPortalActive(false)
+			pushAll()
+		end)
+	else
+		ReplicatedStorage:SetAttribute("UnionPoints", points)
+	end
+end
+
+World.onUnion = function(player)
+	ReplicatedStorage:SetAttribute("UnionTarget", Config.Union.perPlayer * math.max(1, #Players:GetPlayers()))
+	OpenWindowEv:FireClient(player, "union")
+end
+
+---------------------------------------------------------------- Falling stars (land on the hub, first one to catch it wins)
+task.spawn(function()
+	while true do
+		task.wait(rng:NextInteger(Config.FallingStar.every[1], Config.FallingStar.every[2]))
+		if next(sessions) then
+			announceAll("fallingStar", {}, Color3.fromRGB(255, 220, 120))
+			World.dropStar(Config.FallingStar.lifetime, function(player)
+				local data = DataService.get(player)
+				if not data or not sessions[player] then
+					return false
+				end
+				local key = Odds.roll(getLuck(player, data) * Config.FallingStar.luckMult, rng, Stars.season(os.time())).id
+				addToInventory(player, data, key, 1)
+				announceAll("caughtStar", { player.DisplayName, { item = key }, Format.number(Items.chance(key)) }, Color3.fromRGB(255, 220, 120))
+				announceIfRare(player, key)
+				pushState(player)
+				return true
+			end)
+		end
+	end
+end)
+
 ---------------------------------------------------------------- Star Shower
 startShower = function()
 	ReplicatedStorage:SetAttribute("ShowerEndsAt", workspace:GetServerTimeNow() + Config.ShowerDuration)
@@ -3125,6 +3320,7 @@ local function default()
 		likes = { week = 0, count = 0 }, -- likes your museum got this week
 		likedWeek = { week = 0, owners = {} }, -- museums you liked this week ([userId string] = true)
 		likeRewardWeek = 0, -- last week whose top-3 reward was checked
+		fusions = {}, -- [hybrid id] = true, recipes found
 		lastSeen = 0, -- os.time() of the last income tick (offline income)
 		lastIncome = 0, -- income per second at that moment
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
@@ -3250,7 +3446,9 @@ local TOP = 100
 local stores = {}
 pcall(function()
 	for _, board in BOARDS do
-		if board ~= "likes" then
+		if board == "rarest" then
+			stores[board] = DataStoreService:GetOrderedDataStore("LB_rarest_v3") -- v3: room for star numbers above 99
+		elseif board ~= "likes" then
 			stores[board] = DataStoreService:GetOrderedDataStore("LB_" .. board .. "_v2")
 		end
 	end
@@ -3319,7 +3517,7 @@ local function encode(board: string, data): number?
 		if not star then
 			return nil
 		end
-		return math.floor(math.log10(Items.chance(data.best)) * 1000) * 10000 + star.index * 100 + mutation.index
+		return math.floor(math.log10(Items.chance(data.best)) * 1000) * 100000 + star.index * 100 + mutation.index
 	end
 	return nil
 end
@@ -3328,7 +3526,7 @@ local function decode(board: string, value: number)
 	if board == "cash" then
 		return 10 ^ (value / 1e9) - 1
 	elseif board == "rarest" then
-		local star = Stars.ByIndex[math.floor(value / 100) % 100]
+		local star = Stars.ByIndex[math.floor(value / 100) % 1000]
 		local mutation = Mutations.List[value % 100]
 		return if star and mutation then Items.key(star.id, mutation.id) else nil
 	end
@@ -4040,6 +4238,7 @@ World.onHole = nil :: ((Player) -> ())?
 World.onElevator = nil :: ((Player, number, number, number) -> ())?
 World.onExpedition = nil :: ((Player) -> ())?
 World.onLike = nil :: ((Player, number) -> ())?
+World.onUnion = nil :: ((Player) -> ())?
 World.ExpeditionPosition = Vector3.new(0, 0, 1000)
 
 local RING = 150 -- distance from hub center to satellite islands
@@ -4463,6 +4662,36 @@ local function buildHub(folder: Folder)
 		local base = Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31)
 		tree(base, folder, leaves[i])
 		flowers(base, 5, 10, folder)
+	end
+
+	-- Star Union portal: a glowing ring floating above the fountain (prompt on the basin)
+	do
+		local ring = make("Model", { Name = "UnionPortal", Parent = folder })
+		local center = Vector3.new(0, 23, 0)
+		for k = 0, 23 do
+			local a = k / 24 * math.pi * 2
+			make("Part", {
+				Name = "RingPart", Size = Vector3.new(1.2, 1.2, 2.2), CFrame = CFrame.lookAt(center + Vector3.new(math.cos(a) * 7, math.sin(a) * 7, 0), center + Vector3.new(math.cos(a + 0.2) * 7, math.sin(a + 0.2) * 7, 0)),
+				Material = Enum.Material.Neon, Color = Color3.fromRGB(170, 110, 255), CanCollide = false, CanQuery = false, Parent = ring,
+			})
+		end
+		local core = make("Part", { Name = "PortalCore", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 12.5, 12.5), CFrame = CFrame.new(center) * CFrame.Angles(0, math.rad(90), 0), Material = Enum.Material.ForceField, Color = Color3.fromRGB(200, 150, 255), Transparency = 0.2, CanCollide = false, CanQuery = false, Parent = ring })
+		make("PointLight", { Color = Color3.fromRGB(190, 130, 255), Range = 24, Brightness = 1.2, Parent = core })
+		make("ParticleEmitter", {
+			Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 200, 255), Color3.fromRGB(150, 120, 255)),
+			LightEmission = 1, Rate = 18, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(1, 3), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.5, 0), Parent = core,
+		})
+		worldText(core, "signUnion", 9, 20, 3)
+		local basin = folder:FindFirstChild("Basin")
+		if basin then
+			local p = prompt(basin, "UnionPrompt", "promptUnion", nil, 22)
+			p.Triggered:Connect(function(who)
+				if World.onUnion then
+					World.onUnion(who)
+				end
+			end)
+		end
+		World.Portal = ring
 	end
 
 	-- launch pad: send stars on expeditions (opens the window)
@@ -5304,6 +5533,64 @@ function World.build()
 		try("plot " .. index, buildPlot, index, slot, plotFolder)
 	end
 	try("scenery", buildScenery, make("Folder", { Name = "Scenery", Parent = map }))
+end
+
+-- the union portal turns gold while the server-wide luck is on
+function World.setPortalActive(on: boolean)
+	local ring = World.Portal
+	if not ring then
+		return
+	end
+	for _, part in ring:GetChildren() do
+		if part:IsA("BasePart") and part.Name == "RingPart" then
+			part.Color = if on then Color3.fromRGB(255, 210, 80) else Color3.fromRGB(170, 110, 255)
+		end
+	end
+end
+
+-- a star falls from the sky onto a random spot of the hub; onCatch(player) -> true when it was taken
+function World.dropStar(lifetime: number, onCatch: (Player) -> boolean)
+	local a = math.random() * math.pi * 2
+	local r = 16 + math.random() * 22
+	local ground = Vector3.new(math.cos(a) * r, 2.2, math.sin(a) * r)
+	local folder = make("Folder", { Name = "FallingStar", Parent = workspace })
+	local star = make("Part", {
+		Name = "FallingStar", Shape = Enum.PartType.Ball, Size = Vector3.new(2.4, 2.4, 2.4), CFrame = CFrame.new(ground + Vector3.new(30, 160, -20)),
+		Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 230, 140), Anchored = true, CanCollide = false, Parent = folder,
+	})
+	make("PointLight", { Color = Color3.fromRGB(255, 220, 140), Range = 22, Brightness = 2, Parent = star })
+	local a0 = make("Attachment", { Position = Vector3.new(0, 1, 0), Parent = star })
+	local a1 = make("Attachment", { Position = Vector3.new(0, -1, 0), Parent = star })
+	make("Trail", { Attachment0 = a0, Attachment1 = a1, Lifetime = 0.8, LightEmission = 1, Color = ColorSequence.new(Color3.fromRGB(255, 240, 180), Color3.fromRGB(255, 140, 60)), Transparency = NumberSequence.new(0, 1), Parent = star })
+	make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 230, 150)), LightEmission = 1,
+		Rate = 25, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.5, 0), Parent = star,
+	})
+	TweenService:Create(star, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = CFrame.new(ground) }):Play()
+	task.delay(3, function()
+		if not star.Parent then
+			return
+		end
+		-- landed: a pillar of light shows where it is
+		local pillar = make("Part", { Name = "Pillar", Size = Vector3.new(0.6, 80, 0.6), CFrame = CFrame.new(ground + Vector3.new(0, 40, 0)), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 230, 150), Transparency = 0.5, Anchored = true, CanCollide = false, CanQuery = false, Parent = folder })
+		local _ = pillar
+		local catch = prompt(star, "CatchPrompt", "promptCatch", nil, 14)
+		local taken = false
+		catch.Triggered:Connect(function(who)
+			if taken then
+				return
+			end
+			if onCatch(who) then
+				taken = true
+				folder:Destroy()
+			end
+		end)
+	end)
+	task.delay(lifetime + 3, function()
+		if folder.Parent then
+			folder:Destroy()
+		end
+	end)
 end
 
 function World.ownerOf(index: number): Player?
@@ -6706,33 +6993,139 @@ renderers[oddsW] = function()
 end
 
 ---------------------------------------------------------------- Forge (only at the forge table)
-renderers[forgeW] = function()
-	local body = forgeW.body
-	clear(body)
-	text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 0, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
-	for order, key in sortedInventory() do
-		local star, mutation = Items.parse(key)
-		local nextStar = Stars.List[star.index + 1]
-		local have = state.inventory[key]
-		local sub = if nextStar
-			then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
-			else t("forgeMax")
-		local r = itemRow(body, order, key, sub)
-		if nextStar then
-			local ready = have >= Config.ForgeAmount
-			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -290, 0, 9), ZIndex = 23, Max = 13,
-				Text = t("forgeBtn", Format.number(Config.ForgeCost(star, nextStar))), Parent = r }, function()
-				ActionEv:FireServer("Forge", key)
+do
+	local forgeTab = "forge"
+	local fuseA: string? = nil
+	local fuseB: string? = nil
+
+	local function forgeList(body)
+		text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 1, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+		for order, key in sortedInventory() do
+			local star, mutation = Items.parse(key)
+			local nextStar = Stars.List[star.index + 1]
+			local have = state.inventory[key]
+			local sub = if nextStar
+				then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
+				else t("forgeMax")
+			local r = itemRow(body, order + 1, key, sub)
+			if nextStar then
+				local ready = have >= Config.ForgeAmount
+				btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -290, 0, 9), ZIndex = 23, Max = 13,
+					Text = t("forgeBtn", Format.number(Config.ForgeCost(star, nextStar))), Parent = r }, function()
+					ActionEv:FireServer("Forge", key)
+				end)
+			end
+			local nextMutation = Mutations.List[mutation.index + 1]
+			if nextMutation and not star.season and not star.hybrid then
+				local upgraded = Items.key(star.id, nextMutation.id)
+				local ready = have >= nextMutation.copies
+				btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
+					Text = t("upgradeBtn", Format.number(Config.UpgradeCost(star, nextStar, nextMutation))), Parent = r }, function()
+					ActionEv:FireServer("UpgradeMutation", key)
+				end)
+			end
+		end
+	end
+
+	-- FUSION: two different stars -> a hybrid (recipes are secret until someone finds them)
+	local function fuseText(parent: Instance, value: string, props)
+		props.Text = value
+		props.FontFace = TITLE
+		props.TextColor3 = props.TextColor3 or WHITE
+		props.Parent = parent
+		local label = text(props)
+		make("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = label })
+		return label
+	end
+
+	local function fusionPage(body)
+		local hint = text({ Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 1, Text = t("fuseHint"), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+		hint.TextXAlignment = Enum.TextXAlignment.Left
+		local bench = make("Frame", { Size = UDim2.new(1, 0, 0, 110), LayoutOrder = 2, BackgroundColor3 = Color3.fromRGB(60, 40, 110), ZIndex = 21, Parent = body }, { corner(14), stroke(INK, 3) })
+		local function slot(x: number, key: string?, which: string)
+			local b = make("TextButton", { Size = UDim2.new(0, 86, 0, 86), Position = UDim2.new(0, x, 0, 12), Text = if key then "" else "?", FontFace = TITLE, TextSize = 40, TextColor3 = Color3.fromRGB(170, 150, 230), BackgroundColor3 = Color3.fromRGB(36, 24, 70), ZIndex = 22, Parent = bench }, {
+				make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(if key then GOLD else Color3.fromRGB(110, 90, 170), 3),
+			})
+			local star, mutation = Items.parse(key)
+			if star then
+				starIcon(star, mutation, { Size = UDim2.new(0.86, 0, 0.86, 0), Position = UDim2.new(0.07, 0, 0.07, 0), ZIndex = 23, Parent = b })
+			end
+			b.Activated:Connect(function() -- tap a filled slot to empty it
+				if which == "a" then
+					fuseA = nil
+				else
+					fuseB = nil
+				end
+				renderers[forgeW]()
 			end)
 		end
-		local nextMutation = Mutations.List[mutation.index + 1]
-		if nextMutation and not star.season then
-			local upgraded = Items.key(star.id, nextMutation.id)
-			local ready = have >= nextMutation.copies
-			btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
-				Text = t("upgradeBtn", Format.number(Config.UpgradeCost(star, nextStar, nextMutation))), Parent = r }, function()
-				ActionEv:FireServer("UpgradeMutation", key)
+		slot(14, fuseA, "a")
+		fuseText(bench, "+", { Size = UDim2.new(0, 40, 0, 86), Position = UDim2.new(0, 104, 0, 12), Max = 44, ZIndex = 22 })
+		slot(148, fuseB, "b")
+		local a, b = Items.parse(fuseA), Items.parse(fuseB)
+		local known = a and b and Stars.fusion(a.id, b.id)
+		local found = known and state.fusions and state.fusions[known.id]
+		fuseText(bench, "=", { Size = UDim2.new(0, 40, 0, 86), Position = UDim2.new(0, 238, 0, 12), Max = 44, ZIndex = 22 })
+		local result = make("Frame", { Size = UDim2.new(0, 86, 0, 86), Position = UDim2.new(0, 282, 0, 12), BackgroundColor3 = Color3.fromRGB(36, 24, 70), ZIndex = 22, Parent = bench }, {
+			make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(Color3.fromRGB(200, 120, 255), 3),
+		})
+		if found then
+			starIcon(known, nil, { Size = UDim2.new(0.86, 0, 0.86, 0), Position = UDim2.new(0.07, 0, 0.07, 0), ZIndex = 23, Parent = result })
+		else
+			fuseText(result, "?", { Size = UDim2.new(1, 0, 1, 0), Max = 44, ZIndex = 23 })
+		end
+		btn(if a and b then Color3.fromRGB(170, 90, 255) else GREY, { Size = UDim2.new(1, -400, 0, 60), Position = UDim2.new(0, 386, 0, 25), ZIndex = 22, Max = 20,
+			Text = if found then t("fuseBtnCost", Format.number(Config.FusionCost(known))) else t("fuseBtn"), Parent = bench }, function()
+			if fuseA and fuseB then
+				ActionEv:FireServer("Fuse", fuseA, fuseB)
+			end
+		end)
+		-- recipes already found (by you)
+		local foundList = {}
+		for _, hybrid in Stars.Hybrids do
+			if state.fusions and state.fusions[hybrid.id] then
+				table.insert(foundList, Lang.star(lang, Stars.ById[hybrid.recipe[1]]) .. " + " .. Lang.star(lang, Stars.ById[hybrid.recipe[2]]) .. " = " .. Lang.star(lang, hybrid))
+			end
+		end
+		text({ Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 3, Text = t("fuseFound", #foundList, #Stars.Hybrids), FontFace = TITLE, TextColor3 = Color3.fromRGB(170, 90, 255), Max = 17, ZIndex = 21, Parent = body })
+		for i, line in foundList do
+			text({ Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 3 + i, Text = line, FontFace = BODY_SEMI, TextColor3 = TEXT, Max = 14, ZIndex = 21, Parent = body })
+		end
+		-- your stars: tap to put into the first empty slot
+		for order, key in sortedInventory() do
+			itemRow(body, 100 + order, key, t("fusePick")).Activated:Connect(function()
+				if not fuseA then
+					fuseA = key
+				elseif not fuseB and key ~= fuseA then
+					fuseB = key
+				else
+					fuseB = key
+				end
+				renderers[forgeW]()
 			end)
+		end
+	end
+
+	renderers[forgeW] = function()
+		local body = forgeW.body
+		clear(body)
+		if fuseA and not ((state.inventory[fuseA] or 0) > 0) then
+			fuseA = nil
+		end
+		if fuseB and not ((state.inventory[fuseB] or 0) > 0) then
+			fuseB = nil
+		end
+		local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 46), LayoutOrder = 0, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+		for i, tab in { { id = "forge", key = "forgeTab", color = GOLD }, { id = "fusion", key = "fusionTab", color = Color3.fromRGB(170, 90, 255) } } do
+			btn(if forgeTab == tab.id then tab.color else Color3.fromRGB(110, 118, 150), { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new((i - 1) * 0.5, if i == 2 then 4 else 0, 0, 0), Text = t(tab.key), Max = 20, ZIndex = 22, Parent = tabs }, function()
+				forgeTab = tab.id
+				renderers[forgeW]()
+			end)
+		end
+		if forgeTab == "fusion" then
+			fusionPage(body)
+		else
+			forgeList(body)
 		end
 	end
 end
@@ -9523,6 +9916,84 @@ do
 				local pad = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Hub") and workspace.Map.Hub:FindFirstChild("LaunchPad")
 				if root and pad and (root.Position - pad.Position).Magnitude > Config.Expedition.reach + 8 then
 					expeditionW.frame.Visible = false
+				end
+			end
+		end
+	end)
+end
+
+---------------------------------------------------------------- Star Union portal (everyone fills it together -> x3 luck for the server)
+do
+	local unionW = window("unionTitle", "center", { Size = UDim2.new(0.42, 0, 0.66, 0), Position = UDim2.new(0.29, 0, 0.16, 0) })
+	if uiIcon("union", { Size = UDim2.new(0, 72, 0, 72), Position = UDim2.new(0, -18, 0, -86), Rotation = -8, ZIndex = 27, Parent = unionW.frame }) then
+		unionW.title.Position = UDim2.new(0, 60, 0, -62)
+		unionW.title.Size = UDim2.new(1, -136, 0, 50)
+	end
+	local meterFill: Frame? = nil
+	local meterText: TextLabel? = nil
+
+	local function updateMeter()
+		if not meterFill or not meterFill.Parent or not meterText then
+			return
+		end
+		local now = workspace:GetServerTimeNow()
+		local points = ReplicatedStorage:GetAttribute("UnionPoints") or 0
+		local target = math.max(1, ReplicatedStorage:GetAttribute("UnionTarget") or 1)
+		local endsAt = ReplicatedStorage:GetAttribute("UnionEndsAt") or 0
+		local readyAt = ReplicatedStorage:GetAttribute("UnionReadyAt") or 0
+		if now < endsAt then
+			meterFill.Size = UDim2.new(1, 0, 1, 0)
+			meterText.Text = t("unionActive", Config.Union.luck, Format.time(math.ceil(endsAt - now)))
+		elseif now < readyAt then
+			meterFill.Size = UDim2.new(0, 0, 1, 0)
+			meterText.Text = t("unionResting", Format.time(math.ceil(readyAt - now)))
+		else
+			meterFill.Size = UDim2.new(math.clamp(points / target, 0, 1), 0, 1, 0)
+			meterText.Text = points .. " / " .. target
+		end
+	end
+
+	renderers[unionW] = function()
+		local body = unionW.body
+		clear(body)
+		body.BackgroundColor3 = Color3.fromRGB(34, 22, 66)
+		local hint = text({ Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Text = t("unionHint", Config.Union.luck, Format.time(Config.Union.duration)), TextColor3 = Color3.fromRGB(215, 200, 255), FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+		hint.TextXAlignment = Enum.TextXAlignment.Left
+		local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 2, BackgroundColor3 = Color3.fromRGB(20, 12, 40), ZIndex = 21, Parent = body }, { corner(12), stroke(Color3.fromRGB(200, 130, 255), 3) })
+		meterFill = make("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 22, Parent = bar }, {
+			corner(12), make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(150, 80, 255), Color3.fromRGB(255, 120, 220)) }),
+		})
+		meterText = text({ Size = UDim2.new(1, 0, 1, 0), Text = "", FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 20, ZIndex = 23, Parent = bar })
+		updateMeter()
+		-- your stars: tap = 1, ALL = every copy
+		for order, key in sortedInventory() do
+			local r = itemRow(body, 10 + order, key, t("unionPoints", Config.UnionPoints(Items.chance(key))))
+			r.Activated:Connect(function()
+				ActionEv:FireServer("UnionGive", key, 1)
+			end)
+			btn(Color3.fromRGB(200, 90, 230), { Size = UDim2.new(0, 70, 0, 36), Position = UDim2.new(1, -140, 0, 11), Text = t("unionAll"), Max = 15, ZIndex = 23, Parent = r }, function()
+				ActionEv:FireServer("UnionGive", key, state.inventory[key] or 0)
+			end)
+		end
+	end
+
+	OpenWindowEv.OnClientEvent:Connect(function(name: string)
+		if name == "union" then
+			open(unionW, true)
+		end
+	end)
+	for _, attr in { "UnionPoints", "UnionTarget", "UnionEndsAt", "UnionReadyAt" } do
+		ReplicatedStorage:GetAttributeChangedSignal(attr):Connect(updateMeter)
+	end
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			updateMeter()
+			if unionW.frame.Visible then
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart")
+				if root and Vector3.new(root.Position.X, 0, root.Position.Z).Magnitude > 44 then
+					unionW.frame.Visible = false
 				end
 			end
 		end

@@ -19,7 +19,9 @@ local TOP = 100
 local stores = {}
 pcall(function()
 	for _, board in BOARDS do
-		if board ~= "likes" then
+		if board == "rarest" then
+			stores[board] = DataStoreService:GetOrderedDataStore("LB_rarest_v3") -- v3: room for star numbers above 99
+		elseif board ~= "likes" then
 			stores[board] = DataStoreService:GetOrderedDataStore("LB_" .. board .. "_v2")
 		end
 	end
@@ -88,7 +90,7 @@ local function encode(board: string, data): number?
 		if not star then
 			return nil
 		end
-		return math.floor(math.log10(Items.chance(data.best)) * 1000) * 10000 + star.index * 100 + mutation.index
+		return math.floor(math.log10(Items.chance(data.best)) * 1000) * 100000 + star.index * 100 + mutation.index
 	end
 	return nil
 end
@@ -97,7 +99,7 @@ local function decode(board: string, value: number)
 	if board == "cash" then
 		return 10 ^ (value / 1e9) - 1
 	elseif board == "rarest" then
-		local star = Stars.ByIndex[math.floor(value / 100) % 100]
+		local star = Stars.ByIndex[math.floor(value / 100) % 1000]
 		local mutation = Mutations.List[value % 100]
 		return if star and mutation then Items.key(star.id, mutation.id) else nil
 	end

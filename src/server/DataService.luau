@@ -58,6 +58,7 @@ local function default()
 		likes = { week = 0, count = 0 }, -- likes your museum got this week
 		likedWeek = { week = 0, owners = {} }, -- museums you liked this week ([userId string] = true)
 		likeRewardWeek = 0, -- last week whose top-3 reward was checked
+		fusions = {}, -- [hybrid id] = true, recipes found
 		lastSeen = 0, -- os.time() of the last income tick (offline income)
 		lastIncome = 0, -- income per second at that moment
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)

@@ -1175,33 +1175,139 @@ renderers[oddsW] = function()
 end
 
 ---------------------------------------------------------------- Forge (only at the forge table)
-renderers[forgeW] = function()
-	local body = forgeW.body
-	clear(body)
-	text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 0, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
-	for order, key in sortedInventory() do
-		local star, mutation = Items.parse(key)
-		local nextStar = Stars.List[star.index + 1]
-		local have = state.inventory[key]
-		local sub = if nextStar
-			then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
-			else t("forgeMax")
-		local r = itemRow(body, order, key, sub)
-		if nextStar then
-			local ready = have >= Config.ForgeAmount
-			btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -290, 0, 9), ZIndex = 23, Max = 13,
-				Text = t("forgeBtn", Format.number(Config.ForgeCost(star, nextStar))), Parent = r }, function()
-				ActionEv:FireServer("Forge", key)
+do
+	local forgeTab = "forge"
+	local fuseA: string? = nil
+	local fuseB: string? = nil
+
+	local function forgeList(body)
+		text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 1, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+		for order, key in sortedInventory() do
+			local star, mutation = Items.parse(key)
+			local nextStar = Stars.List[star.index + 1]
+			local have = state.inventory[key]
+			local sub = if nextStar
+				then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
+				else t("forgeMax")
+			local r = itemRow(body, order + 1, key, sub)
+			if nextStar then
+				local ready = have >= Config.ForgeAmount
+				btn(if ready then GOLD else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -290, 0, 9), ZIndex = 23, Max = 13,
+					Text = t("forgeBtn", Format.number(Config.ForgeCost(star, nextStar))), Parent = r }, function()
+					ActionEv:FireServer("Forge", key)
+				end)
+			end
+			local nextMutation = Mutations.List[mutation.index + 1]
+			if nextMutation and not star.season and not star.hybrid then
+				local upgraded = Items.key(star.id, nextMutation.id)
+				local ready = have >= nextMutation.copies
+				btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
+					Text = t("upgradeBtn", Format.number(Config.UpgradeCost(star, nextStar, nextMutation))), Parent = r }, function()
+					ActionEv:FireServer("UpgradeMutation", key)
+				end)
+			end
+		end
+	end
+
+	-- FUSION: two different stars -> a hybrid (recipes are secret until someone finds them)
+	local function fuseText(parent: Instance, value: string, props)
+		props.Text = value
+		props.FontFace = TITLE
+		props.TextColor3 = props.TextColor3 or WHITE
+		props.Parent = parent
+		local label = text(props)
+		make("UIStroke", { Color = INK, Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = label })
+		return label
+	end
+
+	local function fusionPage(body)
+		local hint = text({ Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 1, Text = t("fuseHint"), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+		hint.TextXAlignment = Enum.TextXAlignment.Left
+		local bench = make("Frame", { Size = UDim2.new(1, 0, 0, 110), LayoutOrder = 2, BackgroundColor3 = Color3.fromRGB(60, 40, 110), ZIndex = 21, Parent = body }, { corner(14), stroke(INK, 3) })
+		local function slot(x: number, key: string?, which: string)
+			local b = make("TextButton", { Size = UDim2.new(0, 86, 0, 86), Position = UDim2.new(0, x, 0, 12), Text = if key then "" else "?", FontFace = TITLE, TextSize = 40, TextColor3 = Color3.fromRGB(170, 150, 230), BackgroundColor3 = Color3.fromRGB(36, 24, 70), ZIndex = 22, Parent = bench }, {
+				make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(if key then GOLD else Color3.fromRGB(110, 90, 170), 3),
+			})
+			local star, mutation = Items.parse(key)
+			if star then
+				starIcon(star, mutation, { Size = UDim2.new(0.86, 0, 0.86, 0), Position = UDim2.new(0.07, 0, 0.07, 0), ZIndex = 23, Parent = b })
+			end
+			b.Activated:Connect(function() -- tap a filled slot to empty it
+				if which == "a" then
+					fuseA = nil
+				else
+					fuseB = nil
+				end
+				renderers[forgeW]()
 			end)
 		end
-		local nextMutation = Mutations.List[mutation.index + 1]
-		if nextMutation and not star.season then
-			local upgraded = Items.key(star.id, nextMutation.id)
-			local ready = have >= nextMutation.copies
-			btn(if ready then shade(nextMutation.color, 0.15) else GREY, { Size = UDim2.new(0, 110, 0, 40), Position = UDim2.new(1, -174, 0, 9), ZIndex = 23, Max = 13,
-				Text = t("upgradeBtn", Format.number(Config.UpgradeCost(star, nextStar, nextMutation))), Parent = r }, function()
-				ActionEv:FireServer("UpgradeMutation", key)
+		slot(14, fuseA, "a")
+		fuseText(bench, "+", { Size = UDim2.new(0, 40, 0, 86), Position = UDim2.new(0, 104, 0, 12), Max = 44, ZIndex = 22 })
+		slot(148, fuseB, "b")
+		local a, b = Items.parse(fuseA), Items.parse(fuseB)
+		local known = a and b and Stars.fusion(a.id, b.id)
+		local found = known and state.fusions and state.fusions[known.id]
+		fuseText(bench, "=", { Size = UDim2.new(0, 40, 0, 86), Position = UDim2.new(0, 238, 0, 12), Max = 44, ZIndex = 22 })
+		local result = make("Frame", { Size = UDim2.new(0, 86, 0, 86), Position = UDim2.new(0, 282, 0, 12), BackgroundColor3 = Color3.fromRGB(36, 24, 70), ZIndex = 22, Parent = bench }, {
+			make("UICorner", { CornerRadius = UDim.new(1, 0) }), stroke(Color3.fromRGB(200, 120, 255), 3),
+		})
+		if found then
+			starIcon(known, nil, { Size = UDim2.new(0.86, 0, 0.86, 0), Position = UDim2.new(0.07, 0, 0.07, 0), ZIndex = 23, Parent = result })
+		else
+			fuseText(result, "?", { Size = UDim2.new(1, 0, 1, 0), Max = 44, ZIndex = 23 })
+		end
+		btn(if a and b then Color3.fromRGB(170, 90, 255) else GREY, { Size = UDim2.new(1, -400, 0, 60), Position = UDim2.new(0, 386, 0, 25), ZIndex = 22, Max = 20,
+			Text = if found then t("fuseBtnCost", Format.number(Config.FusionCost(known))) else t("fuseBtn"), Parent = bench }, function()
+			if fuseA and fuseB then
+				ActionEv:FireServer("Fuse", fuseA, fuseB)
+			end
+		end)
+		-- recipes already found (by you)
+		local foundList = {}
+		for _, hybrid in Stars.Hybrids do
+			if state.fusions and state.fusions[hybrid.id] then
+				table.insert(foundList, Lang.star(lang, Stars.ById[hybrid.recipe[1]]) .. " + " .. Lang.star(lang, Stars.ById[hybrid.recipe[2]]) .. " = " .. Lang.star(lang, hybrid))
+			end
+		end
+		text({ Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 3, Text = t("fuseFound", #foundList, #Stars.Hybrids), FontFace = TITLE, TextColor3 = Color3.fromRGB(170, 90, 255), Max = 17, ZIndex = 21, Parent = body })
+		for i, line in foundList do
+			text({ Size = UDim2.new(1, 0, 0, 20), LayoutOrder = 3 + i, Text = line, FontFace = BODY_SEMI, TextColor3 = TEXT, Max = 14, ZIndex = 21, Parent = body })
+		end
+		-- your stars: tap to put into the first empty slot
+		for order, key in sortedInventory() do
+			itemRow(body, 100 + order, key, t("fusePick")).Activated:Connect(function()
+				if not fuseA then
+					fuseA = key
+				elseif not fuseB and key ~= fuseA then
+					fuseB = key
+				else
+					fuseB = key
+				end
+				renderers[forgeW]()
 			end)
+		end
+	end
+
+	renderers[forgeW] = function()
+		local body = forgeW.body
+		clear(body)
+		if fuseA and not ((state.inventory[fuseA] or 0) > 0) then
+			fuseA = nil
+		end
+		if fuseB and not ((state.inventory[fuseB] or 0) > 0) then
+			fuseB = nil
+		end
+		local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 46), LayoutOrder = 0, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
+		for i, tab in { { id = "forge", key = "forgeTab", color = GOLD }, { id = "fusion", key = "fusionTab", color = Color3.fromRGB(170, 90, 255) } } do
+			btn(if forgeTab == tab.id then tab.color else Color3.fromRGB(110, 118, 150), { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new((i - 1) * 0.5, if i == 2 then 4 else 0, 0, 0), Text = t(tab.key), Max = 20, ZIndex = 22, Parent = tabs }, function()
+				forgeTab = tab.id
+				renderers[forgeW]()
+			end)
+		end
+		if forgeTab == "fusion" then
+			fusionPage(body)
+		else
+			forgeList(body)
 		end
 	end
 end
@@ -3992,6 +4098,84 @@ do
 				local pad = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Hub") and workspace.Map.Hub:FindFirstChild("LaunchPad")
 				if root and pad and (root.Position - pad.Position).Magnitude > Config.Expedition.reach + 8 then
 					expeditionW.frame.Visible = false
+				end
+			end
+		end
+	end)
+end
+
+---------------------------------------------------------------- Star Union portal (everyone fills it together -> x3 luck for the server)
+do
+	local unionW = window("unionTitle", "center", { Size = UDim2.new(0.42, 0, 0.66, 0), Position = UDim2.new(0.29, 0, 0.16, 0) })
+	if uiIcon("union", { Size = UDim2.new(0, 72, 0, 72), Position = UDim2.new(0, -18, 0, -86), Rotation = -8, ZIndex = 27, Parent = unionW.frame }) then
+		unionW.title.Position = UDim2.new(0, 60, 0, -62)
+		unionW.title.Size = UDim2.new(1, -136, 0, 50)
+	end
+	local meterFill: Frame? = nil
+	local meterText: TextLabel? = nil
+
+	local function updateMeter()
+		if not meterFill or not meterFill.Parent or not meterText then
+			return
+		end
+		local now = workspace:GetServerTimeNow()
+		local points = ReplicatedStorage:GetAttribute("UnionPoints") or 0
+		local target = math.max(1, ReplicatedStorage:GetAttribute("UnionTarget") or 1)
+		local endsAt = ReplicatedStorage:GetAttribute("UnionEndsAt") or 0
+		local readyAt = ReplicatedStorage:GetAttribute("UnionReadyAt") or 0
+		if now < endsAt then
+			meterFill.Size = UDim2.new(1, 0, 1, 0)
+			meterText.Text = t("unionActive", Config.Union.luck, Format.time(math.ceil(endsAt - now)))
+		elseif now < readyAt then
+			meterFill.Size = UDim2.new(0, 0, 1, 0)
+			meterText.Text = t("unionResting", Format.time(math.ceil(readyAt - now)))
+		else
+			meterFill.Size = UDim2.new(math.clamp(points / target, 0, 1), 0, 1, 0)
+			meterText.Text = points .. " / " .. target
+		end
+	end
+
+	renderers[unionW] = function()
+		local body = unionW.body
+		clear(body)
+		body.BackgroundColor3 = Color3.fromRGB(34, 22, 66)
+		local hint = text({ Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 1, Text = t("unionHint", Config.Union.luck, Format.time(Config.Union.duration)), TextColor3 = Color3.fromRGB(215, 200, 255), FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
+		hint.TextXAlignment = Enum.TextXAlignment.Left
+		local bar = make("Frame", { Size = UDim2.new(1, 0, 0, 40), LayoutOrder = 2, BackgroundColor3 = Color3.fromRGB(20, 12, 40), ZIndex = 21, Parent = body }, { corner(12), stroke(Color3.fromRGB(200, 130, 255), 3) })
+		meterFill = make("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 22, Parent = bar }, {
+			corner(12), make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(150, 80, 255), Color3.fromRGB(255, 120, 220)) }),
+		})
+		meterText = text({ Size = UDim2.new(1, 0, 1, 0), Text = "", FontFace = TITLE, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0, Max = 20, ZIndex = 23, Parent = bar })
+		updateMeter()
+		-- your stars: tap = 1, ALL = every copy
+		for order, key in sortedInventory() do
+			local r = itemRow(body, 10 + order, key, t("unionPoints", Config.UnionPoints(Items.chance(key))))
+			r.Activated:Connect(function()
+				ActionEv:FireServer("UnionGive", key, 1)
+			end)
+			btn(Color3.fromRGB(200, 90, 230), { Size = UDim2.new(0, 70, 0, 36), Position = UDim2.new(1, -140, 0, 11), Text = t("unionAll"), Max = 15, ZIndex = 23, Parent = r }, function()
+				ActionEv:FireServer("UnionGive", key, state.inventory[key] or 0)
+			end)
+		end
+	end
+
+	OpenWindowEv.OnClientEvent:Connect(function(name: string)
+		if name == "union" then
+			open(unionW, true)
+		end
+	end)
+	for _, attr in { "UnionPoints", "UnionTarget", "UnionEndsAt", "UnionReadyAt" } do
+		ReplicatedStorage:GetAttributeChangedSignal(attr):Connect(updateMeter)
+	end
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			updateMeter()
+			if unionW.frame.Visible then
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart")
+				if root and Vector3.new(root.Position.X, 0, root.Position.Z).Magnitude > 44 then
+					unionW.frame.Visible = false
 				end
 			end
 		end

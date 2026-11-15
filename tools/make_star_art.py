@@ -635,6 +635,13 @@ SEASONAL = [
     ("petalcomet", "point", (255, 170, 220)), ("bloomnova", "sphere", (255, 130, 200)), ("springstar", "giant", (170, 255, 140)),
     ("emeraldpulsar", "pulsar", (60, 230, 130)), ("verdantcrown", "galaxy", (120, 255, 170)),
 ]
+HYBRIDS = [
+    ("twinkle", "point", (255, 250, 200)), ("greydwarf", "sphere", (190, 170, 210)), ("crimsonsun", "sphere", (255, 90, 60)),
+    ("violetgiant", "giant", (190, 110, 255)), ("trinary", "binary", (255, 230, 120)), ("beacon", "pulsar", (120, 255, 240)),
+    ("stormstar", "giant", (255, 140, 220)), ("blazar", "quasar", (255, 120, 255)), ("goldenkilonova", "remnant", (255, 210, 90)),
+    ("twinlights", "binary", (200, 220, 255)), ("chimera", "nebula", (255, 150, 120)), ("milkomeda", "galaxy", (220, 200, 255)),
+]
+SEASONAL = SEASONAL + HYBRIDS
 for i, (sid, kind, color) in enumerate(SEASONAL):
     KINDS[kind](sid, color, 5000 + i * 11)
 

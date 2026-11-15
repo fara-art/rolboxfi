@@ -104,6 +104,23 @@ Stars.Seasonal = {
 	{ id = "verdantcrown", name = "Verdant Crown", chance = 50000000, income = 60000000, color = Color3.fromRGB(120, 255, 170), kind = "galaxy", season = 3 },
 }
 
+-- Hybrid stars: can't be rolled, only made by FUSION at the Star Forge (two different stars -> one hybrid).
+-- recipe = the two star ids; players discover the recipes themselves.
+Stars.Hybrids = {
+	{ id = "twinkle", name = "Twinkle Star", recipe = { "dust", "spark" }, kind = "point", color = Color3.fromRGB(255, 250, 200) },
+	{ id = "greydwarf", name = "Twilight Dwarf", recipe = { "browndwarf", "whitedwarf" }, kind = "sphere", color = Color3.fromRGB(190, 170, 210) },
+	{ id = "crimsonsun", name = "Crimson Sun", recipe = { "dwarf", "sun" }, kind = "sphere", color = Color3.fromRGB(255, 90, 60) },
+	{ id = "violetgiant", name = "Violet Giant", recipe = { "redgiant", "giant" }, kind = "giant", color = Color3.fromRGB(190, 110, 255) },
+	{ id = "trinary", name = "Trinary Star", recipe = { "sun", "binary" }, kind = "binary", color = Color3.fromRGB(255, 230, 120) },
+	{ id = "beacon", name = "Cosmic Beacon", recipe = { "pulsar", "neutron" }, kind = "pulsar", color = Color3.fromRGB(120, 255, 240) },
+	{ id = "stormstar", name = "Storm Star", recipe = { "wolfrayet", "hypergiant" }, kind = "giant", color = Color3.fromRGB(255, 140, 220) },
+	{ id = "blazar", name = "Blazar", recipe = { "pulsar", "quasar" }, kind = "quasar", color = Color3.fromRGB(255, 120, 255) },
+	{ id = "goldenkilonova", name = "Golden Kilonova", recipe = { "neutron", "kilonova" }, kind = "remnant", color = Color3.fromRGB(255, 210, 90) },
+	{ id = "twinlights", name = "Twin Lights", recipe = { "sirius", "vega" }, kind = "binary", color = Color3.fromRGB(200, 220, 255) },
+	{ id = "chimera", name = "Chimera Nebula", recipe = { "eagle", "horsehead" }, kind = "nebula", color = Color3.fromRGB(255, 150, 120) },
+	{ id = "milkomeda", name = "Milkomeda", recipe = { "whirlpool", "andromeda" }, kind = "galaxy", color = Color3.fromRGB(220, 200, 255) },
+}
+
 Stars.ById = {}
 Stars.ByIndex = {}
 for index, star in Stars.List do
@@ -115,6 +132,27 @@ for i, star in Stars.Seasonal do
 	star.index = #Stars.List + i -- after the normal stars (not part of the Index tiers / Forge chain)
 	Stars.ById[star.id] = star
 	Stars.ByIndex[star.index] = star
+end
+
+for i, hybrid in Stars.Hybrids do
+	local a, b = Stars.ById[hybrid.recipe[1]], Stars.ById[hybrid.recipe[2]]
+	hybrid.hybrid = true
+	hybrid.chance = math.max(a.chance, b.chance) * 3 -- counts as rarer than both parents
+	hybrid.income = (a.income + b.income) * 2
+	hybrid.index = #Stars.List + #Stars.Seasonal + i
+	Stars.ById[hybrid.id] = hybrid
+	Stars.ByIndex[hybrid.index] = hybrid
+end
+
+-- hybrid made from two star ids (order doesn't matter), or nil
+function Stars.fusion(a: string, b: string)
+	for _, hybrid in Stars.Hybrids do
+		local r = hybrid.recipe
+		if (r[1] == a and r[2] == b) or (r[1] == b and r[2] == a) then
+			return hybrid
+		end
+	end
+	return nil
 end
 
 -- which season is running (1..#Seasons) and how many seconds are left

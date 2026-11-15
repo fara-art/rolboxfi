@@ -108,6 +108,12 @@ ProcessReceipt is idempotent (data.receipts).
 - Offline income: data.lastIncome/lastSeen, paid on join (`Config.OfflineMaxHours`, `OfflineShare`).
 - Upgrades have a MAX button (action BuyMax). Inventory sorted by real odds (Items.rank).
 
+- Falling stars: every 2.5–4.5 min one lands on the hub (World.dropStar), first to catch rolls with luck x10.
+- Fusion (Forge window, FUSION tab): two different stars -> hybrid (`Stars.Hybrids`, 12 secret recipes, not rollable,
+  no mutations); data.fusions; icons `assets/hybrid_upload.zip`. Rarest board moved to `LB_rarest_v3` (index > 99).
+- Star Union: portal ring above the fountain (prompt on the basin). Players donate stars (points by rarity); when the
+  server meter is full -> x3 luck for everyone for 10 min, then rests 30 min (ReplicatedStorage attributes Union*).
+
 ## Ideas agreed / next up
 - Daily rewards with streaks, codes (`/code`), first-minutes tutorial, group bonus, invite bonus.
 - Owner wants more things to do with stars (to be decided).

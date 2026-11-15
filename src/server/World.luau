@@ -23,6 +23,7 @@ World.onHole = nil :: ((Player) -> ())?
 World.onElevator = nil :: ((Player, number, number, number) -> ())?
 World.onExpedition = nil :: ((Player) -> ())?
 World.onLike = nil :: ((Player, number) -> ())?
+World.onUnion = nil :: ((Player) -> ())?
 World.ExpeditionPosition = Vector3.new(0, 0, 1000)
 
 local RING = 150 -- distance from hub center to satellite islands
@@ -446,6 +447,36 @@ local function buildHub(folder: Folder)
 		local base = Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31)
 		tree(base, folder, leaves[i])
 		flowers(base, 5, 10, folder)
+	end
+
+	-- Star Union portal: a glowing ring floating above the fountain (prompt on the basin)
+	do
+		local ring = make("Model", { Name = "UnionPortal", Parent = folder })
+		local center = Vector3.new(0, 23, 0)
+		for k = 0, 23 do
+			local a = k / 24 * math.pi * 2
+			make("Part", {
+				Name = "RingPart", Size = Vector3.new(1.2, 1.2, 2.2), CFrame = CFrame.lookAt(center + Vector3.new(math.cos(a) * 7, math.sin(a) * 7, 0), center + Vector3.new(math.cos(a + 0.2) * 7, math.sin(a + 0.2) * 7, 0)),
+				Material = Enum.Material.Neon, Color = Color3.fromRGB(170, 110, 255), CanCollide = false, CanQuery = false, Parent = ring,
+			})
+		end
+		local core = make("Part", { Name = "PortalCore", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.3, 12.5, 12.5), CFrame = CFrame.new(center) * CFrame.Angles(0, math.rad(90), 0), Material = Enum.Material.ForceField, Color = Color3.fromRGB(200, 150, 255), Transparency = 0.2, CanCollide = false, CanQuery = false, Parent = ring })
+		make("PointLight", { Color = Color3.fromRGB(190, 130, 255), Range = 24, Brightness = 1.2, Parent = core })
+		make("ParticleEmitter", {
+			Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 200, 255), Color3.fromRGB(150, 120, 255)),
+			LightEmission = 1, Rate = 18, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(1, 3), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.5, 0), Parent = core,
+		})
+		worldText(core, "signUnion", 9, 20, 3)
+		local basin = folder:FindFirstChild("Basin")
+		if basin then
+			local p = prompt(basin, "UnionPrompt", "promptUnion", nil, 22)
+			p.Triggered:Connect(function(who)
+				if World.onUnion then
+					World.onUnion(who)
+				end
+			end)
+		end
+		World.Portal = ring
 	end
 
 	-- launch pad: send stars on expeditions (opens the window)
@@ -1287,6 +1318,64 @@ function World.build()
 		try("plot " .. index, buildPlot, index, slot, plotFolder)
 	end
 	try("scenery", buildScenery, make("Folder", { Name = "Scenery", Parent = map }))
+end
+
+-- the union portal turns gold while the server-wide luck is on
+function World.setPortalActive(on: boolean)
+	local ring = World.Portal
+	if not ring then
+		return
+	end
+	for _, part in ring:GetChildren() do
+		if part:IsA("BasePart") and part.Name == "RingPart" then
+			part.Color = if on then Color3.fromRGB(255, 210, 80) else Color3.fromRGB(170, 110, 255)
+		end
+	end
+end
+
+-- a star falls from the sky onto a random spot of the hub; onCatch(player) -> true when it was taken
+function World.dropStar(lifetime: number, onCatch: (Player) -> boolean)
+	local a = math.random() * math.pi * 2
+	local r = 16 + math.random() * 22
+	local ground = Vector3.new(math.cos(a) * r, 2.2, math.sin(a) * r)
+	local folder = make("Folder", { Name = "FallingStar", Parent = workspace })
+	local star = make("Part", {
+		Name = "FallingStar", Shape = Enum.PartType.Ball, Size = Vector3.new(2.4, 2.4, 2.4), CFrame = CFrame.new(ground + Vector3.new(30, 160, -20)),
+		Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 230, 140), Anchored = true, CanCollide = false, Parent = folder,
+	})
+	make("PointLight", { Color = Color3.fromRGB(255, 220, 140), Range = 22, Brightness = 2, Parent = star })
+	local a0 = make("Attachment", { Position = Vector3.new(0, 1, 0), Parent = star })
+	local a1 = make("Attachment", { Position = Vector3.new(0, -1, 0), Parent = star })
+	make("Trail", { Attachment0 = a0, Attachment1 = a1, Lifetime = 0.8, LightEmission = 1, Color = ColorSequence.new(Color3.fromRGB(255, 240, 180), Color3.fromRGB(255, 140, 60)), Transparency = NumberSequence.new(0, 1), Parent = star })
+	make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 230, 150)), LightEmission = 1,
+		Rate = 25, Lifetime = NumberRange.new(0.6, 1.2), Speed = NumberRange.new(2, 5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.5, 0), Parent = star,
+	})
+	TweenService:Create(star, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = CFrame.new(ground) }):Play()
+	task.delay(3, function()
+		if not star.Parent then
+			return
+		end
+		-- landed: a pillar of light shows where it is
+		local pillar = make("Part", { Name = "Pillar", Size = Vector3.new(0.6, 80, 0.6), CFrame = CFrame.new(ground + Vector3.new(0, 40, 0)), Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 230, 150), Transparency = 0.5, Anchored = true, CanCollide = false, CanQuery = false, Parent = folder })
+		local _ = pillar
+		local catch = prompt(star, "CatchPrompt", "promptCatch", nil, 14)
+		local taken = false
+		catch.Triggered:Connect(function(who)
+			if taken then
+				return
+			end
+			if onCatch(who) then
+				taken = true
+				folder:Destroy()
+			end
+		end)
+	end)
+	task.delay(lifetime + 3, function()
+		if folder.Parent then
+			folder:Destroy()
+		end
+	end)
 end
 
 function World.ownerOf(index: number): Player?

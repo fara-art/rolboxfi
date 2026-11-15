@@ -124,6 +124,21 @@ Config.ConstellationSets = {
 	{ id = "arc", stars = { "triangulum", "whirlpool", "sombrero", "andromeda" }, bonus = 4 },
 }
 
+-- Fusion (Star Forge): two different stars -> a hybrid; cash cost:
+function Config.FusionCost(hybrid): number
+	return math.floor(hybrid.income * 30)
+end
+
+-- Falling stars: every few minutes one lands on the hub; first to catch it rolls with boosted luck
+Config.FallingStar = { every = { 150, 270 }, luckMult = 10, lifetime = 60 }
+
+-- Star Union: everyone on the server throws stars into the portal over the fountain;
+-- when the meter is full the whole server gets x3 luck for 10 minutes, then the portal rests.
+Config.Union = { perPlayer = 120, luck = 3, duration = 600, rest = 1800 }
+function Config.UnionPoints(chance: number): number
+	return math.max(1, math.floor(math.log10(math.max(chance, 1)) * 2))
+end
+
 -- Museum likes: weekly top 3 get rebirth tokens
 Config.LikeRewards = { 3, 2, 1 }
 function Config.RebirthUpCost(level: number): number
@@ -293,6 +308,19 @@ end
 -- Star icons: upload assets/icons/*.png to Roblox and paste the image IDs here.
 -- Empty = drawn fallback circle.
 Config.StarIcons = {
+	-- hybrid stars (fusion, assets/hybrid_upload.zip)
+	twinkle = "",
+	greydwarf = "",
+	crimsonsun = "",
+	violetgiant = "",
+	trinary = "",
+	beacon = "",
+	stormstar = "",
+	blazar = "",
+	goldenkilonova = "",
+	twinlights = "",
+	chimera = "",
+	milkomeda = "",
 	-- seasonal stars (assets/seasonal_upload.zip)
 	frostcomet = "81175787024013",
 	icenova = "135635151967740",
@@ -418,6 +446,8 @@ Config.UiIcons = {
 	forge = "109351671873293", -- ui_forge.png
 	pets = "105949137779821", -- ui_pets.png (pet slots)
 	expedition = "", -- ui_expedition.png (rocket)
+	union = "", -- ui_union.png (Star Union portal)
+	fusion = "", -- ui_fusion.png
 	blackhole = "89016344401227", -- ui_blackhole.png -- ui_trash.png
 	backpack = "86024249124101", -- ui_backpack.png (inventory)
 	roll = "85946183739046", -- ui_roll.png (big ROLL dice)
@@ -436,7 +466,7 @@ Config.UiIcons = {
 	pass_luckyhunter = "98097466780495", -- pass_luckyhunter.png
 }
 Config.UiIconFallback = {
-	pets = "luck", expedition = "rolls", coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
+	pets = "luck", expedition = "rolls", union = "rewards", fusion = "forge", coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
 	pass_extraroll = "dice2", pass_fastrolls = "bolt", pass_vip = "crown", pass_luck2x = "luck", pass_cash2x = "coins", pass_luckyhunter = "target",
 }
 
