@@ -288,7 +288,7 @@ end
 -- Empty = drawn fallback circle.
 Config.StarIcons = {
 	-- seasonal stars (assets/seasonal_upload.zip)
-	frostcomet = "",
+	frostcomet = "81175787024013",
 	icenova = "135635151967740",
 	aurorastar = "133750262700477",
 	glacierpulsar = "116430703344687",
@@ -302,7 +302,7 @@ Config.StarIcons = {
 	bloomnova = "115703507420552",
 	springstar = "74897878037772",
 	emeraldpulsar = "71378680976619",
-	verdantcrown = "",
+	verdantcrown = "95400792421694",
 	dust = "88057257304175",
 	spark = "95759760184166",
 	dwarf = "108641320003033",
