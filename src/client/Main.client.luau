@@ -417,7 +417,7 @@ do
 			Size = UDim2.new(1, 0, 1, -8), Position = UDim2.new(0, 0, 0, 8), BackgroundColor3 = Color3.fromRGB(214, 222, 238), BackgroundTransparency = 0, BorderSizePixel = 0, ZIndex = 21,
 			CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 6, ScrollBarImageColor3 = INK, Parent = frame,
 		}, { make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }), make("UIPadding", { PaddingRight = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }), corner(10), stroke(INK, 2) })
-		local w = { frame = frame, body = body, group = group, scale = make("UIScale", { Parent = frame }) }
+		local w = { frame = frame, body = body, group = group, title = titleLabel, scale = make("UIScale", { Parent = frame }) }
 		table.insert(windows, w)
 		return w
 	end
@@ -451,6 +451,15 @@ do
 	elevatorInfo = { plot = 0, floor = 1, floors = 1 }
 	rewardsW = window("rewardsTitle", "center", { Size = UDim2.new(0.72, 0, 0.6, 0), Position = UDim2.new(0.14, 0, 0.18, 0) })
 	settingsW = window("settings", "center", { Size = UDim2.new(0.38, 0, 0.56, 0), Position = UDim2.new(0.31, 0, 0.18, 0) })
+
+	-- a big picture next to each window title (when the icon is uploaded)
+	for _, pair in { { forgeW, "forge" }, { holeW, "blackhole" }, { upgradesW, "upgrades" }, { indexW, "index" }, { rewardsW, "rewards" }, { oddsW, "odds" }, { shopW, "shop" }, { settingsW, "settings" }, { catalogueW, "backpack" }, { tradeW, "trade" } } do
+		local w, key = pair[1], pair[2]
+		if uiIcon(key, { Size = UDim2.new(0, 72, 0, 72), Position = UDim2.new(0, -18, 0, -86), Rotation = -8, ZIndex = 27, Parent = w.frame }) then
+			w.title.Position = UDim2.new(0, 60, 0, -62)
+			w.title.Size = UDim2.new(1, -136, 0, 50)
+		end
+	end
 
 	-- catalogue: list + sell bar at the bottom
 	catalogueW.body.Size = UDim2.new(1, 0, 1, -90)
