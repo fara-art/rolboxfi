@@ -271,6 +271,15 @@ local gui = make("ScreenGui", {
 })
 -- HUD pieces that get scaled down / moved on small (phone) screens, see layoutHud at the end
 local hud = {}
+-- full-screen overlays (reveals, crate opening): on phones draw them on a desktop-sized canvas and shrink it
+local function fitOverlay(frame: GuiObject)
+	local s = hud.overlayScale or 1
+	if s < 1 then
+		frame.Size = UDim2.new(1 / s, 0, 1 / s, 0)
+		make("UIScale", { Scale = s, Parent = frame })
+	end
+	return frame
+end
 
 local function panelFrame(props)
 	props.BackgroundColor3 = props.BackgroundColor3 or PANEL
@@ -1743,7 +1752,7 @@ do
 			return
 		end
 		local glow = if mutation.id ~= "normal" then mutation.color else star.color
-		local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(6, 4, 20), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
+		local root = fitOverlay(make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(6, 4, 20), BackgroundTransparency = 1, ZIndex = 200, Parent = gui }))
 		local introTime = 1
 		local meteor: Frame? = nil
 
@@ -3541,7 +3550,7 @@ end
 ---------------------------------------------------------------- Crate opening: every crate on screen, rows of five
 do
 	local function showCrateResults(got)
-		local overlay = make("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(8, 6, 24), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 150, Parent = gui })
+		local overlay = fitOverlay(make("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(8, 6, 24), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 150, Parent = gui }))
 		TweenService:Create(overlay, TweenInfo.new(0.4), { BackgroundTransparency = 0.15 }):Play()
 		-- the crate shakes, then bursts
 		local crateIcon = make("Frame", { Size = UDim2.new(0, 220, 0, 220), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 151, Parent = overlay })
@@ -4342,6 +4351,7 @@ do
 		-- phones: the run button sits LEFT of the jump button (not under it)
 		pcall(ContextActionService.SetPosition, ContextActionService, "Sprint", if phone then UDim2.new(1, -230, 1, -95) else UDim2.new(1, -170, 1, -170))
 		hud.phone = phone
+		hud.overlayScale = if phone then ws else 1
 	end
 	-- phones: while a window is open, hide the top bar / side buttons so the window has room
 	local function windowOpen(): boolean

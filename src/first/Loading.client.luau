@@ -44,6 +44,16 @@ end
 
 -- orbits with planets around a pulsing star
 local center = make("Frame", { Size = UDim2.new(0, 360, 0, 360), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.4, 0), BackgroundTransparency = 1, Parent = bg })
+-- phones: shrink the logo and the bar to the screen
+local screenScale = 1
+pcall(function()
+	local camera = workspace.CurrentCamera or workspace:WaitForChild("Camera", 2)
+	screenScale = math.clamp(camera.ViewportSize.Y / 760, 0.5, 1)
+end)
+
+local centerScale = Instance.new("UIScale")
+centerScale.Scale = screenScale
+centerScale.Parent = center
 local orbitColors = { Color3.fromRGB(120, 210, 255), Color3.fromRGB(200, 130, 255), Color3.fromRGB(255, 200, 100) }
 for i, color in orbitColors do
 	local size = 140 + i * 70
@@ -76,6 +86,9 @@ make("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Co
 local barBack = make("Frame", { Size = UDim2.new(0, 420, 0, 22), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.83, 0), BackgroundColor3 = Color3.fromRGB(30, 26, 60), Parent = bg }, {
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }), make("UIStroke", { Color = INK, Thickness = 3 }),
 })
+local barScale = Instance.new("UIScale")
+barScale.Scale = screenScale
+barScale.Parent = barBack
 local barFill = make("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = barBack }, {
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }),
 	make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(120, 210, 255), Color3.fromRGB(200, 130, 255)) }),

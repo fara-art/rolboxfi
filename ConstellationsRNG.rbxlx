@@ -48,6 +48,16 @@ end
 
 -- orbits with planets around a pulsing star
 local center = make("Frame", { Size = UDim2.new(0, 360, 0, 360), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.4, 0), BackgroundTransparency = 1, Parent = bg })
+-- phones: shrink the logo and the bar to the screen
+local screenScale = 1
+pcall(function()
+	local camera = workspace.CurrentCamera or workspace:WaitForChild("Camera", 2)
+	screenScale = math.clamp(camera.ViewportSize.Y / 760, 0.5, 1)
+end)
+
+local centerScale = Instance.new("UIScale")
+centerScale.Scale = screenScale
+centerScale.Parent = center
 local orbitColors = { Color3.fromRGB(120, 210, 255), Color3.fromRGB(200, 130, 255), Color3.fromRGB(255, 200, 100) }
 for i, color in orbitColors do
 	local size = 140 + i * 70
@@ -80,6 +90,9 @@ make("UIGradient", { Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Co
 local barBack = make("Frame", { Size = UDim2.new(0, 420, 0, 22), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.83, 0), BackgroundColor3 = Color3.fromRGB(30, 26, 60), Parent = bg }, {
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }), make("UIStroke", { Color = INK, Thickness = 3 }),
 })
+local barScale = Instance.new("UIScale")
+barScale.Scale = screenScale
+barScale.Parent = barBack
 local barFill = make("Frame", { Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = barBack }, {
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }),
 	make("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(120, 210, 255), Color3.fromRGB(200, 130, 255)) }),
@@ -6112,6 +6125,15 @@ local gui = make("ScreenGui", {
 })
 -- HUD pieces that get scaled down / moved on small (phone) screens, see layoutHud at the end
 local hud = {}
+-- full-screen overlays (reveals, crate opening): on phones draw them on a desktop-sized canvas and shrink it
+local function fitOverlay(frame: GuiObject)
+	local s = hud.overlayScale or 1
+	if s < 1 then
+		frame.Size = UDim2.new(1 / s, 0, 1 / s, 0)
+		make("UIScale", { Scale = s, Parent = frame })
+	end
+	return frame
+end
 
 local function panelFrame(props)
 	props.BackgroundColor3 = props.BackgroundColor3 or PANEL
@@ -7584,7 +7606,7 @@ do
 			return
 		end
 		local glow = if mutation.id ~= "normal" then mutation.color else star.color
-		local root = make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(6, 4, 20), BackgroundTransparency = 1, ZIndex = 200, Parent = gui })
+		local root = fitOverlay(make("Frame", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(6, 4, 20), BackgroundTransparency = 1, ZIndex = 200, Parent = gui }))
 		local introTime = 1
 		local meteor: Frame? = nil
 
@@ -9382,7 +9404,7 @@ end
 ---------------------------------------------------------------- Crate opening: every crate on screen, rows of five
 do
 	local function showCrateResults(got)
-		local overlay = make("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(8, 6, 24), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 150, Parent = gui })
+		local overlay = fitOverlay(make("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(8, 6, 24), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 150, Parent = gui }))
 		TweenService:Create(overlay, TweenInfo.new(0.4), { BackgroundTransparency = 0.15 }):Play()
 		-- the crate shakes, then bursts
 		local crateIcon = make("Frame", { Size = UDim2.new(0, 220, 0, 220), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.45, 0), BackgroundTransparency = 1, ZIndex = 151, Parent = overlay })
@@ -10183,6 +10205,7 @@ do
 		-- phones: the run button sits LEFT of the jump button (not under it)
 		pcall(ContextActionService.SetPosition, ContextActionService, "Sprint", if phone then UDim2.new(1, -230, 1, -95) else UDim2.new(1, -170, 1, -170))
 		hud.phone = phone
+		hud.overlayScale = if phone then ws else 1
 	end
 	-- phones: while a window is open, hide the top bar / side buttons so the window has room
 	local function windowOpen(): boolean
