@@ -8899,8 +8899,11 @@ do
 			local star, mutation = Items.parse(entry.item)
 			if star then
 				local top = i == #crate.odds
-				local size = if top then 150 else 104
-				local tile = make("Frame", { Size = UDim2.new(0, size, 0, size + 14), LayoutOrder = i, BackgroundColor3 = Color3.fromRGB(30, 18, 66), ZIndex = 24, Parent = tiles }, { corner(10) })
+				-- sizes follow the card width, so the top drop always fits (shop window got smaller)
+				local share = if top then 0.22 else (0.76 / (#crate.odds - 1))
+				local tile = make("Frame", { Size = UDim2.new(share, -8, 1, 0), LayoutOrder = i, BackgroundColor3 = Color3.fromRGB(30, 18, 66), ZIndex = 24, Parent = tiles }, {
+					corner(10), make("UIAspectRatioConstraint", { AspectRatio = 0.9, DominantAxis = Enum.DominantAxis.Width }),
+				})
 				if top then
 					rgbStroke(tile, 4)
 					titleText(tile, t("topDrop"), { Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 0, -26), Max = 20, ZIndex = 26 }):FindFirstChildOfClass("UITextSizeConstraint")
@@ -8911,8 +8914,14 @@ do
 				else
 					stroke(INK, 2.5).Parent = tile
 				end
-				starIcon(star, mutation, { Size = UDim2.new(0, size - 24, 0, size - 24), Position = UDim2.new(0, 12, 0, 6), ZIndex = 25, Parent = tile })
-				titleText(tile, (math.floor(entry.p * 1000 + 0.5) / 10) .. "%", { Size = UDim2.new(1, -8, 0, 24), Position = UDim2.new(0, 4, 1, -28), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = if top then Color3.fromRGB(255, 225, 80) else WHITE, Max = 20, ZIndex = 26 })
+				if top then
+					-- the top drop stays a mystery
+					local mystery = titleText(tile, "???", { Size = UDim2.new(0.9, 0, 0.62, 0), Position = UDim2.new(0.05, 0, 0.06, 0), TextColor3 = WHITE, Max = 80, ZIndex = 26 })
+					CollectionService:AddTag(make("UIGradient", { Parent = mystery }), "RainbowFx")
+				else
+					starIcon(star, mutation, { Size = UDim2.new(0.8, 0, 0.8, 0), Position = UDim2.new(0.1, 0, 0.02, 0), ZIndex = 25, Parent = tile })
+				end
+				titleText(tile, (math.floor(entry.p * 1000 + 0.5) / 10) .. "%", { Size = UDim2.new(1, -8, 0.2, 0), Position = UDim2.new(0, 4, 0.78, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = if top then Color3.fromRGB(255, 225, 80) else WHITE, Max = 20, ZIndex = 26 })
 			end
 		end
 		-- buy row: biggest pack first, like the reference
