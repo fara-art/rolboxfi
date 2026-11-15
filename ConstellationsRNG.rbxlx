@@ -3454,6 +3454,57 @@ local function buildHub(folder: Folder)
 		crystal((cf * CFrame.new(0, 15.4, 0)).Position, 1.3, Color3.fromRGB(255, 220, 120), folder)
 	end
 
+	-- paved paths from the fountain to every bridge, with lamp posts
+	for slot = 1, 8 do
+		local dir = directionAt(slot)
+		local sideways = Vector3.new(-dir.Z, 0, dir.X)
+		local from, to = 14.5, (if slot == 3 then 24 else 48)
+		local pathCf = CFrame.lookAt(dir * (from + to) / 2 + Vector3.new(0, 0.07, 0), dir * 100 + Vector3.new(0, 0.07, 0))
+		make("Part", { Name = "Path", Size = Vector3.new(7, 0.14, to - from), CFrame = pathCf, Material = Enum.Material.Cobblestone, Color = Color3.fromRGB(226, 216, 198), CanCollide = false, Parent = folder })
+		for _, s in { -3.7, 3.7 } do
+			make("Part", { Name = "PathEdge", Size = Vector3.new(0.4, 0.18, to - from), CFrame = pathCf * CFrame.new(s, 0.02, 0), Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = folder })
+		end
+		if slot ~= 3 and slot ~= 5 then -- (forge / spawn plaza already have their own lights)
+			for _, s in { -5, 5 } do
+				local base = dir * 36 + sideways * s
+				make("Part", { Name = "LampPost", Size = Vector3.new(0.5, 7, 0.5), CFrame = CFrame.new(base + Vector3.new(0, 3.5, 0)), Material = Enum.Material.Metal, Color = GOLD, Parent = folder })
+				local lamp = ball(base + Vector3.new(0, 7.5, 0), 1.4, { Name = "Lantern", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 225, 170), CanCollide = false, Parent = folder })
+				make("PointLight", { Color = Color3.fromRGB(255, 210, 150), Range = 14, Brightness = 0.7, Parent = lamp })
+			end
+		end
+	end
+	-- benches and a flower ring around the fountain
+	for k = 0, 7 do
+		local a = math.rad(22.5 + k * 45)
+		local benchCf = CFrame.lookAt(Vector3.new(math.cos(a) * 19, 0, math.sin(a) * 19), Vector3.zero)
+		make("Part", { Name = "Bench", Size = Vector3.new(5, 0.5, 1.8), CFrame = benchCf * CFrame.new(0, 1.4, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 100, 60), Parent = folder })
+		make("Part", { Name = "BenchBack", Size = Vector3.new(5, 1.8, 0.4), CFrame = benchCf * CFrame.new(0, 2.4, 1), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 100, 60), Parent = folder })
+		for _, x in { -2, 2 } do
+			make("Part", { Name = "BenchLeg", Size = Vector3.new(0.5, 1.2, 1.6), CFrame = benchCf * CFrame.new(x, 0.6, 0), Material = Enum.Material.Metal, Color = GOLD, Parent = folder })
+		end
+	end
+	for _ = 1, 60 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(13.6, 15.2)
+		local pos = Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+		make("Part", { Name = "Stem", Size = Vector3.new(0.15, 0.9, 0.15), CFrame = CFrame.new(pos + Vector3.new(0, 0.45, 0)), Color = Color3.fromRGB(90, 170, 80), CanCollide = false, CastShadow = false, Parent = folder })
+		ball(pos + Vector3.new(0, 1, 0), rng:NextNumber(0.6, 0.9), { Name = "Flower", Material = Enum.Material.SmoothPlastic, Color = FLOWERS[rng:NextInteger(1, #FLOWERS)], CanCollide = false, CastShadow = false, Parent = folder })
+	end
+	-- hedges between the paths on the +Z half (the other half has the leaderboards)
+	for k = 0, 3 do
+		local a = math.rad(22.5 + k * 45)
+		for seg = -1, 1 do
+			if (k == 1 and seg == 1) or (k == 2 and seg == -1) then
+				continue -- keep clear of the forge house
+			end
+			local sa = a + seg * math.rad(9)
+			make("Part", {
+				Name = "Hedge", Size = Vector3.new(6.4, 2.6, 1.8), CFrame = CFrame.lookAt(Vector3.new(math.cos(sa) * 39, 1.3, math.sin(sa) * 39), Vector3.new(0, 1.3, 0)),
+				Material = Enum.Material.Grass, Color = Color3.fromRGB(80, 160, 90), Parent = folder,
+			})
+		end
+	end
+
 	-- the spawn plate stays but invisible
 	local spawn = workspace:FindFirstChildOfClass("SpawnLocation")
 	if spawn then
@@ -3824,6 +3875,114 @@ local function buildMuseum(plot, floors: number, themeId: string)
 		make("ParticleEmitter", { Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(190, 160, 255)), LightEmission = 0.7,
 			Rate = 20, Lifetime = NumberRange.new(3, 6), Speed = NumberRange.new(0.5, 1.5), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.4, 0), Parent = roofTop })
 	end
+	-- ================= decor: makes the box a museum
+	local cf0 = plot.cf
+	local dark = theme.trim:Lerp(Color3.new(0, 0, 0), 0.4)
+	local function deco(className: string, props)
+		props.Parent = m
+		return make(className, props)
+	end
+	-- grand entrance: columns, beam, pediment with a star, steps, lanterns, banners
+	for _, x in { -9.5, 9.5 } do
+		cylinder(cf0 * CFrame.new(x, 0.5, -HALF - 2), 1, 3.6, { Name = "ColumnFoot", Material = Enum.Material.Marble, Color = MARBLE, Parent = m })
+		cylinder(cf0 * CFrame.new(x, 6.5, -HALF - 2), 11, 2.4, { Name = "EntranceColumn", Material = Enum.Material.Marble, Color = MARBLE, Parent = m })
+		cylinder(cf0 * CFrame.new(x, 12.3, -HALF - 2), 0.8, 3.4, { Name = "ColumnCap", Material = theme.trimMat, Color = theme.trim, Parent = m })
+		local lantern = deco("Part", { Name = "DoorLantern", Size = Vector3.new(1, 1.6, 1), CFrame = cf0 * CFrame.new(x * 0.62, 7.5, -HALF - 1.1), Material = Enum.Material.Neon, Color = theme.light, CanCollide = false })
+		make("PointLight", { Color = theme.light, Range = 14, Brightness = 1, Parent = lantern })
+	end
+	deco("Part", { Name = "EntranceBeam", Size = Vector3.new(23, 1.4, 4), CFrame = cf0 * CFrame.new(0, 13.4, -HALF - 1.6), Material = Enum.Material.Marble, Color = MARBLE })
+	for _, side in { -1, 1 } do
+		deco("WedgePart", { Name = "Pediment", Size = Vector3.new(3.6, 4.5, 11.5), CFrame = cf0 * CFrame.new(side * 5.75, 16.35, -HALF - 1.6) * CFrame.Angles(0, math.rad(-90 * side), 0), Material = Enum.Material.Marble, Color = MARBLE })
+	end
+	local emblemCf = cf0 * CFrame.new(0, 15.6, -HALF - 3.5)
+	deco("Part", { Name = "Emblem", Size = Vector3.new(2.2, 2.2, 0.4), CFrame = emblemCf, Material = Enum.Material.Neon, Color = theme.trim, CanCollide = false })
+	deco("Part", { Name = "Emblem", Size = Vector3.new(2.2, 2.2, 0.4), CFrame = emblemCf * CFrame.Angles(0, 0, math.rad(45)), Material = Enum.Material.Neon, Color = theme.light, CanCollide = false })
+	deco("Part", { Name = "Step", Size = Vector3.new(18, 0.2, 3), CFrame = cf0 * CFrame.new(0, 0.1, -HALF - 2), Material = Enum.Material.Marble, Color = MARBLE_WARM })
+	for _, x in { -18, 18 } do
+		deco("Part", { Name = "Banner", Size = Vector3.new(4, 10, 0.25), CFrame = cf0 * CFrame.new(x, 9, -HALF - 0.95), Material = Enum.Material.Fabric, Color = dark, CanCollide = false })
+		deco("Part", { Name = "BannerTrim", Size = Vector3.new(4.4, 0.5, 0.4), CFrame = cf0 * CFrame.new(x, 14.2, -HALF - 0.95), Material = Enum.Material.Foil, Color = GOLD, CanCollide = false })
+		local bs = cf0 * CFrame.new(x, 9.5, -HALF - 1.15)
+		deco("Part", { Name = "BannerStar", Size = Vector3.new(1.6, 1.6, 0.15), CFrame = bs, Material = Enum.Material.Neon, Color = theme.light, CanCollide = false })
+		deco("Part", { Name = "BannerStar", Size = Vector3.new(1.6, 1.6, 0.15), CFrame = bs * CFrame.Angles(0, 0, math.rad(45)), Material = Enum.Material.Neon, Color = theme.light, CanCollide = false })
+	end
+
+	-- inside every floor: carpet, rope posts, chandelier, plants; an orrery on the ground floor
+	for f = 1, floors do
+		local y0 = (f - 1) * FLOOR_H + 0.4
+		deco("Part", { Name = "Carpet", Size = Vector3.new(7, 0.1, 40), CFrame = cf0 * CFrame.new(0, y0 + 0.05, -8), Material = Enum.Material.Fabric, Color = dark, CanCollide = false })
+		for _, x in { -3.3, 3.3 } do
+			deco("Part", { Name = "CarpetEdge", Size = Vector3.new(0.4, 0.12, 40), CFrame = cf0 * CFrame.new(x, y0 + 0.06, -8), Material = Enum.Material.Foil, Color = GOLD, CanCollide = false })
+			for _, z in { -20, -12 } do
+				cylinder(cf0 * CFrame.new(x * 1.6, y0 + 1.5, z), 3, 0.5, { Name = "RopePost", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+				ball((cf0 * CFrame.new(x * 1.6, y0 + 3.2, z)).Position, 0.9, { Name = "RopeKnob", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+			end
+			deco("Part", { Name = "Rope", Size = Vector3.new(0.25, 0.25, 8), CFrame = cf0 * CFrame.new(x * 1.6, y0 + 2.5, -16), Material = Enum.Material.Fabric, Color = Color3.fromRGB(150, 30, 50), CanCollide = false })
+		end
+		-- chandelier
+		local cy = y0 + FLOOR_H - 4.2
+		deco("Part", { Name = "ChandelierChain", Size = Vector3.new(0.2, 3, 0.2), CFrame = cf0 * CFrame.new(0, cy + 1.8, 0), Material = Enum.Material.Metal, Color = GOLD, CanCollide = false })
+		cylinder(cf0 * CFrame.new(0, cy, 0), 0.4, 8, { Name = "Chandelier", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+		for k = 0, 7 do
+			local a = k / 8 * math.pi * 2
+			ball((cf0 * CFrame.new(math.cos(a) * 3.8, cy - 0.6, math.sin(a) * 3.8)).Position, 0.9, { Name = "ChandelierLamp", Material = Enum.Material.Neon, Color = theme.light, CanCollide = false, Parent = m })
+		end
+		local glow = ball((cf0 * CFrame.new(0, cy - 1, 0)).Position, 1.6, { Name = "ChandelierCore", Material = Enum.Material.Neon, Color = theme.light, CanCollide = false, Parent = m })
+		make("PointLight", { Color = theme.light, Range = 30, Brightness = 0.9, Shadows = false, Parent = glow })
+		-- potted plants in the front corners
+		for _, x in { -24, 9 } do
+			cylinder(cf0 * CFrame.new(x, y0 + 1, -25), 2, 2.6, { Name = "Pot", Material = Enum.Material.Marble, Color = MARBLE_WARM, Parent = m })
+			for k = 1, 3 do
+				ball((cf0 * CFrame.new(x + (k - 2) * 0.7, y0 + 2.6 + k * 0.7, -25 + (k % 2) * 0.6)).Position, 2.2, { Name = "Leaves", Material = Enum.Material.Grass, Color = Color3.fromRGB(90, 180, 100), CanCollide = false, Parent = m })
+			end
+		end
+		if f == 1 then
+			-- orrery: a little solar system in the middle of the hall
+			local o = cf0 * CFrame.new(0, y0, 6)
+			cylinder(o * CFrame.new(0, 0.5, 0), 1, 7, { Name = "OrreryBase", Material = Enum.Material.Marble, Color = MARBLE, Parent = m })
+			cylinder(o * CFrame.new(0, 1.15, 0), 0.3, 7.6, { Name = "OrreryTrim", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+			cylinder(o * CFrame.new(0, 2.6, 0), 3, 0.6, { Name = "OrreryStem", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+			local sun = ball((o * CFrame.new(0, 5, 0)).Position, 2.4, { Name = "OrrerySun", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 210, 110), CanCollide = false, Parent = m })
+			make("PointLight", { Color = Color3.fromRGB(255, 220, 150), Range = 16, Brightness = 1, Parent = sun })
+			local planetColors = { Color3.fromRGB(120, 180, 255), Color3.fromRGB(255, 140, 110), Color3.fromRGB(170, 255, 190), Color3.fromRGB(210, 160, 255) }
+			for k, pc in planetColors do
+				local r = 1.8 + k * 0.9
+				local tilt = o * CFrame.new(0, 5, 0) * CFrame.Angles(math.rad(k * 9), 0, math.rad(k * 6))
+				cylinder(tilt, 0.06, r * 2, { Name = "OrreryRing", Material = Enum.Material.Neon, Color = GOLD, Transparency = 0.86, CanCollide = false, Parent = m })
+				ball((tilt * CFrame.Angles(0, k * 1.7, 0) * CFrame.new(r, 0, 0)).Position, 0.5 + (k % 2) * 0.25, { Name = "OrreryPlanet", Material = Enum.Material.Neon, Color = pc, CanCollide = false, Parent = m })
+			end
+		else
+			-- benches on upper floors
+			for _, x in { -5, 5 } do
+				deco("Part", { Name = "Bench", Size = Vector3.new(5, 0.5, 2), CFrame = cf0 * CFrame.new(x, y0 + 1.5, 8), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 100, 60) })
+				for _, lx in { -2, 2 } do
+					deco("Part", { Name = "BenchLeg", Size = Vector3.new(0.5, 1.3, 1.8), CFrame = cf0 * CFrame.new(x + lx, y0 + 0.65, 8), Material = Enum.Material.Metal, Color = GOLD })
+				end
+			end
+		end
+	end
+
+	-- stepped glass dome with a spire and a star, small turrets on the corners
+	local domeY = top + 2
+	for step, d in { 36, 29, 21, 12 } do
+		cylinder(cf0 * CFrame.new(0, domeY + 1.3, 0), 2.6, d, { Name = "Dome", Material = Enum.Material.Glass, Color = theme.light, Transparency = 0.35, CanCollide = false, Parent = m })
+		cylinder(cf0 * CFrame.new(0, domeY + 0.1, 0), 0.4, d + 0.8, { Name = "DomeBand", Material = theme.trimMat, Color = theme.trim, CanCollide = false, Parent = m })
+		domeY += 2.6
+		local _ = step
+	end
+	cylinder(cf0 * CFrame.new(0, domeY + 3, 0), 6, 0.7, { Name = "Spire", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+	local starCf = cf0 * CFrame.new(0, domeY + 7.4, 0)
+	local topStar = deco("Part", { Name = "RoofStar", Size = Vector3.new(3, 3, 0.7), CFrame = starCf, Material = Enum.Material.Neon, Color = theme.light, CanCollide = false })
+	deco("Part", { Name = "RoofStar", Size = Vector3.new(3, 3, 0.7), CFrame = starCf * CFrame.Angles(0, 0, math.rad(45)), Material = Enum.Material.Neon, Color = theme.trim, CanCollide = false })
+	make("PointLight", { Color = theme.light, Range = 30, Brightness = 1.5, Parent = topStar })
+	make("Sparkles", { SparkleColor = theme.light, Parent = topStar })
+	for _, c in { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } } do
+		local t = cf0 * CFrame.new(c[1] * (HALF + 0.6), top + 2, c[2] * (HALF + 0.6))
+		cylinder(t * CFrame.new(0, 0.6, 0), 1.2, 4.4, { Name = "TurretCap", Material = Enum.Material.Marble, Color = MARBLE, CanCollide = false, Parent = m })
+		cylinder(t * CFrame.new(0, 2.6, 0), 3, 2.6, { Name = "Turret", Material = theme.trimMat, Color = theme.trim, CanCollide = false, Parent = m })
+		cylinder(t * CFrame.new(0, 5.2, 0), 2.4, 0.5, { Name = "TurretSpire", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = m })
+		ball((t * CFrame.new(0, 6.8, 0)).Position, 1.1, { Name = "TurretOrb", Material = Enum.Material.Neon, Color = theme.light, CanCollide = false, Parent = m })
+	end
+
 	plot.builtFloors = floors
 	plot.builtTheme = themeId
 end
@@ -3886,6 +4045,38 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 		flowers((cf * CFrame.new(c[1], 0, c[2])).Position, 1.5, 4, plotFolder)
 	end
 	bridge(direction, HUB_RADIUS - 2, RING - PLOT_SIZE / 2 + 1, plotFolder)
+
+	-- side gardens left and right of the museum
+	for _, side in { -1, 1 } do
+		local g = cf * CFrame.new(side * (PLOT_SIZE / 2 + 9), 0, 0)
+		make("Part", { Name = "Garden", Size = Vector3.new(18, 4, 50), CFrame = g * CFrame.new(0, -2, 0), Material = Enum.Material.Grass, Color = GRASS, Parent = plotFolder })
+		make("Part", { Name = "GardenBorder", Size = Vector3.new(19.5, 3.6, 51.5), CFrame = g * CFrame.new(0, -2.3, 0), Material = Enum.Material.Marble, Color = MARBLE, Parent = plotFolder })
+		make("Part", { Name = "GardenRock", Size = Vector3.new(13, 7, 38), CFrame = g * CFrame.new(0, -7.5, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(176, 160, 142), CanCollide = false, Parent = plotFolder })
+		cloudPuff((g * CFrame.new(0, -12, 0)).Position, 14, plotFolder, 3)
+		make("Part", { Name = "Hedge", Size = Vector3.new(2, 3, 46), CFrame = g * CFrame.new(side * 7.5, 1.5, 0), Material = Enum.Material.Grass, Color = Color3.fromRGB(80, 160, 90), Parent = plotFolder })
+		tree((g * CFrame.new(0, 0, -17)).Position, plotFolder, if side == 1 then Color3.fromRGB(255, 205, 225) else Color3.fromRGB(190, 240, 205))
+		tree((g * CFrame.new(side * 2, 0, 17)).Position, plotFolder, Color3.fromRGB(255, 230, 190))
+		flowers((g * CFrame.new(0, 0, -17)).Position, 4.5, 10, plotFolder)
+		flowers((g * CFrame.new(side * 2, 0, 17)).Position, 4.5, 10, plotFolder)
+		-- lamp post
+		make("Part", { Name = "LampPost", Size = Vector3.new(0.6, 9, 0.6), CFrame = g * CFrame.new(-side * 6, 4.5, -22), Material = Enum.Material.Metal, Color = GOLD, Parent = plotFolder })
+		local lamp = ball((g * CFrame.new(-side * 6, 9.6, -22)).Position, 1.8, { Name = "Lantern", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 225, 170), CanCollide = false, Parent = plotFolder })
+		make("PointLight", { Color = Color3.fromRGB(255, 210, 150), Range = 18, Brightness = 0.9, Parent = lamp })
+		if side == 1 then
+			-- pond with a lily
+			cylinder(g * CFrame.new(0, 0.15, 0), 0.3, 11, { Name = "PondRim", Material = Enum.Material.Marble, Color = MARBLE, Parent = plotFolder })
+			cylinder(g * CFrame.new(0, 0.22, 0), 0.3, 9.6, { Name = "Pond", Material = Enum.Material.Glass, Color = Color3.fromRGB(110, 200, 255), Transparency = 0.25, CanCollide = false, Parent = plotFolder })
+			cylinder(g * CFrame.new(1.5, 0.42, -1), 0.1, 2, { Name = "Lily", Material = Enum.Material.Grass, Color = Color3.fromRGB(90, 190, 110), CanCollide = false, Parent = plotFolder })
+			ball((g * CFrame.new(1.5, 0.7, -1)).Position, 0.8, { Name = "LilyFlower", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 180, 215), CanCollide = false, Parent = plotFolder })
+		else
+			-- bench facing the museum
+			make("Part", { Name = "Bench", Size = Vector3.new(2, 0.5, 6), CFrame = g * CFrame.new(-3, 1.5, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 100, 60), Parent = plotFolder })
+			make("Part", { Name = "BenchBack", Size = Vector3.new(0.4, 2, 6), CFrame = g * CFrame.new(-4, 2.6, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 100, 60), Parent = plotFolder })
+			for _, z in { -2.5, 2.5 } do
+				make("Part", { Name = "BenchLeg", Size = Vector3.new(1.8, 1.3, 0.5), CFrame = g * CFrame.new(-3, 0.65, z), Material = Enum.Material.Metal, Color = GOLD, Parent = plotFolder })
+			end
+		end
+	end
 
 	local post = make("Part", { Name = "SignPost", Size = Vector3.new(1, 7, 1), CFrame = cf * CFrame.new(-10, 3.5, -(PLOT_SIZE / 2 - 1.5)), Material = Enum.Material.SmoothPlastic, Color = GOLD, Parent = plotFolder })
 	local label = worldText(post, "signFree", 5, 11, 3.2)
