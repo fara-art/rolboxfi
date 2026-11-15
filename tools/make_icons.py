@@ -380,6 +380,24 @@ for x in (380, 512, 644):
     img = shape(img, lambda d, x=x: d.rounded_rectangle((x - 22, 420, x + 22, 830), 18, fill=255), (120, 130, 155), (90, 100, 125), outline=8, gloss=False, shadow=False)
 icons["ui_trash"] = save(img, "ui_trash")
 
+# backpack (inventory)
+img = blank()
+img = shape(img, lambda d: d.rounded_rectangle((330, 120, 694, 300), 90, fill=255), (150, 95, 50), (110, 65, 35), outline=26)
+img = shape(img, lambda d: d.rounded_rectangle((220, 220, 804, 930), 150, fill=255), (196, 128, 66), (128, 76, 38), outline=30)
+img = shape(img, lambda d: d.rounded_rectangle((300, 560, 724, 860), 70, fill=255), (176, 110, 54), (120, 72, 36), outline=22, shadow=False)
+img = shape(img, lambda d: d.rounded_rectangle((300, 560, 724, 640), 30, fill=255), (140, 86, 42), (110, 66, 32), outline=16, gloss=False, shadow=False)
+img = shape(img, lambda d: d.rounded_rectangle((470, 590, 554, 690), 20, fill=255), (255, 215, 90), (230, 160, 40), outline=14, gloss=False, shadow=False)
+for x in (250, 774):
+    img = shape(img, lambda d, x=x: d.rounded_rectangle((x - 40, 420, x + 40, 760), 30, fill=255), (150, 95, 50), (110, 65, 35), outline=16, gloss=False, shadow=False)
+icons["ui_backpack"] = save(sparkle(img, 830, 200, 60), "ui_backpack")
+
+# big white dice (ROLL)
+img = blank()
+img = shape(img, lambda d: d.rounded_rectangle((170, 170, 854, 854), 150, fill=255), (255, 255, 255), (214, 214, 236), outline=34)
+for cx, cy in ((340, 340), (684, 340), (512, 512), (340, 684), (684, 684)):
+    img = shape(img, lambda d, cx=cx, cy=cy: d.ellipse((cx - 62, cy - 62, cx + 62, cy + 62), fill=255), (235, 70, 110), (170, 30, 70), outline=10, gloss=False, shadow=False)
+icons["ui_roll"] = save(sparkle(img, 850, 180, 80), "ui_roll")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

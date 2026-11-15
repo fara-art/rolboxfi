@@ -6,12 +6,15 @@ Config.MaxRollSpeedLevel = 10
 function Config.RollCooldown(level: number): number
 	return math.max(0.3, 1 * 0.88 ^ level)
 end
+-- price of the NEXT level; a wide spread so it takes the whole game to max out
+Config.RollSpeedPrices = { 500, 6000, 50000, 400000, 3000000, 25000000, 200000000, 1500000000, 12000000000, 100000000000 }
 function Config.RollSpeedCost(level: number): number
-	return math.floor(400 * 2.6 ^ level)
+	return Config.RollSpeedPrices[level + 1] or math.huge
 end
 Config.MaxMultiRollLevel = 4 -- rolls per click = 1 + level
+Config.MultiRollPrices = { 2500, 200000, 25000000, 5000000000 }
 function Config.MultiRollCost(level: number): number
-	return math.floor(5000 * 8 ^ level)
+	return Config.MultiRollPrices[level + 1] or math.huge
 end
 
 -- Museum on the plot: display spots along the walls, more floors can be bought
@@ -341,14 +344,16 @@ Config.UiIcons = {
 	rebirth = "73756458949010", -- ui_rebirth.png
 	build = "81422090060014", -- ui_build.png
 	codes = "135556107125294", -- ui_codes.png
-	robux = "", -- ui_robux.png
-	crate = "", -- ui_crate.png
-	shop = "", -- ui_shop.png
-	crown = "", -- ui_crown.png
-	bolt = "", -- ui_bolt.png
-	dice2 = "", -- ui_dice2.png
-	target = "", -- ui_target.png
+	robux = "88925874604658", -- ui_robux.png
+	crate = "88943358599901", -- ui_crate.png
+	shop = "94738538358982", -- ui_shop.png
+	crown = "82112958345651", -- ui_crown.png
+	bolt = "82339824773311", -- ui_bolt.png
+	dice2 = "136163108916637", -- ui_dice2.png
+	target = "137226022006314", -- ui_target.png
 	trash = "", -- ui_trash.png
+	backpack = "", -- ui_backpack.png (inventory)
+	roll = "", -- ui_roll.png (big ROLL dice)
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

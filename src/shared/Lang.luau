@@ -6,7 +6,7 @@ local Lang = {}
 Lang.Strings = {
 	en = {
 		cash = "CASH", perSec = "PER SEC", luck = "LUCK", rolls = "ROLLS", rebirths = "REBIRTHS",
-		telescope = "TELESCOPE", rollHint = "Roll for a star", roll = "ROLL", rollN = "ROLL x%d",
+		telescope = "TELESCOPE", rollHint = "Roll for a star", roll = "ROLL!", rollN = "ROLL x%d", inventory = "Inventory", rollAnim = "Roll animation",
 		autoOn = "AUTO: ON", autoOff = "AUTO: OFF", autoLocked = "AUTO  %d/%d",
 		oneIn = "1/%s", andMore = "+%d more", totalRolls = "Total rolls: %s",
 		catalogue = "CATALOGUE", mySky = "MY SKY", upgrades = "UPGRADES", index = "INDEX",
@@ -83,7 +83,7 @@ Lang.Strings = {
 	},
 	ru = {
 		cash = "ДЕНЬГИ", perSec = "В СЕКУНДУ", luck = "УДАЧА", rolls = "КРУТКИ", rebirths = "ПЕРЕРОЖД.",
-		telescope = "ТЕЛЕСКОП", rollHint = "Крути звезду", roll = "КРУТИТЬ", rollN = "КРУТИТЬ x%d",
+		telescope = "ТЕЛЕСКОП", rollHint = "Крути звезду", roll = "КРУТИТЬ!", rollN = "КРУТИТЬ x%d", inventory = "Инвентарь", rollAnim = "Анимация ролла",
 		autoOn = "АВТО: ВКЛ", autoOff = "АВТО: ВЫКЛ", autoLocked = "АВТО  %d/%d",
 		oneIn = "1/%s", andMore = "ещё +%d", totalRolls = "Всего круток: %s",
 		catalogue = "КАТАЛОГ", mySky = "МОЁ НЕБО", upgrades = "УЛУЧШЕНИЯ", index = "ИНДЕКС",
