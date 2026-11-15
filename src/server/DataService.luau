@@ -33,7 +33,7 @@ local function default()
 		indexClaims = {}, -- [mutationId] = true
 		milestones = {}, -- ["1"] = true (string keys for DataStore)
 		lang = "", -- "" = auto
-		settings = { music = true, sfx = true, rareAlert = 50000000 },
+		settings = { music = true, sfx = true, rareAlert = 10000 },
 		slabs = {}, -- ["x_y"] = slab id (build mode)
 		freeSlabsGiven = false,
 		best = "", -- rarest item ever found (leaderboard)

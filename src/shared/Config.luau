@@ -368,7 +368,7 @@ Config.UiIcons = {
 	trash = "104917106609924", -- ui_trash.png
 	backpack = "72074171084419", -- ui_backpack.png (inventory)
 	roll = "128516275355024", -- ui_roll.png (big ROLL dice)
-	trade = "", -- ui_trade.png (two arrows)
+	trade = "134683086824732", -- ui_trade.png (two arrows)
 	crateBg = "", -- optional painted background for the featured crate (shop)
 }
 

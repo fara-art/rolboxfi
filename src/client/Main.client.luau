@@ -349,7 +349,7 @@ local setLang
 local render
 local settingsButton
 do
-	local langFrame = panelFrame({ Size = UDim2.new(0, 112, 0, 44), Position = UDim2.new(0, 16, 0, 64), Parent = gui })
+	local langFrame = panelFrame({ Size = UDim2.new(0, 112, 0, 44), Position = UDim2.new(0, 16, 0, 64), Visible = false, Parent = gui }) -- language lives in the settings now
 	local enButton, ruButton
 	local render -- forward
 
@@ -937,14 +937,15 @@ do
 			stroked({ Size = UDim2.new(1, 0, 0.2, 0), Position = UDim2.new(0, 0, 0.55, 0), Text = t("allDone"), TextWrapped = true, Max = 22, Parent = rewardsSummary })
 		end
 
-		-- right: one card per milestone
+		-- right: one card per milestone (sized from the screen, not from the animated window)
+		local cardH = math.max(170, math.floor(gui.AbsoluteSize.Y * 0.6 - 48))
+		local cardW = math.floor(cardH * 0.66)
 for i, milestone in Config.RollMilestones do
 			local claimed = state.milestones[tostring(i)] == true
 			local ready = rolls >= milestone.rolls and not claimed
 			local card = make("Frame", {
-				Size = UDim2.new(0, 0, 1, -14), LayoutOrder = i, ZIndex = 21, Parent = rewardsBody, BackgroundColor3 = WHITE,
+				Size = UDim2.new(0, cardW, 0, cardH), LayoutOrder = i, ZIndex = 21, Parent = rewardsBody, BackgroundColor3 = WHITE,
 			}, {
-				make("UIAspectRatioConstraint", { AspectRatio = 0.66, DominantAxis = Enum.DominantAxis.Height }),
 				corner(14), stroke(if ready then NEON else INK, if ready then 4 else 3),
 				make("UIGradient", {
 					Color = if claimed then ColorSequence.new(Color3.fromRGB(70, 80, 90), Color3.fromRGB(40, 46, 56))
@@ -1221,6 +1222,18 @@ do
 	renderers[settingsW] = function()
 		local body = settingsW.body
 		clear(body)
+		-- language
+		local langRow = row(body, 0, 60, WHITE)
+		text({ Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), Text = t("language"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = langRow })
+		for i, code in { "en", "ru" } do
+			btn(if lang == code then BLUE else GREY, {
+				Size = UDim2.new(0.27, 0, 0, 42), Position = UDim2.new(0.4 + (i - 1) * 0.29, 0, 0, 9), Text = if code == "en" then "English" else "Русский", Max = 18, ZIndex = 22, Parent = langRow,
+			}, function()
+				ActionEv:FireServer("SetLang", code)
+				setLang(code)
+				renderers[settingsW]()
+			end)
+		end
 		for order, name in { "music", "sfx", "rollAnim" } do
 			local r = row(body, order, 60, WHITE)
 			text({ Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), Text = t(name), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = r })
@@ -1258,7 +1271,7 @@ do
 		text({ Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 14, 0, 6), Text = t("rareAlert"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 20, ZIndex = 22, Parent = alertRow })
 		local options = make("Frame", { Size = UDim2.new(1, -20, 0, 50), Position = UDim2.new(0, 10, 0, 46), BackgroundTransparency = 1, ZIndex = 22, Parent = alertRow })
 		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), Parent = options })
-		local current = (state and state.settings and state.settings.rareAlert) or 50000000
+		local current = (state and state.settings and state.settings.rareAlert) or 10000
 		text({ Size = UDim2.new(0.42, 0, 0, 40), Position = UDim2.new(0, 14, 0, 106), Text = t("customAlert"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 17, ZIndex = 22, Parent = alertRow })
 		local custom = make("TextBox", {
 			Size = UDim2.new(0.5, 0, 0, 40), Position = UDim2.new(0.46, 0, 0, 106), BackgroundColor3 = PANEL_2, Text = if current > 0 then Format.number(current) else "",
@@ -1273,7 +1286,7 @@ do
 				renderers[settingsW]()
 			end
 		end)
-		for _, value in { 1000, 1000000, 50000000, 1000000000, 0 } do
+		for _, value in { 10000, 1000000, 50000000, 1000000000, 0 } do
 			btn(if current == value then BLUE else GREY, {
 				Size = UDim2.new(0.2, -5, 1, 0), Text = if value == 0 then t("alertOff") else t("oneIn", Format.number(value)), Max = 15, ZIndex = 23, Parent = options,
 			}, function()
@@ -1287,7 +1300,7 @@ do
 		end
 	end
 
-	settingsButton = iconButton("settings", "settings", Color3.fromRGB(120, 130, 160), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 136, 0, 64), Max = 10, Parent = gui }, function()
+	settingsButton = iconButton("settings", "settings", Color3.fromRGB(120, 130, 160), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 16, 0, 64), Max = 10, Parent = gui }, function()
 		open(settingsW)
 	end)
 
@@ -1406,7 +1419,7 @@ do
 		end)
 	end
 
-	adminButton = iconButton("admin", "admin", Color3.fromRGB(230, 90, 90), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 188, 0, 64), Max = 9, Visible = false, Parent = gui }, function()
+	adminButton = iconButton("admin", "admin", Color3.fromRGB(230, 90, 90), { Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(0, 68, 0, 64), Max = 9, Visible = false, Parent = gui }, function()
 		open(adminW)
 	end)
 end
@@ -1419,7 +1432,7 @@ do
 		if value == 0 then
 			return math.huge -- off
 		end
-		return value or 50000000
+		return value or 10000
 	end
 
 	local function circle(px: number, color: Color3, z: number, parent: Instance)
@@ -1612,7 +1625,7 @@ do
 		if threshold == math.huge then
 			return false -- reveals switched off
 		end
-		return chance >= threshold or chance >= Config.UltraRevealChance
+		return chance >= threshold -- only what the player picked in the settings
 	end
 
 	GlobalRareEv.OnClientEvent:Connect(function(finder: string, key: string, chance: number)
