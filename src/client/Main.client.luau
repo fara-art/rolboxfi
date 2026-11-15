@@ -32,6 +32,7 @@ local PickerEv = Remotes:WaitForChild("OpenPicker")
 local OpenWindowEv = Remotes:WaitForChild("OpenWindow")
 local GlobalRareEv = Remotes:WaitForChild("GlobalRare")
 local CrateEv = Remotes:WaitForChild("CrateResult")
+local TradeEv = Remotes:WaitForChild("Trade")
 
 local state = nil
 local selected: string? = nil
@@ -401,6 +402,9 @@ local holeW = window("holeTitle", "center", centerProps())
 local elevatorW = window("elevatorTitle", "center", { Size = UDim2.new(0.26, 0, 0.5, 0), Position = UDim2.new(0.37, 0, 0.22, 0) })
 local shopW = window("shop", "center", { Size = UDim2.new(0.8, 0, 0.84, 0), Position = UDim2.new(0.1, 0, 0.08, 0) })
 local giftW = window("giftTo", "center", { Size = UDim2.new(0.3, 0, 0.5, 0), Position = UDim2.new(0.35, 0, 0.25, 0) })
+local tradeW = window("tradeTitle", "center", { Size = UDim2.new(0.76, 0, 0.82, 0), Position = UDim2.new(0.12, 0, 0.09, 0) })
+local playersW = window("tradePlayers", "center", { Size = UDim2.new(0.3, 0, 0.5, 0), Position = UDim2.new(0.35, 0, 0.25, 0) })
+local tradeReqW = window("tradeTitle", "center", { Size = UDim2.new(0.36, 0, 0.28, 0), Position = UDim2.new(0.32, 0, 0.3, 0) })
 local crateW = window("crateGot", "center", { Size = UDim2.new(0.4, 0, 0.5, 0), Position = UDim2.new(0.3, 0, 0.24, 0) })
 local dailyW = window("dailyTitle", "center", { Size = UDim2.new(0.66, 0, 0.5, 0), Position = UDim2.new(0.17, 0, 0.22, 0) })
 local codesW = window("codes", "center", { Size = UDim2.new(0.34, 0, 0.32, 0), Position = UDim2.new(0.33, 0, 0.3, 0) })
@@ -1788,12 +1792,13 @@ addButtons(bottomRow, {
 	{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
 	{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
 })
-local rightColumn = buttonGroup(4, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
+local rightColumn = buttonGroup(5, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
 addButtons(rightColumn, {
 	{ "catalogue", catalogueW, BLUE, "catalogue" },
 	{ "index", indexW, LILAC, "index" },
 	{ "odds", oddsW, GOLD, "odds" },
 	{ "codes", codesW, Color3.fromRGB(80, 170, 240), "codes" },
+	{ "trade", playersW, Color3.fromRGB(255, 140, 60), "dice2" },
 })
 local rewardsBadge = badge(dockButtons.rewards)
 local indexBadge = badge(dockButtons.index)
@@ -2490,6 +2495,175 @@ renderers[shopW] = function()
 	clear(body)
 	renderShopTab[shopTab](body)
 end
+
+---------------------------------------------------------------- Trading
+local tradeState = nil
+local tradeRequest = nil
+local tradeCountdownEnd: number? = nil
+local tradeInfoKey: string? = nil
+local tradeClosingQuietly = false
+local tradeCountdownLabel: TextLabel? = nil
+
+renderers[playersW] = function()
+	local body = playersW.body
+	clear(body)
+	local any = false
+	for _, other in Players:GetPlayers() do
+		if other ~= player then
+			any = true
+			btn(Color3.fromRGB(255, 140, 60), { Size = UDim2.new(1, -8, 0, 46), Text = t("tradeSend") .. ":  " .. other.DisplayName, Max = 18, ZIndex = 22, Parent = body }, function()
+				ActionEv:FireServer("TradeRequest", other.UserId)
+				playersW.frame.Visible = false
+			end)
+		end
+	end
+	if not any then
+		text({ Size = UDim2.new(1, 0, 0, 40), Text = t("tradeNobody"), TextColor3 = MUTED, Max = 16, ZIndex = 22, Parent = body })
+	end
+end
+
+renderers[tradeReqW] = function()
+	local body = tradeReqW.body
+	clear(body)
+	if not tradeRequest then
+		return
+	end
+	text({ Size = UDim2.new(1, 0, 0, 50), Text = t("tradeRequest", tradeRequest.from), FontFace = TITLE, TextWrapped = true, Max = 20, ZIndex = 22, Parent = body })
+	local row = make("Frame", { Size = UDim2.new(1, -8, 0, 50), BackgroundTransparency = 1, ZIndex = 22, Parent = body })
+	local request = tradeRequest
+	btn(MINT, { Size = UDim2.new(0.48, 0, 1, 0), Text = t("accept"), Max = 18, ZIndex = 23, Parent = row }, function()
+		ActionEv:FireServer("TradeRespond", request.userId, true)
+		tradeReqW.frame.Visible = false
+	end)
+	btn(RED, { Size = UDim2.new(0.48, 0, 1, 0), Position = UDim2.new(0.52, 0, 0, 0), Text = t("decline"), Max = 18, ZIndex = 23, Parent = row }, function()
+		ActionEv:FireServer("TradeRespond", request.userId, false)
+		tradeReqW.frame.Visible = false
+	end)
+end
+
+local function tradeCard(parent: Instance, order: number, key: string, count: number, onMinus, onPlus)
+	local star, mutation = Items.parse(key)
+	if not star then
+		return
+	end
+	local card = make("TextButton", { LayoutOrder = order, Text = "", AutoButtonColor = true, BackgroundColor3 = if tradeInfoKey == key then Color3.fromRGB(220, 236, 255) else WHITE, ZIndex = 23, Parent = parent }, {
+		corner(10), stroke(if tradeInfoKey == key then BLUE else INK, 2.5),
+	})
+	starIcon(star, mutation, { Size = UDim2.new(0, 64, 0, 64), Position = UDim2.new(0.5, -32, 0, 4), ZIndex = 24, Parent = card })
+	text({ Size = UDim2.new(1, -6, 0, 18), Position = UDim2.new(0, 3, 0, 70), Text = Lang.item(lang, key), FontFace = TITLE, Max = 13, ZIndex = 24, Parent = card })
+	text({ Size = UDim2.new(1, -6, 0, 16), Position = UDim2.new(0, 3, 0, 88), Text = t("perSecShort", Format.number(Items.income(key))), FontFace = BODY, TextColor3 = MUTED, Max = 12, ZIndex = 24, Parent = card })
+	titleText(card, "x" .. count, { Size = UDim2.new(0, 40, 0, 22), Position = UDim2.new(1, -44, 0, 2), Max = 18, ZIndex = 25 })
+	card.Activated:Connect(function()
+		tradeInfoKey = key -- full info about this star (works for the partner's stars too)
+		renderers[tradeW]()
+	end)
+	if onMinus then
+		btn(RED, { Size = UDim2.new(0, 26, 0, 26), Position = UDim2.new(0, 2, 0, 2), Text = "-", Max = 18, ZIndex = 25, Parent = card }, onMinus)
+	end
+	if onPlus then
+		btn(MINT, { Size = UDim2.new(0, 26, 0, 26), Position = UDim2.new(0, 2, 0, 2), Text = "+", Max = 18, ZIndex = 25, Parent = card }, onPlus)
+	end
+end
+
+renderers[tradeW] = function()
+	local body = tradeW.body
+	clear(body)
+	if not tradeState then
+		return
+	end
+	local function column(order: number, title: string, ready: boolean, offer, mine: boolean)
+		local col = make("Frame", { Size = UDim2.new(0.5, -6, 1, 0), Position = UDim2.new(if order == 1 then 0 else 0.5, if order == 1 then 0 else 6, 0, 0), BackgroundColor3 = PANEL_2, ZIndex = 22 }, {
+			corner(14), stroke(if ready then MINT else INK, if ready then 4 else 2.5),
+		})
+		titleText(col, title .. "   " .. (if ready then t("tradeReady") else t("tradeNotReady")), { Size = UDim2.new(1, -12, 0, 30), Position = UDim2.new(0, 6, 0, 4), TextColor3 = if ready then MINT else WHITE, Max = 20 })
+		local grid = make("Frame", { Size = UDim2.new(1, -12, 1, -40), Position = UDim2.new(0, 6, 0, 36), BackgroundTransparency = 1, ZIndex = 22, Parent = col })
+		make("UIGridLayout", { CellSize = UDim2.new(0, 110, 0, 108), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid })
+		local keys = {}
+		for key in offer do
+			table.insert(keys, key)
+		end
+		table.sort(keys, function(a, b)
+			return Items.rank(a) > Items.rank(b)
+		end)
+		for i, key in keys do
+			tradeCard(grid, i, key, offer[key], if mine then function()
+				ActionEv:FireServer("TradeOffer", key, -1)
+			end else nil, nil)
+		end
+		return col
+	end
+	local top = make("Frame", { Size = UDim2.new(1, -8, 0, 270), LayoutOrder = 1, BackgroundTransparency = 1, ZIndex = 22, Parent = body })
+	column(1, t("tradeYou"), tradeState.myReady, tradeState.mine, true).Parent = top
+	column(2, tradeState.partner, tradeState.theirReady, tradeState.theirs, false).Parent = top
+
+	-- info about the selected star
+	local info = if tradeInfoKey and Items.parse(tradeInfoKey) then t("tradeInfo", Lang.item(lang, tradeInfoKey), Format.number(Items.chance(tradeInfoKey)), Format.number(Items.income(tradeInfoKey)), Format.number(Items.income(tradeInfoKey) * Config.SellMultiplier)) else ""
+	text({ Size = UDim2.new(1, -8, 0, 26), LayoutOrder = 2, Text = info, FontFace = TITLE, TextColor3 = BLUE, Max = 17, ZIndex = 22, Parent = body })
+
+	-- ready / countdown / cancel
+	local controls = make("Frame", { Size = UDim2.new(1, -8, 0, 52), LayoutOrder = 3, BackgroundTransparency = 1, ZIndex = 22, Parent = body })
+	btn(if tradeState.myReady then MINT else GREY, { Size = UDim2.new(0.3, 0, 1, 0), Text = "✓  " .. (if tradeState.myReady then t("tradeReady") else t("tradeNotReady")), FontFace = TITLE, Max = 20, ZIndex = 23, Parent = controls }, function()
+		ActionEv:FireServer("TradeReady", not tradeState.myReady)
+	end)
+	tradeCountdownLabel = titleText(controls, "", { Size = UDim2.new(0.36, 0, 1, 0), Position = UDim2.new(0.32, 0, 0, 0), TextColor3 = GOLD, Max = 26, ZIndex = 23 })
+	btn(RED, { Size = UDim2.new(0.3, 0, 1, 0), Position = UDim2.new(0.7, 0, 0, 0), Text = "X  " .. t("decline"), Max = 18, ZIndex = 23, Parent = controls }, function()
+		ActionEv:FireServer("TradeCancel")
+	end)
+
+	-- your catalogue: tap + to add one
+	text({ Size = UDim2.new(1, -8, 0, 22), LayoutOrder = 4, Text = t("tradeAdd"), TextColor3 = MUTED, FontFace = BODY_SEMI, Max = 15, ZIndex = 22, Parent = body })
+	local inv = make("Frame", { Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 5, BackgroundTransparency = 1, ZIndex = 22, Parent = body })
+	make("UIGridLayout", { CellSize = UDim2.new(0, 110, 0, 108), CellPadding = UDim2.new(0, 6, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = inv })
+	for i, key in sortedInventory() do
+		local left = (state.inventory[key] or 0) - (tradeState.mine[key] or 0)
+		if left > 0 then
+			tradeCard(inv, i, key, left, nil, function()
+				ActionEv:FireServer("TradeOffer", key, 1)
+			end)
+		end
+	end
+end
+
+-- closing the trade window cancels the trade
+tradeW.frame:GetPropertyChangedSignal("Visible"):Connect(function()
+	if not tradeW.frame.Visible and tradeState and not tradeClosingQuietly then
+		ActionEv:FireServer("TradeCancel")
+	end
+end)
+
+TradeEv.OnClientEvent:Connect(function(kind: string, info)
+	if kind == "request" and type(info) == "table" then
+		tradeRequest = info
+		open(tradeReqW, true)
+	elseif kind == "state" and type(info) == "table" then
+		tradeState = info
+		tradeCountdownEnd = if info.countdown then os.clock() + info.countdown else nil
+		if tradeW.frame.Visible then
+			renderers[tradeW]()
+		else
+			open(tradeW, true)
+		end
+	elseif kind == "closed" then
+		tradeState = nil
+		tradeCountdownEnd = nil
+		tradeInfoKey = nil
+		tradeClosingQuietly = true
+		tradeW.frame.Visible = false
+		tradeClosingQuietly = false
+		if type(info) == "string" then
+			showToast(t(info), if info == "tradeDone" then MINT else RED)
+		end
+	end
+end)
+
+task.spawn(function()
+	while true do
+		if tradeCountdownLabel and tradeCountdownLabel.Parent then
+			tradeCountdownLabel.Text = if tradeCountdownEnd then t("tradeIn", math.max(0, math.ceil(tradeCountdownEnd - os.clock()))) else ""
+		end
+		task.wait(0.2)
+	end
+end)
 
 ---------------------------------------------------------------- Crate opening: every crate on screen, rows of five
 local function showCrateResults(got)

@@ -35,6 +35,7 @@ local PickerEv = remote("RemoteEvent", "OpenPicker") -- (cellKey)
 local OpenWindowEv = remote("RemoteEvent", "OpenWindow") -- (name)
 local GlobalRareEv = remote("RemoteEvent", "GlobalRare") -- (playerName, itemKey, chance)
 local CrateEv = remote("RemoteEvent", "CrateResult") -- ({ itemKey })
+local TradeEv = remote("RemoteEvent", "Trade") -- (kind, info)
 remotes.Parent = ReplicatedStorage
 
 ReplicatedStorage:SetAttribute("ShowerEndsAt", 0)
@@ -913,6 +914,151 @@ end
 function actions.TutorialDone(player, data)
 	data.tutorialDone = true
 end
+
+---------------------------------------------------------------- Trading between players (server decides everything)
+local trades: { [Player]: any } = {} -- player -> trade
+local tradeRequests: { [Player]: { from: Player, expires: number } } = {}
+
+local function otherSide(trade, player: Player): Player
+	return if trade.a == player then trade.b else trade.a
+end
+
+local function pushTrade(trade)
+	for _, side in { trade.a, trade.b } do
+		local other = otherSide(trade, side)
+		TradeEv:FireClient(side, "state", {
+			partner = other.DisplayName,
+			mine = trade.offer[side],
+			theirs = trade.offer[other],
+			myReady = trade.ready[side] == true,
+			theirReady = trade.ready[other] == true,
+			countdown = if trade.countdownEnd then math.max(0, trade.countdownEnd - os.clock()) else nil,
+		})
+	end
+end
+
+local function closeTrade(trade, reasonKey: string?)
+	for _, side in { trade.a, trade.b } do
+		if trades[side] == trade then
+			trades[side] = nil
+		end
+		if side.Parent then
+			TradeEv:FireClient(side, "closed", reasonKey)
+		end
+	end
+	trade.closed = true
+end
+
+local function executeTrade(trade)
+	local dataA, dataB = DataService.get(trade.a), DataService.get(trade.b)
+	if not dataA or not dataB then
+		return closeTrade(trade, "tradeFailed")
+	end
+	-- everything is checked again right before swapping
+	for _, pair in { { dataA, trade.offer[trade.a] }, { dataB, trade.offer[trade.b] } } do
+		for key, count in pair[2] do
+			if (pair[1].inventory[key] or 0) < count then
+				return closeTrade(trade, "tradeFailed")
+			end
+		end
+	end
+	for key, count in trade.offer[trade.a] do
+		takeFromInventory(dataA, key, count)
+		addToInventory(trade.b, dataB, key, count)
+	end
+	for key, count in trade.offer[trade.b] do
+		takeFromInventory(dataB, key, count)
+		addToInventory(trade.a, dataA, key, count)
+	end
+	closeTrade(trade, "tradeDone")
+	pushState(trade.a)
+	pushState(trade.b)
+	task.spawn(DataService.save, trade.a)
+	task.spawn(DataService.save, trade.b)
+end
+
+function actions.TradeRequest(player, data, targetUserId)
+	local target = type(targetUserId) == "number" and Players:GetPlayerByUserId(targetUserId)
+	if not target or target == player or trades[player] or trades[target] or not sessions[target] then
+		return toast(player, "tradeBusy")
+	end
+	tradeRequests[target] = { from = player, expires = os.clock() + 20 }
+	TradeEv:FireClient(target, "request", { from = player.DisplayName, userId = player.UserId })
+	toast(player, "tradeSent", { target.DisplayName })
+end
+
+function actions.TradeRespond(player, data, fromUserId, accept)
+	local request = tradeRequests[player]
+	tradeRequests[player] = nil
+	if not request or request.from.UserId ~= fromUserId or os.clock() > request.expires or not request.from.Parent then
+		return
+	end
+	local from = request.from
+	if not accept then
+		return toast(from, "tradeDeclined", { player.DisplayName })
+	end
+	if trades[player] or trades[from] then
+		return toast(player, "tradeBusy")
+	end
+	local trade = { a = from, b = player, offer = { [from] = {}, [player] = {} }, ready = {}, countdownEnd = nil, version = 0 }
+	trades[from] = trade
+	trades[player] = trade
+	pushTrade(trade)
+end
+
+local function tradeChanged(trade)
+	trade.ready = {}
+	trade.countdownEnd = nil
+	trade.version += 1
+	pushTrade(trade)
+end
+
+function actions.TradeOffer(player, data, itemKey, delta)
+	local trade = trades[player]
+	if not trade or not Items.parse(itemKey) or type(delta) ~= "number" then
+		return
+	end
+	local offer = trade.offer[player]
+	local count = math.clamp((offer[itemKey] or 0) + math.floor(delta), 0, data.inventory[itemKey] or 0)
+	offer[itemKey] = if count > 0 then count else nil
+	tradeChanged(trade)
+end
+
+function actions.TradeReady(player, data, ready)
+	local trade = trades[player]
+	if not trade then
+		return
+	end
+	trade.ready[player] = ready == true
+	if trade.ready[trade.a] and trade.ready[trade.b] then
+		trade.countdownEnd = os.clock() + 5
+		local version = trade.version
+		task.delay(5, function()
+			if not trade.closed and trade.version == version and trade.ready[trade.a] and trade.ready[trade.b] then
+				executeTrade(trade)
+			end
+		end)
+	else
+		trade.countdownEnd = nil
+		trade.version += 1
+	end
+	pushTrade(trade)
+end
+
+function actions.TradeCancel(player, data)
+	local trade = trades[player]
+	if trade then
+		closeTrade(trade, "tradeCancelled")
+	end
+end
+
+Players.PlayerRemoving:Connect(function(player)
+	local trade = trades[player]
+	if trade then
+		closeTrade(trade, "tradeCancelled")
+	end
+	tradeRequests[player] = nil
+end)
 
 ---------------------------------------------------------------- Robux shop
 -- product id -> what it gives
