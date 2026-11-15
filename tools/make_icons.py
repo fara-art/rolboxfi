@@ -372,6 +372,14 @@ for (r, top, bot) in [(420, (255, 120, 140), (210, 40, 80)), (300, (255, 255, 25
     img = shape(img, lambda d, r=r: d.ellipse((C - r, C - r, C + r, C + r), fill=255), top, bot, outline=22, shadow=(r == 420), gloss=(r == 420))
 icons["ui_target"] = save(sparkle(img, 840, 180, 70), "ui_target")
 
+# trash can (delete in build mode)
+img = shape(blank(), lambda d: d.polygon([(250, 330), (774, 330), (720, 920), (304, 920)], fill=255), (210, 220, 235), (140, 150, 175), outline=32)
+img = shape(img, lambda d: d.rounded_rectangle((190, 230, 834, 340), 30, fill=255), (225, 232, 245), (160, 170, 195), outline=28)
+img = shape(img, lambda d: d.rounded_rectangle((420, 150, 604, 250), 30, fill=255), (225, 232, 245), (160, 170, 195), outline=22, shadow=False)
+for x in (380, 512, 644):
+    img = shape(img, lambda d, x=x: d.rounded_rectangle((x - 22, 420, x + 22, 830), 18, fill=255), (120, 130, 155), (90, 100, 125), outline=8, gloss=False, shadow=False)
+icons["ui_trash"] = save(img, "ui_trash")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

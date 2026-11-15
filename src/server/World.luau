@@ -358,8 +358,8 @@ local function buildHub(folder: Folder)
 		Size = NumberSequence.new(0.35), Parent = wings,
 	})
 	-- ================= daily reward chest (the client opens its lid and the window when you walk up)
-	local C = Vector3.new(-10, 0, -18)
-	local chestCf = CFrame.lookAt(C, Vector3.new(-22, 0, 0)) -- faces the spawn plaza
+	local C = Vector3.new(-13.5, 0, 35)
+	local chestCf = CFrame.lookAt(C, Vector3.new(-13.5, 0, 0)) -- next to the forge, facing the fountain
 	cylinder(CFrame.new(C + Vector3.new(0, 0.1, 0)), 0.2, 16, { Name = "DailyZone", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 200, 90), Transparency = 0.55, CanCollide = false, Parent = folder })
 	local chest = make("Model", { Name = "DailyChest", Parent = folder })
 	local body = make("Part", { Name = "Body", Size = Vector3.new(5, 2.6, 3.4), CFrame = chestCf * CFrame.new(0, 1.5, 0), Material = Enum.Material.WoodPlanks, Color = Color3.fromRGB(150, 90, 45), Parent = chest })
@@ -378,6 +378,33 @@ local function buildHub(folder: Folder)
 	worldText(body, "signDaily", 5.5, 16, 2.6)
 	CollectionService:AddTag(chest, "DailyChest")
 	World.DailyPosition = C
+
+	-- ================= crate zone near spawn (the client opens the crate shop when you step in)
+	local Z = Vector3.new(-10, 0, -18)
+	cylinder(CFrame.new(Z + Vector3.new(0, 0.1, 0)), 0.2, 16, { Name = "CrateZone", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 225, 60), Transparency = 0.45, CanCollide = false, Parent = folder })
+	cylinder(CFrame.new(Z + Vector3.new(0, 0.12, 0)), 0.2, 14, { Name = "CrateZoneInner", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(255, 245, 170), Transparency = 0.3, CanCollide = false, Parent = folder })
+	local crateBase = cylinder(CFrame.new(Z + Vector3.new(0, 1, 0)), 2, 6, { Name = "CratePedestal", Material = Enum.Material.Marble, Color = MARBLE, Parent = folder })
+	cylinder(CFrame.new(Z + Vector3.new(0, 2.1, 0)), 0.3, 6.6, { Name = "CratePedestalTrim", Material = Enum.Material.Foil, Color = GOLD, CanCollide = false, Parent = folder })
+	-- a big purple crystal cluster = the crate
+	local crystals = make("Model", { Name = "CelestialCrate", Parent = folder })
+	for k = 0, 8 do
+		local a = k / 9 * math.pi * 2
+		local r = if k == 0 then 0 else 1.4
+		local h = if k == 0 then 6 else rng:NextNumber(2.6, 4.4)
+		make("Part", {
+			Name = "Crystal", Size = Vector3.new(1.6, h, 1.6),
+			CFrame = CFrame.new(Z + Vector3.new(math.cos(a) * r, 2.2 + h / 2, math.sin(a) * r)) * CFrame.Angles(math.sin(a) * 0.35, k, math.cos(a) * 0.35) * CFrame.Angles(0, math.rad(45), 0),
+			Material = Enum.Material.Glass, Color = if k % 2 == 0 then Color3.fromRGB(170, 90, 255) else Color3.fromRGB(120, 60, 220), Transparency = 0.1, CanCollide = false, Parent = crystals,
+		})
+	end
+	local crateGlow = ball(Z + Vector3.new(0, 4.5, 0), 2.2, { Name = "CrateCore", Material = Enum.Material.Neon, Color = Color3.fromRGB(220, 160, 255), CanCollide = false, Parent = crystals })
+	make("PointLight", { Color = Color3.fromRGB(200, 130, 255), Range = 18, Brightness = 1.4, Parent = crateGlow })
+	make("ParticleEmitter", {
+		Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 230, 150), Color3.fromRGB(200, 130, 255)),
+		LightEmission = 0.8, Rate = 14, Lifetime = NumberRange.new(1, 2), Speed = NumberRange.new(2, 4), SpreadAngle = Vector2.new(180, 180), Size = NumberSequence.new(0.35, 0), Parent = crateGlow,
+	})
+	worldText(crateBase, "crateName", 9, 20, 3)
+	CollectionService:AddTag(crateBase, "CrateZone")
 
 	-- floating crystal ring around the fountain
 	for k = 0, 7 do
@@ -467,8 +494,8 @@ local function buildHub(folder: Folder)
 	for k = 0, 3 do
 		local a = math.rad(22.5 + k * 45)
 		for seg = -1, 1 do
-			if (k == 1 and seg == 1) or (k == 2 and seg == -1) then
-				continue -- keep clear of the forge house
+			if k == 1 or k == 2 then
+				continue -- forge house + daily chest live on this side
 			end
 			local sa = a + seg * math.rad(9)
 			make("Part", {

@@ -170,6 +170,7 @@ local function pushState(player: Player)
 		daily = data.daily,
 		tutorialDone = data.tutorialDone,
 		floors = data.floors,
+		slabs = data.slabs,
 		theme = data.theme,
 		rebirths = data.rebirths,
 		mass = data.mass,

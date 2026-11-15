@@ -348,6 +348,7 @@ Config.UiIcons = {
 	bolt = "", -- ui_bolt.png
 	dice2 = "", -- ui_dice2.png
 	target = "", -- ui_target.png
+	trash = "", -- ui_trash.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.
