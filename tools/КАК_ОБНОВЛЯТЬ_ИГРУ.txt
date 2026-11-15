@@ -1,0 +1,24 @@
+КАК ОБНОВЛЯТЬ ИГРУ STAR RNG (в живом Roblox)
+==========================================
+
+ОДИН РАЗ (настройка):
+1. Положи publish_StarRNG.bat в папку D:\cloud\roblox\meteor\
+2. Правой кнопкой по publish_StarRNG.bat -> "Изменить" (откроется Блокнот).
+3. В строке  set KEY=PASTE_YOUR_KEY_HERE  замени PASTE_YOUR_KEY_HERE на свой API-ключ.
+   Ключ: create.roblox.com -> All tools -> API Extensions -> твой ключ "publish" -> Regenerate Key.
+   (у ключа должно быть: universe-places -> [RELEASE] Star RNG -> write)
+4. Сохрани (Ctrl+S). Этот файл НИКОМУ не отправляй и не фоткай — в нём ключ.
+
+КАЖДЫЙ РАЗ, когда Claude прислал новый ConstellationsRNG.rbxlx:
+1. Открой новый ConstellationsRNG.rbxlx в Roblox Studio.
+2. File -> Save to File As... -> тип "Roblox Place (*.rbxl)" ->
+   сохрани как  D:\cloud\roblox\meteor\StarRNG.rbxl  (заменить старый).
+3. Двойной клик по publish_StarRNG.bat
+4. Зелёная надпись "OK! Game updated, version N" — готово. Перезайди в игру.
+   Красная "ERROR" — скинь Claude текст ошибки (без ключа!).
+
+ЕСЛИ ОШИБКА:
+- "Scope not authorized" -> у ключа нет доступа к игре (п.3 настройки).
+- "Invalid Content stream" -> загружаешь .rbxlx вместо .rbxl (шаг 2).
+- "Unauthorized"/"Invalid API key" -> ключ неверный или старый, вставь новый.
+- не находит файл -> проверь, что StarRNG.rbxl лежит рядом с батником.
