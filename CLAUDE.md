@@ -91,6 +91,18 @@ ProcessReceipt is idempotent (data.receipts).
 - Bottom bar: Inventory (backpack) | ROLL! (dice) | Upgrades, auto button above. Upgrade prices are explicit lists
   (`Config.RollSpeedPrices`, `Config.MultiRollPrices`).
 
+- Pets (`src/shared/Pets.luau`): equip stars from the inventory (PET button), 2 slots + rebirth upgrade "pets" (+1, max 4);
+  luck +5%*log10(chance) each, mutated pets add roll speed (data.petSpeed, read by Config.EffectiveCooldown);
+  player attribute "Pets" -> client draws small orbiting planets for everyone.
+- Expeditions: rocket launch pad on the hub (World.ExpeditionPosition), window in the client; data.expedition;
+  1/2/4/8 h, up to 5 stars, cash + mutation chance + token chance (`Config.Expedition`; Studio: 10 s per hour).
+- Constellation sets (`Config.ConstellationSets`): all stars of a set in the museum -> income bonus + neon constellation
+  above the museum (World.setConstellations). Window = bookW (left column button).
+- Museum likes: "Like" prompt on the plot sign (other people's museums, once a week each), weekly OrderedDataStore
+  `LB_likes_w<week>`, 5th tablet "likes", top 3 of last week get 3/2/1 rebirth tokens on join.
+- Seasonal stars (`Stars.Seasonal`, 3 seasons x 5, 2 weeks each): rolled only in their season (Odds.list(season)),
+  index after the normal stars, not in Index tiers / Forge. Icons: `assets/seasonal_upload.zip`.
+
 ## Ideas agreed / next up
 - Daily rewards with streaks, codes (`/code`), first-minutes tutorial, group bonus, invite bonus.
 - Owner wants more things to do with stars (to be decided).

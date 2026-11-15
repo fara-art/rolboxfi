@@ -83,10 +83,47 @@ Stars.List = {
 	{ id = "infinity", name = "Infinity Star", chance = 1000000000000, income = 5000000000000, color = Color3.fromRGB(200, 160, 255) },
 }
 
+-- Seasonal stars: each season (2 weeks) five of them can be rolled, then they're gone until the season comes back.
+Stars.SeasonDays = 14
+Stars.Seasons = { "frost", "ember", "bloom" }
+Stars.Seasonal = {
+	{ id = "frostcomet", name = "Frost Comet", chance = 5000, income = 5000, color = Color3.fromRGB(170, 230, 255), kind = "point", season = 1 },
+	{ id = "icenova", name = "Ice Nova", chance = 50000, income = 50000, color = Color3.fromRGB(140, 210, 255), kind = "sphere", season = 1 },
+	{ id = "aurorastar", name = "Aurora Star", chance = 500000, income = 520000, color = Color3.fromRGB(120, 255, 200), kind = "giant", season = 1 },
+	{ id = "glacierpulsar", name = "Glacier Pulsar", chance = 5000000, income = 5500000, color = Color3.fromRGB(200, 240, 255), kind = "pulsar", season = 1 },
+	{ id = "wintercrown", name = "Winter Crown", chance = 50000000, income = 60000000, color = Color3.fromRGB(230, 245, 255), kind = "galaxy", season = 1 },
+	{ id = "embercomet", name = "Ember Comet", chance = 5000, income = 5000, color = Color3.fromRGB(255, 150, 80), kind = "point", season = 2 },
+	{ id = "phoenixstar", name = "Phoenix Star", chance = 50000, income = 50000, color = Color3.fromRGB(255, 110, 50), kind = "sphere", season = 2 },
+	{ id = "solarflare", name = "Solar Flare", chance = 500000, income = 520000, color = Color3.fromRGB(255, 200, 60), kind = "giant", season = 2 },
+	{ id = "magmapulsar", name = "Magma Pulsar", chance = 5000000, income = 5500000, color = Color3.fromRGB(255, 80, 40), kind = "pulsar", season = 2 },
+	{ id = "infernocrown", name = "Inferno Crown", chance = 50000000, income = 60000000, color = Color3.fromRGB(255, 60, 90), kind = "galaxy", season = 2 },
+	{ id = "petalcomet", name = "Petal Comet", chance = 5000, income = 5000, color = Color3.fromRGB(255, 170, 220), kind = "point", season = 3 },
+	{ id = "bloomnova", name = "Bloom Nova", chance = 50000, income = 50000, color = Color3.fromRGB(255, 130, 200), kind = "sphere", season = 3 },
+	{ id = "springstar", name = "Spring Star", chance = 500000, income = 520000, color = Color3.fromRGB(170, 255, 140), kind = "giant", season = 3 },
+	{ id = "emeraldpulsar", name = "Emerald Pulsar", chance = 5000000, income = 5500000, color = Color3.fromRGB(60, 230, 130), kind = "pulsar", season = 3 },
+	{ id = "verdantcrown", name = "Verdant Crown", chance = 50000000, income = 60000000, color = Color3.fromRGB(120, 255, 170), kind = "galaxy", season = 3 },
+}
+
 Stars.ById = {}
+Stars.ByIndex = {}
 for index, star in Stars.List do
 	star.index = index
 	Stars.ById[star.id] = star
+	Stars.ByIndex[index] = star
+end
+for i, star in Stars.Seasonal do
+	star.index = #Stars.List + i -- after the normal stars (not part of the Index tiers / Forge chain)
+	Stars.ById[star.id] = star
+	Stars.ByIndex[star.index] = star
+end
+
+-- which season is running (1..#Seasons) and how many seconds are left
+function Stars.season(now: number): number
+	return math.floor(now / (Stars.SeasonDays * 86400)) % #Stars.Seasons + 1
+end
+function Stars.seasonLeft(now: number): number
+	local length = Stars.SeasonDays * 86400
+	return length - now % length
 end
 
 return Stars

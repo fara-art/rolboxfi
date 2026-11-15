@@ -21,6 +21,9 @@ World.onPedestal = nil :: ((Player, number, string) -> ())?
 World.onForge = nil :: ((Player) -> ())?
 World.onHole = nil :: ((Player) -> ())?
 World.onElevator = nil :: ((Player, number, number, number) -> ())?
+World.onExpedition = nil :: ((Player) -> ())?
+World.onLike = nil :: ((Player, number) -> ())?
+World.ExpeditionPosition = Vector3.new(0, 0, 1000)
 
 local RING = 150 -- distance from hub center to satellite islands
 local HUB_RADIUS = 50
@@ -416,8 +419,8 @@ local function buildHub(folder: Folder)
 	for i = 0, 7 do
 		local a = (i + 0.5) / 8 * math.pi * 2
 		local base = Vector3.new(math.cos(a) * 43, 0, math.sin(a) * 43)
-		if i >= 4 then
-			continue -- the leaderboard tablets stand on this half of the edge
+		if i >= 4 or i == 0 then
+			continue -- the leaderboard tablets stand on this half of the edge (+ the weekly likes tablet)
 		end
 		pillar(base, 14, folder)
 		crystal(base + Vector3.new(0, 18, 0), 2.2, if i % 2 == 0 then Color3.fromRGB(150, 220, 255) else Color3.fromRGB(190, 255, 220), folder)
@@ -436,8 +439,8 @@ local function buildHub(folder: Folder)
 	-- trees
 	local leaves = { Color3.fromRGB(255, 205, 225), Color3.fromRGB(190, 240, 205), Color3.fromRGB(255, 230, 190), Color3.fromRGB(215, 205, 255) }
 	for i = 1, 4 do
-		if i == 2 or i == 3 then
-			continue -- the forge side: the daily chest and the crate stand there
+		if i <= 4 then
+			continue -- forge side: daily chest + crate; i = 1: in front of the likes tablet; i = 4: the launch pad
 		end
 		local a = math.rad(22.5 + (i - 1) * 45)
 		local base = Vector3.new(math.cos(a) * 31, 0, math.sin(a) * 31)
@@ -445,10 +448,48 @@ local function buildHub(folder: Folder)
 		flowers(base, 5, 10, folder)
 	end
 
+	-- launch pad: send stars on expeditions (opens the window)
+	do
+		local a = math.rad(157.5)
+		local P = Vector3.new(math.cos(a) * 29, 0, math.sin(a) * 29)
+		local padCf = CFrame.lookAt(P, Vector3.new(0, 0, 0))
+		cylinder(CFrame.new(P + Vector3.new(0, 0.12, 0)), 0.2, 15, { Name = "PadRing", Material = Enum.Material.Neon, Color = Color3.fromRGB(90, 170, 255), Transparency = 0.4, CanCollide = false, Parent = folder })
+		local pad = cylinder(CFrame.new(P + Vector3.new(0, 0.6, 0)), 1.2, 11, { Name = "LaunchPad", Material = Enum.Material.DiamondPlate, Color = Color3.fromRGB(150, 156, 172), Parent = folder })
+		for k = 0, 3 do -- support legs
+			local la = k / 4 * math.pi * 2 + math.pi / 4
+			make("Part", { Name = "Leg", Size = Vector3.new(0.6, 6, 0.6), CFrame = CFrame.new(P + Vector3.new(math.cos(la) * 3.2, 3.6, math.sin(la) * 3.2)) * CFrame.Angles(math.sin(la) * 0.25, 0, -math.cos(la) * 0.25), Material = Enum.Material.Metal, Color = Color3.fromRGB(110, 115, 130), Parent = folder })
+		end
+		local body = cylinder(CFrame.new(P + Vector3.new(0, 6.4, 0)), 9, 3.4, { Name = "RocketBody", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(245, 245, 250), Parent = folder })
+		cylinder(CFrame.new(P + Vector3.new(0, 3.2, 0)), 1, 3.6, { Name = "RocketBand", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 70, 80), Parent = folder })
+		cylinder(CFrame.new(P + Vector3.new(0, 8.6, 0)), 0.6, 3.5, { Name = "RocketBand", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 70, 80), Parent = folder })
+		ball(P + Vector3.new(0, 10.9, 0), 3.4, { Name = "RocketNose", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 70, 80), Parent = folder })
+		ball(P + Vector3.new(0, 12.3, 0), 2, { Name = "RocketNose", Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 70, 80), Parent = folder })
+		ball(P + Vector3.new(0, 13.2, 0), 0.9, { Name = "RocketTip", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 220, 120), Parent = folder })
+		local window = ball((padCf * CFrame.new(0, 7.2, -1.55)).Position, 1.5, { Name = "RocketWindow", Material = Enum.Material.Neon, Color = Color3.fromRGB(110, 200, 255), Parent = folder })
+		make("PointLight", { Color = Color3.fromRGB(110, 200, 255), Range = 10, Brightness = 1, Parent = window })
+		for k = 0, 2 do -- fins
+			local fa = k / 3 * math.pi * 2
+			make("Part", { Name = "Fin", Size = Vector3.new(0.4, 3.2, 2.2), CFrame = CFrame.new(P + Vector3.new(math.cos(fa) * 2.2, 3.4, math.sin(fa) * 2.2)) * CFrame.Angles(0, -fa, 0), Material = Enum.Material.SmoothPlastic, Color = Color3.fromRGB(235, 70, 80), Parent = folder })
+		end
+		local flame = ball(P + Vector3.new(0, 1.6, 0), 1.6, { Name = "Flame", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 170, 60), CanCollide = false, Parent = folder })
+		make("ParticleEmitter", {
+			Texture = "rbxasset://textures/particles/sparkles_main.dds", Color = ColorSequence.new(Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 90, 40)), LightEmission = 1,
+			Rate = 20, Lifetime = NumberRange.new(0.5, 1), Speed = NumberRange.new(2, 4), SpreadAngle = Vector2.new(60, 60), Size = NumberSequence.new(0.6, 0), Parent = flame,
+		})
+		worldText(body, "signExpedition", 9, 18, 2.8)
+		local p = prompt(pad, "ExpeditionPrompt", "promptExpedition", nil, 16)
+		p.Triggered:Connect(function(who)
+			if World.onExpedition then
+				World.onExpedition(who)
+			end
+		end)
+		World.ExpeditionPosition = P
+	end
+
 	-- stone leaderboard tablets (the client draws the scrollable lists on them)
 	local boards = make("Folder", { Name = "Leaderboards", Parent = folder })
-	for i, board in { "rolls", "rebirths", "cash", "rarest" } do
-		local a = math.rad(202.5 + (i - 1) * 45)
+	for i, board in { "rolls", "rebirths", "cash", "rarest", "likes" } do
+		local a = math.rad(202.5 + (i - 1) * 45) -- the 5th (weekly museum likes) lands at 22.5 degrees
 		local pos = Vector3.new(math.cos(a) * 45, 0, math.sin(a) * 45)
 		local cf = CFrame.lookAt(pos, Vector3.zero)
 		make("Part", { Name = "Step", Size = Vector3.new(10.5, 1.2, 4), CFrame = cf * CFrame.new(0, 0.6, 0), Material = Enum.Material.Slate, Color = Color3.fromRGB(118, 120, 132), Parent = folder })
@@ -1098,6 +1139,16 @@ local function buildPlot(index: number, slot: number, folder: Folder)
 	local label = worldText(post, "signFree", 5, 11, 3.2)
 	label:SetAttribute("Owner", "")
 	label:SetAttribute("Income", 0)
+	label:SetAttribute("Likes", 0)
+	-- visitors can like the museum (once a week per museum)
+	local likePrompt = prompt(post, "LikePrompt", "promptLike", nil, 14)
+	likePrompt:SetAttribute("Plot", index)
+	likePrompt:SetAttribute("NotOwner", true)
+	likePrompt.Triggered:Connect(function(who)
+		if World.onLike then
+			World.onLike(who, index)
+		end
+	end)
 
 	local plot = {
 		index = index,
@@ -1238,6 +1289,64 @@ function World.build()
 	try("scenery", buildScenery, make("Folder", { Name = "Scenery", Parent = map }))
 end
 
+function World.ownerOf(index: number): Player?
+	local plot = plots[index]
+	return plot and plot.owner
+end
+
+function World.setLikes(index: number?, count: number)
+	local plot = index and plots[index]
+	if plot then
+		plot.label:SetAttribute("Likes", count)
+	end
+end
+
+-- complete constellation sets glow high above the museum
+function World.setConstellations(index: number?, ids: { string })
+	local plot = index and plots[index]
+	if not plot then
+		return
+	end
+	local key = table.concat(ids, ",")
+	if plot.skyKey == key then
+		return
+	end
+	plot.skyKey = key
+	if plot.sky then
+		plot.sky:Destroy()
+		plot.sky = nil
+	end
+	if #ids == 0 then
+		return
+	end
+	local sky = make("Folder", { Name = "Constellations", Parent = plot.folder })
+	plot.sky = sky
+	for setIndex, set in Config.ConstellationSets do
+		if table.find(ids, set.id) then
+			local r = Random.new(setIndex * 7919)
+			local a = setIndex / #Config.ConstellationSets * math.pi * 2
+			local center = plot.cf * CFrame.new(math.cos(a) * 16, 95, math.sin(a) * 16)
+			local points = {}
+			for k = 1, #set.stars do
+				local offset = Vector3.new((k - (#set.stars + 1) / 2) * 3.4, r:NextNumber(-2.5, 2.5), r:NextNumber(-1.5, 1.5))
+				local pos = (center * CFrame.new(offset)).Position
+				table.insert(points, pos)
+				local dot = ball(pos, 1.3, { Name = "Star", Material = Enum.Material.Neon, Color = Color3.fromRGB(255, 240, 190), CanCollide = false, CanQuery = false, CastShadow = false, Parent = sky })
+				if k == 1 then
+					make("PointLight", { Color = Color3.fromRGB(255, 230, 170), Range = 14, Brightness = 1, Parent = dot })
+				end
+			end
+			for k = 2, #points do
+				local from, to = points[k - 1], points[k]
+				make("Part", {
+					Name = "Line", Size = Vector3.new(0.25, 0.25, (to - from).Magnitude), CFrame = CFrame.lookAt((from + to) / 2, to),
+					Material = Enum.Material.Neon, Color = Color3.fromRGB(150, 200, 255), Transparency = 0.3, CanCollide = false, CanQuery = false, CastShadow = false, Parent = sky,
+				})
+			end
+		end
+	end
+end
+
 function World.plotOf(player: Player): number?
 	return playerPlot[player]
 end
@@ -1264,6 +1373,12 @@ function World.releasePlot(player: Player)
 	plot.folder:SetAttribute("OwnerId", 0)
 	plot.label:SetAttribute("Owner", "")
 	plot.label:SetAttribute("Income", 0)
+	plot.label:SetAttribute("Likes", 0)
+	if plot.sky then
+		plot.sky:Destroy()
+		plot.sky = nil
+		plot.skyKey = ""
+	end
 	plot.stars:ClearAllChildren()
 	plot.museum:ClearAllChildren()
 	plot.pedestals:ClearAllChildren()

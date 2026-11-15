@@ -13,6 +13,7 @@ local Evolution = require(Shared.Evolution)
 local Odds = require(Shared.Odds)
 local Sky = require(Shared.Sky)
 local Format = require(Shared.Format)
+local Pets = require(Shared.Pets)
 local DataService = require(script.Parent.DataService)
 local World = require(script.Parent.World)
 local Leaderboards = require(script.Parent.Leaderboards)
@@ -44,6 +45,7 @@ World.build()
 
 local GOLD = Color3.fromRGB(255, 196, 70)
 local rng = Random.new()
+local refreshPets, checkLikeReward -- defined further down (pets / likes), used when a player joins
 local sessions: { [Player]: any } = {}
 
 ---------------------------------------------------------------- messaging
@@ -86,6 +88,7 @@ local function getLuck(player: Player, data): number
 	end
 	luck *= 1 + (data.robuxLuck or 0) -- "double your luck" tiers: x2, x3, x4...
 	luck *= 1 + 0.25 * Config.RebirthUp(data, "luck") -- rebirth token upgrade
+	luck *= 1 + (Pets.totals(data.pets)) -- pets
 	if (data.boostLuckUntil or 0) > workspace:GetServerTimeNow() then
 		luck *= 2 -- bought x2 luck boost
 	end
@@ -95,6 +98,48 @@ local function getLuck(player: Player, data): number
 	return luck
 end
 
+-- constellation sets that are complete in the museum right now
+local function activeSets(data): { string }
+	local placed = {}
+	for _, cell in data.grid do
+		local star = Items.parse(cell.id)
+		if star then
+			placed[star.id] = true
+		end
+	end
+	local active = {}
+	for _, set in Config.ConstellationSets do
+		local complete = true
+		for _, id in set.stars do
+			if not placed[id] then
+				complete = false
+				break
+			end
+		end
+		if complete then
+			table.insert(active, set.id)
+		end
+	end
+	return active
+end
+
+local function setsBonus(data): number
+	local bonus = 0
+	for _, id in activeSets(data) do
+		for _, set in Config.ConstellationSets do
+			if set.id == id then
+				bonus += set.bonus
+			end
+		end
+	end
+	return bonus
+end
+
+local function likesThisWeek(data): number
+	local week = math.floor(os.time() / 604800)
+	return if data.likes and data.likes.week == week then data.likes.count else 0
+end
+
 local function incomePerSecond(player: Player, data): number
 	local session = sessions[player]
 	if not World.plotOf(player) or not session.eval then
@@ -102,6 +147,7 @@ local function incomePerSecond(player: Player, data): number
 	end
 	local mult = (1 + data.rebirths * Config.RebirthIncomeBonus) * (if session.passes.Cash2x then 2 else 1) * (if session.passes.VIP then 1.5 else 1)
 		* (1 + 0.5 * Config.RebirthUp(data, "cash"))
+		* (1 + setsBonus(data)) -- constellation sets in the museum
 	return session.eval.income * mult
 end
 
@@ -116,6 +162,8 @@ local function recompute(player: Player, data)
 			end
 		end
 		World.renderPlot(player, data, session.eval, incomePerSecond(player, data))
+		World.setConstellations(World.plotOf(player), activeSets(data))
+		World.setLikes(World.plotOf(player), likesThisWeek(data))
 	end
 end
 
@@ -177,6 +225,13 @@ local function pushState(player: Player)
 		rebirths = data.rebirths,
 		rebirthTokens = data.rebirthTokens,
 		rebirthUps = data.rebirthUps,
+		pets = data.pets,
+		petSpeed = data.petSpeed,
+		expedition = data.expedition,
+		activeSets = activeSets(data),
+		likes = likesThisWeek(data),
+		season = Stars.season(os.time()),
+		seasonLeft = Stars.seasonLeft(os.time()),
 		mass = data.mass,
 		index = data.index,
 		indexClaims = data.indexClaims,
@@ -277,7 +332,7 @@ local function inBounds(data, key: any): boolean
 end
 
 local function rollItem(luck: number): string
-	return Odds.roll(luck, rng).id -- mutations come from upgrading at the Forge
+	return Odds.roll(luck, rng, Stars.season(os.time())).id -- mutations come from upgrading at the Forge
 end
 
 local function announceIfRare(player: Player, key: string)
@@ -351,8 +406,10 @@ Players.PlayerAdded:Connect(function(player)
 	stats.Parent = player
 	showBest(player, data)
 
+	refreshPets(player, data)
 	recompute(player, data)
 	pushState(player)
+	task.spawn(checkLikeReward, player, data)
 
 	player.CharacterAdded:Connect(function(character)
 		onCharacter(player, character)
@@ -540,6 +597,9 @@ function actions.UpgradeMutation(player, data, itemKey)
 	if not nextMutation then
 		return
 	end
+	if star.season then
+		return -- seasonal stars can't be upgraded
+	end
 	if (data.inventory[itemKey] or 0) < nextMutation.copies then
 		return toast(player, "toastNeedSame", { nextMutation.copies })
 	end
@@ -562,6 +622,165 @@ function actions.Feed(player, data, itemKey, count)
 	count = toCount(count, data.inventory[itemKey] or 0)
 	if takeFromInventory(data, itemKey, count) then
 		data.mass += Items.income(itemKey) * Config.SellMultiplier * count
+	end
+end
+
+---------------------------------------------------------------- pets
+refreshPets = function(player: Player, data)
+	data.pets = data.pets or {}
+	local _, speed = Pets.totals(data.pets)
+	data.petSpeed = speed
+	player:SetAttribute("Pets", table.concat(data.pets, ","))
+end
+
+function actions.PetEquip(player, data, itemKey)
+	if not Items.parse(itemKey) then
+		return
+	end
+	if #data.pets >= Pets.slots(data) then
+		return toast(player, "petsFull", { Pets.slots(data) })
+	end
+	if not takeFromInventory(data, itemKey, 1) then
+		return
+	end
+	table.insert(data.pets, itemKey)
+	refreshPets(player, data)
+end
+
+function actions.PetUnequip(player, data, slot)
+	if type(slot) ~= "number" or not data.pets[slot] then
+		return
+	end
+	local key = table.remove(data.pets, slot)
+	addToInventory(player, data, key, 1)
+	refreshPets(player, data)
+end
+
+---------------------------------------------------------------- expeditions (launch pad on the hub)
+local function expeditionSeconds(hours: number): number
+	return if RunService:IsStudio() then hours * Config.Expedition.studioSecondsPerHour else hours * 3600
+end
+
+function actions.ExpeditionStart(player, data, keys, hours)
+	if data.expedition or type(keys) ~= "table" or not table.find(Config.Expedition.hours, hours) then
+		return
+	end
+	if World.distanceTo(player, World.ExpeditionPosition) > Config.Expedition.reach then
+		return toast(player, "toastTooFar")
+	end
+	if #keys < 1 or #keys > Config.Expedition.maxStars then
+		return
+	end
+	local need = {}
+	for _, key in keys do
+		if type(key) ~= "string" or not Items.parse(key) then
+			return
+		end
+		need[key] = (need[key] or 0) + 1
+	end
+	for key, count in need do
+		if (data.inventory[key] or 0) < count then
+			return
+		end
+	end
+	local items = {}
+	for key, count in need do
+		takeFromInventory(data, key, count)
+		for _ = 1, count do
+			table.insert(items, key)
+		end
+	end
+	data.expedition = { items = items, start = os.time(), hours = hours }
+	toast(player, "expSent", { hours }, Color3.fromRGB(90, 170, 255))
+end
+
+function actions.ExpeditionClaim(player, data)
+	local trip = data.expedition
+	if not trip or os.time() - trip.start < expeditionSeconds(trip.hours) then
+		return
+	end
+	local income, mutated = 0, 0
+	for _, key in trip.items do
+		income += Items.income(key)
+		local star, mutation = Items.parse(key)
+		local result = key
+		local nextMutation = mutation and Mutations.List[mutation.index + 1]
+		if star and nextMutation and rng:NextNumber() < Config.Expedition.mutatePerHour * trip.hours then
+			result = Items.key(star.id, nextMutation.id)
+			mutated += 1
+		end
+		addToInventory(player, data, result, 1)
+	end
+	local cash = math.floor(income * trip.hours * 3600 * Config.Expedition.cashFactor)
+	setCash(player, data, data.cash + cash)
+	local token = rng:NextNumber() < Config.Expedition.tokenPerHour * trip.hours
+	if token then
+		data.rebirthTokens = math.max(0, data.rebirthTokens or 0) + 1
+	end
+	data.expedition = false
+	toast(player, if token then "expBackToken" else "expBack", { Format.number(cash), mutated }, Color3.fromRGB(90, 200, 140))
+end
+
+function actions.ExpeditionCancel(player, data)
+	local trip = data.expedition
+	if not trip then
+		return
+	end
+	for _, key in trip.items do
+		addToInventory(player, data, key, 1)
+	end
+	data.expedition = false
+end
+
+World.onExpedition = function(player)
+	OpenWindowEv:FireClient(player, "expedition")
+end
+
+---------------------------------------------------------------- museum likes (weekly top 3 get rebirth tokens)
+World.onLike = function(player, index)
+	local owner = World.ownerOf(index)
+	local data = DataService.get(player)
+	local ownerData = owner and DataService.get(owner)
+	if not owner or owner == player or not data or not ownerData then
+		return
+	end
+	local week = math.floor(os.time() / 604800)
+	if not data.likedWeek or data.likedWeek.week ~= week then
+		data.likedWeek = { week = week, owners = {} }
+	end
+	local id = tostring(owner.UserId)
+	if data.likedWeek.owners[id] then
+		return toast(player, "likeAlready")
+	end
+	data.likedWeek.owners[id] = true
+	if not ownerData.likes or ownerData.likes.week ~= week then
+		ownerData.likes = { week = week, count = 0 }
+	end
+	ownerData.likes.count += 1
+	World.setLikes(index, ownerData.likes.count)
+	toast(player, "likeSent", { owner.DisplayName }, Color3.fromRGB(255, 110, 150))
+	toast(owner, "likeGot", { player.DisplayName }, Color3.fromRGB(255, 110, 150))
+	task.spawn(Leaderboards.submit, owner, ownerData)
+	pushState(owner)
+end
+
+-- once a week: were you in last week's top 3 museums?
+checkLikeReward = function(player: Player, data)
+	local lastWeek = math.floor(os.time() / 604800) - 1
+	if data.likeRewardWeek == lastWeek then
+		return
+	end
+	local top = Leaderboards.likesTop(lastWeek, #Config.LikeRewards)
+	if not top then
+		return -- store unavailable: try again next time
+	end
+	data.likeRewardWeek = lastWeek
+	local rank = table.find(top, player.UserId)
+	if rank then
+		local tokens = Config.LikeRewards[rank]
+		data.rebirthTokens = math.max(0, data.rebirthTokens or 0) + tokens
+		toast(player, "likeReward", { rank, tokens }, Color3.fromRGB(255, 200, 60))
+		pushState(player)
 	end
 end
 

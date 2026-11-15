@@ -52,6 +52,12 @@ local function default()
 		theme = "sky",
 		rebirthTokens = -1, -- -1 = old save: gets one token per rebirth already done
 		rebirthUps = {}, -- [upgrade id] = level (permanent)
+		pets = {}, -- equipped pet item keys (taken out of the inventory while equipped)
+		petSpeed = 0, -- cached roll-speed share of the pets (read by Config.EffectiveCooldown)
+		expedition = false, -- false or { items = { keys }, start = os.time(), hours = n }
+		likes = { week = 0, count = 0 }, -- likes your museum got this week
+		likedWeek = { week = 0, owners = {} }, -- museums you liked this week ([userId string] = true)
+		likeRewardWeek = 0, -- last week whose top-3 reward was checked
 		layoutVersion = 0, -- 2 = museum layout (spot_floor keys)
 	}
 end

@@ -13,15 +13,53 @@ local Items = require(Shared.Items)
 
 local Leaderboards = {}
 
-local BOARDS = { "rolls", "rebirths", "cash", "rarest" }
+local BOARDS = { "rolls", "rebirths", "cash", "rarest", "likes" }
 local TOP = 100
 
 local stores = {}
 pcall(function()
 	for _, board in BOARDS do
-		stores[board] = DataStoreService:GetOrderedDataStore("LB_" .. board .. "_v2")
+		if board ~= "likes" then
+			stores[board] = DataStoreService:GetOrderedDataStore("LB_" .. board .. "_v2")
+		end
 	end
 end)
+
+-- museum likes start over every week: one store per week
+local function week(): number
+	return math.floor(os.time() / 604800)
+end
+local likeStores = {}
+local function likesStore(w: number)
+	if likeStores[w] == nil then
+		local ok, store = pcall(DataStoreService.GetOrderedDataStore, DataStoreService, "LB_likes_w" .. w)
+		likeStores[w] = if ok then store else false
+	end
+	return likeStores[w] or nil
+end
+local function storeOf(board: string)
+	return if board == "likes" then likesStore(week()) else stores[board]
+end
+
+-- user ids of the top museums of a given week (nil when the store can't be read)
+function Leaderboards.likesTop(w: number, count: number): { number }?
+	local store = likesStore(w)
+	if not store then
+		return nil
+	end
+	local ok, pages = pcall(store.GetSortedAsync, store, false, count)
+	if not ok or not pages then
+		return nil
+	end
+	local top = {}
+	for _, entry in pages:GetCurrentPage() do
+		local userId = tonumber(entry.key)
+		if userId and (tonumber(entry.value) or 0) > 0 then
+			table.insert(top, userId)
+		end
+	end
+	return top
+end
 
 local folder = Instance.new("Folder")
 folder.Name = "Leaderboards"
@@ -43,6 +81,8 @@ local function encode(board: string, data): number?
 		return math.floor(data.rebirths)
 	elseif board == "cash" then
 		return math.floor(math.log10(math.max(data.cash, 0) + 1) * 1e9)
+	elseif board == "likes" then
+		return if data.likes and data.likes.week == week() then math.floor(data.likes.count) else nil
 	elseif board == "rarest" then
 		local star, mutation = Items.parse(data.best)
 		if not star then
@@ -57,7 +97,7 @@ local function decode(board: string, value: number)
 	if board == "cash" then
 		return 10 ^ (value / 1e9) - 1
 	elseif board == "rarest" then
-		local star = Stars.List[math.floor(value / 100) % 100]
+		local star = Stars.ByIndex[math.floor(value / 100) % 100]
 		local mutation = Mutations.List[value % 100]
 		return if star and mutation then Items.key(star.id, mutation.id) else nil
 	end
@@ -81,7 +121,7 @@ end
 
 function Leaderboards.submit(player: Player, data)
 	for _, board in BOARDS do
-		local store = stores[board]
+		local store = storeOf(board)
 		local value = encode(board, data)
 		if store and value and value > 0 then
 			pcall(store.SetAsync, store, tostring(player.UserId), value)
@@ -93,7 +133,7 @@ end
 function Leaderboards.refresh(live)
 	for _, board in BOARDS do
 		local list = nil
-		local store = stores[board]
+		local store = storeOf(board)
 		if store then
 			local ok, pages = pcall(store.GetSortedAsync, store, false, TOP)
 			if ok and pages then

@@ -94,7 +94,32 @@ Config.RebirthUpgrades = {
 	{ id = "cash", icon = "coins", per = 0.5, max = 20 }, -- income x(1 + 0.5 * level)
 	{ id = "speed", icon = "bolt", per = 0.05, max = 10 }, -- rolls 5% faster per level
 	{ id = "multi", icon = "dice2", per = 1, max = 3 }, -- +1 star per roll
+	{ id = "pets", icon = "pets", per = 1, max = 4 }, -- +1 pet slot
 }
+
+-- Expeditions: send stars away for a few hours from the launch pad on the hub
+Config.Expedition = {
+	hours = { 1, 2, 4, 8 },
+	maxStars = 5,
+	cashFactor = 0.5, -- cash = income/s of the sent stars * seconds away * this
+	tokenPerHour = 0.03, -- chance of a rebirth token (8 h = 24%)
+	mutatePerHour = 0.025, -- chance per star to come back one mutation higher (8 h = 20%)
+	reach = 24,
+	studioSecondsPerHour = 10, -- Studio tests: one "hour" lasts 10 s
+}
+
+-- Constellations: show all stars of a set in your museum (any mutation) -> income bonus + it lights up above the museum
+Config.ConstellationSets = {
+	{ id = "dipper", stars = { "dust", "spark", "browndwarf", "dwarf" }, bonus = 0.1 },
+	{ id = "orion", stars = { "sun", "redgiant", "giant", "binary", "pulsar" }, bonus = 0.25 },
+	{ id = "cassiopeia", stars = { "wolfrayet", "neutron", "hypergiant", "quasar" }, bonus = 0.5 },
+	{ id = "triangle", stars = { "sirius", "vega", "altair", "procyon", "arcturus" }, bonus = 1 },
+	{ id = "crown", stars = { "eagle", "horsehead", "lagoon", "tarantula" }, bonus = 2 },
+	{ id = "arc", stars = { "triangulum", "whirlpool", "sombrero", "andromeda" }, bonus = 4 },
+}
+
+-- Museum likes: weekly top 3 get rebirth tokens
+Config.LikeRewards = { 3, 2, 1 }
 function Config.RebirthUpCost(level: number): number
 	return level + 1 -- tokens
 end
@@ -232,6 +257,7 @@ function Config.EffectiveCooldown(data, now: number, passes): number
 	if passes and passes.FastRolls then
 		cooldown /= 1.25
 	end
+	cooldown /= 1 + (data.petSpeed or 0) -- mutated pets
 	return math.max(0.1, cooldown)
 end
 
@@ -261,6 +287,22 @@ end
 -- Star icons: upload assets/icons/*.png to Roblox and paste the image IDs here.
 -- Empty = drawn fallback circle.
 Config.StarIcons = {
+	-- seasonal stars (assets/seasonal_upload.zip)
+	frostcomet = "",
+	icenova = "",
+	aurorastar = "",
+	glacierpulsar = "",
+	wintercrown = "",
+	embercomet = "",
+	phoenixstar = "",
+	solarflare = "",
+	magmapulsar = "",
+	infernocrown = "",
+	petalcomet = "",
+	bloomnova = "",
+	springstar = "",
+	emeraldpulsar = "",
+	verdantcrown = "",
 	dust = "88057257304175",
 	spark = "95759760184166",
 	dwarf = "108641320003033",
@@ -368,6 +410,8 @@ Config.UiIcons = {
 	trash = "92788742362698",
 	museum = "117596197732303", -- ui_museum.png ("My museum" teleport button)
 	forge = "119228344814101", -- ui_forge.png
+	pets = "", -- ui_pets.png (pet slots)
+	expedition = "", -- ui_expedition.png (rocket)
 	blackhole = "89016344401227", -- ui_blackhole.png -- ui_trash.png
 	backpack = "100292629775325", -- ui_backpack.png (inventory)
 	roll = "77284188602216", -- ui_roll.png (big ROLL dice)
@@ -386,7 +430,7 @@ Config.UiIcons = {
 	pass_luckyhunter = "87479578239137", -- pass_luckyhunter.png
 }
 Config.UiIconFallback = {
-	coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
+	pets = "luck", expedition = "rolls", coins_small = "coins", coins_big = "coins", boost_luck = "luck", boost_speed = "bolt",
 	pass_extraroll = "dice2", pass_fastrolls = "bolt", pass_vip = "crown", pass_luck2x = "luck", pass_cash2x = "coins", pass_luckyhunter = "target",
 }
 

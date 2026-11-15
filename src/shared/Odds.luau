@@ -31,16 +31,41 @@ function Odds.mutationLuck(luck: number): number
 	return math.sqrt(luck)
 end
 
-function Odds.roll(luck: number, rng: Random)
-	return rollFrom(Stars.List, luck, rng)
+-- the normal stars plus the stars of one season, kept in order of rarity
+local listCache = {}
+function Odds.list(season: number?)
+	if not season then
+		return Stars.List
+	end
+	if not listCache[season] then
+		local list = table.clone(Stars.List)
+		for _, star in Stars.Seasonal do
+			if star.season == season then
+				local at = #list + 1
+				for i = #list, 1, -1 do
+					if list[i].chance <= star.chance then
+						break
+					end
+					at = i
+				end
+				table.insert(list, at, star)
+			end
+		end
+		listCache[season] = list
+	end
+	return listCache[season]
+end
+
+function Odds.roll(luck: number, rng: Random, season: number?)
+	return rollFrom(Odds.list(season), luck, rng)
 end
 
 function Odds.rollMutation(luck: number, rng: Random)
 	return rollFrom(Mutations.List, Odds.mutationLuck(luck), rng)
 end
 
-function Odds.exact(luck: number)
-	return exactFrom(Stars.List, luck)
+function Odds.exact(luck: number, season: number?)
+	return exactFrom(Odds.list(season), luck)
 end
 
 function Odds.exactMutations(luck: number)

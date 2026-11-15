@@ -626,6 +626,18 @@ KINDS = {
 for i, (sid, _en, _ru, kind, color) in enumerate(NAMED):
     KINDS[kind](sid, color, 1000 + i * 7)
 
+# seasonal stars (src/shared/Stars.luau -> Stars.Seasonal): same look, own colours
+SEASONAL = [
+    ("frostcomet", "point", (170, 230, 255)), ("icenova", "sphere", (140, 210, 255)), ("aurorastar", "giant", (120, 255, 200)),
+    ("glacierpulsar", "pulsar", (200, 240, 255)), ("wintercrown", "galaxy", (230, 245, 255)),
+    ("embercomet", "point", (255, 150, 80)), ("phoenixstar", "sphere", (255, 110, 50)), ("solarflare", "giant", (255, 200, 60)),
+    ("magmapulsar", "pulsar", (255, 80, 40)), ("infernocrown", "galaxy", (255, 60, 90)),
+    ("petalcomet", "point", (255, 170, 220)), ("bloomnova", "sphere", (255, 130, 200)), ("springstar", "giant", (170, 255, 140)),
+    ("emeraldpulsar", "pulsar", (60, 230, 130)), ("verdantcrown", "galaxy", (120, 255, 170)),
+]
+for i, (sid, kind, color) in enumerate(SEASONAL):
+    KINDS[kind](sid, color, 5000 + i * 11)
+
 for fn in [dust, spark, browndwarf, red_dwarf, whitedwarf, sun, redgiant, bluegiant, binary, pulsar, wolfrayet,
            neutron, hypergiant, quasar, kilonova, supernova, magnetar, nebula, whitehole, eventhorizon, galaxy,
            darkmatter, cosmic, multiverse, bigbang, cosmicweb, infinity]:
