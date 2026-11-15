@@ -24,7 +24,7 @@
     re-sort after every roll (same fix as 12: no full rebuild every state update).
 15. Rebirth must reset pets (unequip → they are lost like the inventory) and expeditions (cancelled, stars lost).
 16. Rebirth luck: total luck (everything: passes, pets, upgrades…) x2 after 1st rebirth, x4 after 2nd, x6, x8 …
-    (= x2·rebirths, replaces the current x(1+0.5r)). NOT a product 2·4·6 — confirm with owner if unsure.
+    (= x2·rebirths, ONE multiplier: 1st rebirth x2, 2nd x4, 3rd x6 — confirmed by owner; replaces x(1+0.5r)).
 17. Upgrades: "MAX" button — spend all cash on the selected upgrade (buy as many levels as affordable).
 18. Offline income: when a player comes back, pay income for the time away (cap it, e.g. 8–12 h, maybe x0.5).
 19. Forge mutation upgrade doesn't work ("не могу апгрейднуть в фордже") — investigate (maybe the copies/cost check,
