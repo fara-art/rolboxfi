@@ -75,7 +75,7 @@ function Config.ForgeCost(star, nextStar): number
 	return (nextStar or star).income * Config.ForgeCostMult
 end
 function Config.UpgradeCost(star, nextStar, nextMutation): number
-	return math.floor(Config.ForgeCost(star, nextStar) * 3 * (nextMutation.chance / 1.5))
+	return math.floor(Config.ForgeCost(star, nextStar) * 10 * (nextMutation.chance / 1.5))
 end
 
 -- Black Hole / Rebirth
@@ -174,7 +174,7 @@ Config.Shop = {
 		packs = { { id = 0, price = 99, count = 1 }, { id = 0, price = 249, count = 3 }, { id = 0, price = 799, count = 10 } },
 		odds = {
 			{ item = "hypergiant", p = 0.39 },
-			{ item = "kilonova", p = 0.24 },
+			{ item = "quasar", p = 0.24 },
 			{ item = "supernova", p = 0.18 },
 			{ item = "magnetar", p = 0.12 },
 			{ item = "etacarinae", p = 0.065 },

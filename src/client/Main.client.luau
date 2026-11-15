@@ -2068,11 +2068,13 @@ end
 renderers[codesW] = function()
 	local body = codesW.body
 	clear(body)
+	-- rounded frame holds a transparent text box (no square corners poking out)
+	local holder = make("Frame", { Size = UDim2.new(1, -8, 0, 50), LayoutOrder = 1, BackgroundColor3 = WHITE, ZIndex = 22, Parent = body }, { corner(14), stroke(INK, 2.5) })
 	local box = make("TextBox", {
-		Size = UDim2.new(1, 0, 0, 50), LayoutOrder = 1, BackgroundColor3 = WHITE, PlaceholderText = t("codeHint"), Text = "",
-		TextColor3 = TEXT, FontFace = TITLE, TextScaled = true, ClearTextOnFocus = false, ZIndex = 22, Parent = body,
-	}, { corner(10), stroke(INK, 2.5), pad(8), make("UITextSizeConstraint", { MaxTextSize = 22 }) })
-	btn(MINT, { Size = UDim2.new(1, 0, 0, 50), LayoutOrder = 2, Text = t("redeem"), Max = 20, ZIndex = 22, Parent = body }, function()
+		Size = UDim2.new(1, -24, 1, -12), Position = UDim2.new(0, 12, 0, 6), BackgroundTransparency = 1, PlaceholderText = t("codeHint"), Text = "",
+		TextColor3 = TEXT, FontFace = TITLE, TextScaled = true, ClearTextOnFocus = false, ZIndex = 23, Parent = holder,
+	}, { make("UITextSizeConstraint", { MaxTextSize = 22 }) })
+	btn(MINT, { Size = UDim2.new(1, -8, 0, 50), LayoutOrder = 2, Text = t("redeem"), Max = 20, ZIndex = 22, Parent = body }, function()
 		if box.Text ~= "" then
 			ActionEv:FireServer("RedeemCode", box.Text)
 			box.Text = ""
@@ -2167,9 +2169,9 @@ end
 renderers[elevatorW] = function()
 	local body = elevatorW.body
 	clear(body)
-	for floor = elevatorInfo.floors, 1, -1 do
+	for floor = 1, elevatorInfo.floors do
 		local here = floor == elevatorInfo.floor
-		btn(if here then GREY else BLUE, { Size = UDim2.new(1, 0, 0, 50), LayoutOrder = -floor, Text = t("floorN", floor), Max = 20, ZIndex = 22, Parent = body }, function()
+		btn(if here then GREY else BLUE, { Size = UDim2.new(1, 0, 0, 50), LayoutOrder = floor, Text = t("floorN", floor), Max = 20, ZIndex = 22, Parent = body }, function()
 			if not here then
 				ActionEv:FireServer("Elevator", elevatorInfo.plot, floor)
 			end

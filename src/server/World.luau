@@ -710,6 +710,19 @@ local function buildBlackHole(folder: Folder, slot: number)
 		})
 	end
 
+	-- altar with a beam to the hole
+	local altar = cylinder(CFrame.new(center + Vector3.new(0, 1.5, 0)), 3, 10, { Name = "Altar", Material = Enum.Material.Basalt, Color = Color3.fromRGB(40, 32, 60), Parent = folder })
+	local top = cylinder(CFrame.new(center + Vector3.new(0, 3.15, 0)), 0.3, 8, { Name = "AltarTop", Material = Enum.Material.Neon, Color = Color3.fromRGB(176, 110, 255), Parent = folder })
+	local a0 = make("Attachment", { Parent = top })
+	local a1 = make("Attachment", { Parent = hole })
+	make("Beam", {
+		Attachment0 = a0, Attachment1 = a1, Color = ColorSequence.new(Color3.fromRGB(200, 150, 255)),
+		LightEmission = 1, Width0 = 1.2, Width1 = 4, FaceCamera = true, Transparency = NumberSequence.new(0.2, 0.7), Parent = top,
+	})
+	for i = 0, 5 do
+		local a = i / 6 * math.pi * 2
+		crystal(center + Vector3.new(math.cos(a) * 14, 3, math.sin(a) * 14), 2, Color3.fromRGB(190, 140, 255), folder)
+	end
 	prompt(altar, "BlackHolePrompt", "promptHole", nil, 14).Triggered:Connect(function(who)
 		if World.onHole then
 			World.onHole(who)
