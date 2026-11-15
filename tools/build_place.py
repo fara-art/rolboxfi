@@ -34,6 +34,7 @@ xml = ('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
        'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">\n'
        + item("Workspace", "Workspace", part("SpawnLocation", "SpawnLocation", 0.5, (12, 1, 12)))
        + item("Lighting", "Lighting", extra='<float name="ClockTime">14.5</float><float name="Brightness">2</float>')
+       + item("ReplicatedFirst", "ReplicatedFirst", item("LocalScript", "Loading", source=src("src/first/Loading.client.luau")))
        + item("ReplicatedStorage", "ReplicatedStorage", item("Folder", "Shared", shared))
        + item("ServerScriptService", "ServerScriptService", item("Folder", "Server", server))
        + item("StarterPlayer", "StarterPlayer",
