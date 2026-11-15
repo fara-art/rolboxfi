@@ -850,7 +850,7 @@ Lang.Strings = {
 		skyHint = "This is your plot from above. Place stars at the pedestals.",
 		pickTitle = "PLACE A STAR", pickEmpty = "No stars yet. Roll first!",
 		forgeTitle = "STAR FORGE", forgeHint = "%d of the same star + cash = the next star. Mutation is kept.",
-		forgeBtn = "FORGE  %s", forgeMax = "Top star, can't forge", forgeHave = "%d/%d",
+		forgeBtn = "FORGE  %s", forgeMax = "Top star, can't forge", forgeHybrid = "Hybrid star: made only by fusion", forgeSeasonal = "Seasonal star: can't be forged", forgeHave = "%d/%d",
 		holeTitle = "BLACK HOLE", mass = "%s / %s mass", holeFeed = "Feed it stars to grow its mass.",
 		holeNow = "Now: income x%s, luck x%s", holeNext = "After rebirth: income x%s, luck x%s",
 		holeWarn = "Rebirth resets cash, stars, plot and upgrades. Index and constellations stay.",
@@ -952,7 +952,7 @@ Lang.Strings = {
 		skyHint = "Это твой участок сверху. Ставь звёзды на постаменты.",
 		pickTitle = "ПОСТАВИТЬ ЗВЕЗДУ", pickEmpty = "Звёзд пока нет. Сначала покрути!",
 		forgeTitle = "ЗВЁЗДНАЯ КУЗНЯ", forgeHint = "%d одинаковых звёзд + деньги = следующая звезда. Мутация сохраняется.",
-		forgeBtn = "КОВАТЬ  %s", forgeMax = "Это лучшая звезда", forgeHave = "%d/%d",
+		forgeBtn = "КОВАТЬ  %s", forgeMax = "Это лучшая звезда", forgeHybrid = "Гибрид: только через синтез", forgeSeasonal = "Сезонная звезда: ковать нельзя", forgeHave = "%d/%d",
 		holeTitle = "ЧЁРНАЯ ДЫРА", mass = "%s / %s массы", holeFeed = "Корми её звёздами, чтобы росла масса.",
 		holeNow = "Сейчас: доход x%s, удача x%s", holeNext = "После перерождения: доход x%s, удача x%s",
 		holeWarn = "Перерождение сбрасывает деньги, звёзды, участок и улучшения. Индекс и созвездия остаются.",
@@ -7001,10 +7001,13 @@ do
 		text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 1, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
 		for order, key in sortedInventory() do
 			local star, mutation = Items.parse(key)
-			local nextStar = Stars.List[star.index + 1]
+			local special = star.hybrid or star.season -- fusion / seasonal stars sit outside the forge chain
+			local nextStar = if special then nil else Stars.List[star.index + 1]
 			local have = state.inventory[key]
 			local sub = if nextStar
 				then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
+				elseif star.hybrid then t("forgeHybrid")
+				elseif star.season then t("forgeSeasonal")
 				else t("forgeMax")
 			local r = itemRow(body, order + 1, key, sub)
 			if nextStar then

@@ -1183,10 +1183,13 @@ do
 		text({ Size = UDim2.new(1, 0, 0, 36), LayoutOrder = 1, Text = t("forgeHint", Config.ForgeAmount), TextColor3 = MUTED, FontFace = BODY_SEMI, TextWrapped = true, Max = 15, ZIndex = 21, Parent = body })
 		for order, key in sortedInventory() do
 			local star, mutation = Items.parse(key)
-			local nextStar = Stars.List[star.index + 1]
+			local special = star.hybrid or star.season -- fusion / seasonal stars sit outside the forge chain
+			local nextStar = if special then nil else Stars.List[star.index + 1]
 			local have = state.inventory[key]
 			local sub = if nextStar
 				then "→ " .. Lang.item(lang, Items.key(nextStar.id, mutation.id)) .. "   " .. t("forgeHave", math.min(have, Config.ForgeAmount), Config.ForgeAmount)
+				elseif star.hybrid then t("forgeHybrid")
+				elseif star.season then t("forgeSeasonal")
 				else t("forgeMax")
 			local r = itemRow(body, order + 1, key, sub)
 			if nextStar then
