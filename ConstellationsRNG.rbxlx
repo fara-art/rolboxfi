@@ -813,7 +813,7 @@ local Lang = {}
 Lang.Strings = {
 	en = {
 		cash = "CASH", perSec = "PER SEC", luck = "LUCK", rolls = "ROLLS", rebirths = "REBIRTHS",
-		language = "Language", upTabCash = "UPGRADES", upTabRebirth = "REBIRTH", rebirthTokens = "Rebirth tokens: %d", tokensCost = "%d TOKENS",
+		language = "Language", uiMode = "Interface", uiMode_auto = "Auto", uiMode_pc = "PC", uiMode_phone = "Phone", upTabCash = "UPGRADES", upTabRebirth = "REBIRTH", rebirthTokens = "Rebirth tokens: %d", tokensCost = "%d TOKENS",
 		rup_luck = "Luck", rup_cash = "Income", rup_speed = "Roll speed", rup_multi = "Extra star",
 		petsFull = "Pet slots are full (%d)", petEquip = "EQUIP", petUnequip = "UNEQUIP", petInfo = "+%d%% luck   +%d%% speed", toastSeasonalNoUpgrade = "Seasonal stars can't get mutations", toastBoughtLevels = "Bought %d levels!", offlineEarned = "While you were away (%s) your museum earned +%s", upMaxBtn = "MAX", petsTitle = "PETS %d/%d   +%d%% luck   +%d%% speed",
 		petsHint = "Pick a star below and press EQUIP: it will orbit you and add luck", rup_pets = "Pet slots",
@@ -915,7 +915,7 @@ Lang.Strings = {
 	},
 	ru = {
 		cash = "ДЕНЬГИ", perSec = "В СЕКУНДУ", luck = "УДАЧА", rolls = "КРУТКИ", rebirths = "ПЕРЕРОЖД.",
-		language = "Язык", upTabCash = "УЛУЧШЕНИЯ", upTabRebirth = "ПЕРЕРОЖДЕНИЕ", rebirthTokens = "Токены перерождения: %d", tokensCost = "%d ТОКЕН(ОВ)",
+		language = "Язык", uiMode = "Интерфейс", uiMode_auto = "Авто", uiMode_pc = "ПК", uiMode_phone = "Телефон", upTabCash = "УЛУЧШЕНИЯ", upTabRebirth = "ПЕРЕРОЖДЕНИЕ", rebirthTokens = "Токены перерождения: %d", tokensCost = "%d ТОКЕН(ОВ)",
 		rup_luck = "Удача", rup_cash = "Доход", rup_speed = "Скорость ролла", rup_multi = "Доп. звезда",
 		petsFull = "Все слоты питомцев заняты (%d)", petEquip = "НАДЕТЬ", petUnequip = "СНЯТЬ", petInfo = "+%d%% удачи   +%d%% скорости", toastSeasonalNoUpgrade = "Сезонным звёздам мутации нельзя", toastBoughtLevels = "Куплено уровней: %d!", offlineEarned = "Пока тебя не было (%s), музей заработал +%s", upMaxBtn = "МАКС", petsTitle = "ПИТОМЦЫ %d/%d   +%d%% удачи   +%d%% скорости",
 		petsHint = "Выбери звезду ниже и нажми «НАДЕТЬ»: она будет летать вокруг тебя и давать удачу", rup_pets = "Слоты питомцев",
@@ -2602,6 +2602,8 @@ end
 function actions.SetSetting(player, data, name, value)
 	if (name == "music" or name == "sfx" or name == "night" or name == "rollAnim") and type(value) == "boolean" then
 		data.settings[name] = value
+	elseif name == "uiMode" and (value == "auto" or value == "pc" or value == "phone") then
+		data.settings.uiMode = value
 	elseif name == "rareAlert" and type(value) == "number" and value == value and value >= 0 and value <= 1e15 then
 		data.settings.rareAlert = value
 	end
@@ -6333,8 +6335,9 @@ do
 			w.frame.Position = target + UDim2.new(0, 520, 0, 0)
 			TweenService:Create(w.frame, TweenInfo.new(0.35, Enum.EasingStyle.Quint), { Position = target }):Play()
 		elseif willShow then
-			w.scale.Scale = 0.85
-			TweenService:Create(w.scale, TweenInfo.new(0.28, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+			local fit = w.fit or 1 -- smaller on phones (see layoutHud)
+			w.scale.Scale = 0.85 * fit
+			TweenService:Create(w.scale, TweenInfo.new(0.28, Enum.EasingStyle.Back), { Scale = fit }):Play()
 		end
 		if willShow and renderers[w] then
 			local ok, err = pcall(renderers[w])
@@ -7319,7 +7322,7 @@ do
 		local body = settingsW.body
 		clear(body)
 		-- language
-		local langRow = row(body, 0, 60, WHITE)
+		local langRow = row(body, -2, 60, WHITE)
 		text({ Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), Text = t("language"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = langRow })
 		for i, code in { "en", "ru" } do
 			btn(if lang == code then BLUE else GREY, {
@@ -7328,6 +7331,26 @@ do
 				ActionEv:FireServer("SetLang", code)
 				setLang(code)
 				renderers[settingsW]()
+			end)
+		end
+		-- interface size: auto / PC / phone (if the auto detection gets it wrong)
+		local uiRow = row(body, 0, 60, WHITE)
+		uiRow.LayoutOrder = -1
+		text({ Size = UDim2.new(0.34, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), Text = t("uiMode"), FontFace = TITLE, TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 22, Parent = uiRow })
+		local currentMode = (state and state.settings and state.settings.uiMode) or "auto"
+		for i, mode in { "auto", "pc", "phone" } do
+			btn(if currentMode == mode then BLUE else GREY, {
+				Size = UDim2.new(0.2, 0, 0, 42), Position = UDim2.new(0.36 + (i - 1) * 0.21, 0, 0, 9), Text = t("uiMode_" .. mode), Max = 16, ZIndex = 22, Parent = uiRow,
+			}, function()
+				if state then
+					state.settings = state.settings or {}
+					state.settings.uiMode = mode
+					ActionEv:FireServer("SetSetting", "uiMode", mode)
+					if hud.relayout then
+						hud.relayout()
+					end
+					renderers[settingsW]()
+				end
 			end)
 		end
 		for order, name in { "music", "sfx", "rollAnim" } do
@@ -8490,6 +8513,9 @@ do
 		end
 		if firstState then
 			task.defer(applyDayNight) -- the world's lighting is set by the server first
+		end
+		if firstState and hud.relayout then
+			task.defer(hud.relayout) -- saved interface size
 		end
 		if firstState then
 			firstState = false
@@ -10101,6 +10127,35 @@ do
 		local vp = camera.ViewportSize
 		local s = math.clamp(math.min(vp.Y / 760, vp.X / 1400), 0.45, 1)
 		local phone = s < 0.8 and UserInputService.TouchEnabled
+		local mode = state and state.settings and state.settings.uiMode
+		if mode == "pc" then
+			s, phone = 1, false
+		elseif mode == "phone" then
+			s, phone = math.min(s, 0.6), true
+		end
+		-- windows: on phones they get a bigger share of the screen, and everything inside is drawn on a
+		-- desktop-sized canvas that a UIScale shrinks (so nothing inside overflows or gets cut off)
+		local ws = math.clamp(s * 1.12, 0.5, 1)
+		for _, w in windows do
+			if not w.base then
+				w.base = { Size = w.frame.Size, Position = w.frame.Position, AnchorPoint = w.frame.AnchorPoint }
+			end
+			if phone then
+				local sz = w.base.Size
+				local width = math.clamp(sz.X.Scale * 1.5, 0.56, 0.84)
+				local height = math.clamp(sz.Y.Scale * 1.3, 0.62, 0.78)
+				w.fit = ws
+				w.frame.AnchorPoint = Vector2.new(0.5, 0.5)
+				w.frame.Position = UDim2.new(0.5, 0, 0.56, 0)
+				w.frame.Size = UDim2.new(width / ws, 0, height / ws, 0)
+			else
+				w.fit = 1
+				w.frame.AnchorPoint = w.base.AnchorPoint
+				w.frame.Position = w.base.Position
+				w.frame.Size = w.base.Size
+			end
+			w.scale.Scale = w.fit
+		end
 		for _, frame in { hud.header, hud.corner, hud.left, hud.right, telescope, luckyBar, reelHolder, tutorialCard, settingsButton, adminButton, hud.buildPanel, hud.buildBottom } do
 			local scale = scaleOf(frame)
 			if scale then
@@ -10125,8 +10180,31 @@ do
 				hud.corner.Position = UDim2.new(0, 14, 1, -10)
 			end
 		end
-		pcall(ContextActionService.SetPosition, ContextActionService, "Sprint", if phone then UDim2.new(1, -96, 1, -96) else UDim2.new(1, -170, 1, -170))
+		-- phones: the run button sits LEFT of the jump button (not under it)
+		pcall(ContextActionService.SetPosition, ContextActionService, "Sprint", if phone then UDim2.new(1, -230, 1, -95) else UDim2.new(1, -170, 1, -170))
+		hud.phone = phone
 	end
+	-- phones: while a window is open, hide the top bar / side buttons so the window has room
+	local function windowOpen(): boolean
+		for _, w in windows do
+			if w.frame.Visible then
+				return true
+			end
+		end
+		return false
+	end
+	local function hideBehindWindows()
+		local hide = hud.phone == true and windowOpen()
+		for _, frame in { hud.header, hud.corner, luckyBar, hud.left, hud.right, settingsButton } do
+			if frame then
+				frame.Visible = not hide
+			end
+		end
+	end
+	for _, w in windows do
+		w.frame:GetPropertyChangedSignal("Visible"):Connect(hideBehindWindows)
+	end
+	hud.relayout = layoutHud
 	task.defer(layoutHud)
 	local function watchCamera()
 		local camera = workspace.CurrentCamera

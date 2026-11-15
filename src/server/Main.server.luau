@@ -999,6 +999,8 @@ end
 function actions.SetSetting(player, data, name, value)
 	if (name == "music" or name == "sfx" or name == "night" or name == "rollAnim") and type(value) == "boolean" then
 		data.settings[name] = value
+	elseif name == "uiMode" and (value == "auto" or value == "pc" or value == "phone") then
+		data.settings.uiMode = value
 	elseif name == "rareAlert" and type(value) == "number" and value == value and value >= 0 and value <= 1e15 then
 		data.settings.rareAlert = value
 	end
