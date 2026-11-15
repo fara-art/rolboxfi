@@ -4209,10 +4209,24 @@ do
 		end
 		local color = if mutation and mutation.id ~= "normal" then mutation.color else star.color
 		local message = Lang.t(lang, if sameServer then "chatRareHere" else "chatRareGlobal", name, Lang.item(lang, key), Format.number(chance))
-		local hex = string.format("#%02X%02X%02X", math.floor(color.R * 255), math.floor(color.G * 255), math.floor(color.B * 255))
+		-- rainbow text: every letter its own colour (red -> yellow -> green -> blue -> purple)
+		local escaped = message:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+		local parts, i, count = {}, 0, utf8.len(message) or 1
+		for _, code in utf8.codes(escaped) do
+			local ch = utf8.char(code)
+			if ch == " " then
+				table.insert(parts, ch)
+			else
+				local c = Color3.fromHSV((i / math.max(count, 1)) * 0.8 % 1, 0.85, 1)
+				table.insert(parts, string.format('<font color="#%02X%02X%02X">%s</font>', math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255), ch))
+			end
+			i += 1
+		end
+		local rich = "<b>" .. table.concat(parts) .. "</b>"
+		local _ = color
 		local ok = pcall(function()
 			local channel = TextChatService:WaitForChild("TextChannels", 5):WaitForChild("RBXGeneral", 5)
-			channel:DisplaySystemMessage('<font color="' .. hex .. '"><b>' .. message .. '</b></font>')
+			channel:DisplaySystemMessage(rich)
 		end)
 		if not ok then -- legacy chat
 			pcall(StarterGui.SetCore, StarterGui, "ChatMakeSystemMessage", { Text = message, Color = color, Font = Enum.Font.GothamBold })
