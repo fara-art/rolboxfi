@@ -72,6 +72,14 @@ x2 luck and x2 roll-speed boosts for 15/30/60 min, permanent speed tiers (6) and
 Owner must create every product in Creator Hub (Monetization → Developer Products) and send the IDs.
 ProcessReceipt is idempotent (data.receipts).
 
+## Recent systems
+- Shop window: tab rail (featured crate with 50-pack + rainbow top drop, game passes `Config.Passes`, coin packs,
+  "double your luck/speed" tiers, boosts), gifting (action SetGift before the purchase), crate results grid.
+- Trading (server: actions Trade*, 5 s countdown after both ready; client: playersW / tradeReqW / tradeW).
+- Daily chest (`Config.DailyRewards`), codes (`src/server/Codes.luau`, server-only), one-time tutorial.
+- Loading screen: `src/first/Loading.client.luau` → ReplicatedFirst.
+- New UI icons waiting for upload: ui_robux, ui_crate, ui_shop, ui_crown, ui_bolt, ui_dice2, ui_target (`assets/icons_new.zip`).
+
 ## Ideas agreed / next up
 - Daily rewards with streaks, codes (`/code`), first-minutes tutorial, group bonus, invite bonus.
 - Owner wants more things to do with stars (to be decided).
