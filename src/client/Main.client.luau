@@ -269,6 +269,8 @@ local gui = make("ScreenGui", {
 	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	Parent = player:WaitForChild("PlayerGui"),
 })
+-- HUD pieces that get scaled down / moved on small (phone) screens, see layoutHud at the end
+local hud = {}
 
 local function panelFrame(props)
 	props.BackgroundColor3 = props.BackgroundColor3 or PANEL
@@ -280,6 +282,7 @@ end
 local readout, cashValue, incomeValue, luckValue, rollsValue, rebirthValue, luckyBar, luckyFill, luckyText, showerBanner, showToast
 do
 	local header = panelFrame({ Size = UDim2.new(0, 380, 0, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), Parent = gui })
+	hud.header = header
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0.01, 0), Parent = header })
 	readout = function(key: string, color: Color3, iconKey: string?, fallbackIcon: string?)
 		local box = make("Frame", { Size = UDim2.new(0.32, 0, 1, 0), BackgroundTransparency = 1, Parent = header })
@@ -308,6 +311,7 @@ do
 	local headerRollsBox = rollsValue.Parent.Parent
 	-- bottom-left corner: rolls and cash, big and chunky
 	local cornerHud = make("Frame", { Size = UDim2.new(0, 360, 0, 120), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 14, 1, -10), BackgroundTransparency = 1, Parent = gui })
+	hud.corner = cornerHud
 	local function hudLine(y: number, iconKey: string, color: Color3)
 		local icon = uiIcon(iconKey, { Size = UDim2.new(0, 54, 0, 54), Position = UDim2.new(0, 0, 0, y), Parent = cornerHud })
 		local label = make("TextLabel", {
@@ -1989,9 +1993,11 @@ do
 	local hoverKey: string? = nil -- PC: spot under the mouse
 	-- defined below (the panel's EXIT button needs it)
 	local buildPanel = panelFrame({ Size = UDim2.new(0, 380, 0, 440), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.55, 0), Visible = false, ZIndex = 30, Parent = gui })
+	hud.buildPanel = buildPanel
 	buildPanel.BackgroundColor3 = Color3.fromRGB(70, 78, 108)
 	buildPanel.BackgroundTransparency = 0
 	local buildBottom = make("Frame", { Size = UDim2.new(0, 360, 0, 190), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -10), BackgroundTransparency = 1, Visible = false, ZIndex = 30, Parent = gui })
+	hud.buildBottom = buildBottom
 	local buildTab = "stands"
 
 	myPlotFolder = function(): Instance?
@@ -2306,6 +2312,7 @@ do
 
 	-- left side: roll rewards + index
 	local leftColumn = buttonGroup(4, false, { AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.45, 0), Parent = gui })
+	hud.left = leftColumn
 	addButtons(leftColumn, {
 		{ "rewards", rewardsW, RED, "rewards" },
 		{ "index", indexW, LILAC, "index" },
@@ -2314,6 +2321,7 @@ do
 	})
 	-- right side: everything else (codes live at the bottom of the shop now)
 	local rightColumn = buttonGroup(4, false, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Parent = gui })
+	hud.right = rightColumn
 	addButtons(rightColumn, {
 		{ "shop", shopW, Color3.fromRGB(70, 200, 90), "shop" },
 		{ "build", "build", Color3.fromRGB(240, 150, 60), "build" },
@@ -4232,4 +4240,62 @@ do
 			pcall(StarterGui.SetCore, StarterGui, "ChatMakeSystemMessage", { Text = message, Color = color, Font = Enum.Font.GothamBold })
 		end
 	end)
+end
+
+---------------------------------------------------------------- Phone / small screens: shrink the HUD and move pieces apart
+do
+	local scales = {}
+	local function scaleOf(frame: GuiObject?)
+		if not frame then
+			return nil
+		end
+		if not scales[frame] then
+			scales[frame] = make("UIScale", { Parent = frame })
+		end
+		return scales[frame]
+	end
+	local function layoutHud()
+		local camera = workspace.CurrentCamera
+		if not camera then
+			return
+		end
+		local vp = camera.ViewportSize
+		local s = math.clamp(math.min(vp.Y / 760, vp.X / 1400), 0.45, 1)
+		local phone = s < 0.8 and UserInputService.TouchEnabled
+		for _, frame in { hud.header, hud.corner, hud.left, hud.right, telescope, luckyBar, reelHolder, tutorialCard, settingsButton, adminButton, hud.buildPanel, hud.buildBottom } do
+			local scale = scaleOf(frame)
+			if scale then
+				scale.Scale = s
+			end
+		end
+		luckyBar.Position = UDim2.new(0.5, 0, 0, 8 + 64 * s)
+		reelHolder.Position = UDim2.new(0.5, 0, 0, 8 + 100 * s)
+		tutorialCard.Position = UDim2.new(0, 16 + 88 * s, 0.42, 0)
+		settingsButton.Position = UDim2.new(0, 16, 0, if phone then 60 else 64)
+		adminButton.Position = UDim2.new(0, 16 + 52 * s, 0, if phone then 60 else 64)
+		if hud.left then
+			hud.left.Position = UDim2.new(0, 16, if phone then 0.55 else 0.45, 0)
+		end
+		if hud.corner then
+			if phone then
+				-- the thumbstick lives bottom-left on phones: cash/rolls go to the top right instead
+				hud.corner.AnchorPoint = Vector2.new(1, 0)
+				hud.corner.Position = UDim2.new(1, -(28 + 72 * s), 0, 8)
+			else
+				hud.corner.AnchorPoint = Vector2.new(0, 1)
+				hud.corner.Position = UDim2.new(0, 14, 1, -10)
+			end
+		end
+		pcall(ContextActionService.SetPosition, ContextActionService, "Sprint", if phone then UDim2.new(1, -96, 1, -96) else UDim2.new(1, -170, 1, -170))
+	end
+	task.defer(layoutHud)
+	local function watchCamera()
+		local camera = workspace.CurrentCamera
+		if camera then
+			camera:GetPropertyChangedSignal("ViewportSize"):Connect(layoutHud)
+		end
+		layoutHud()
+	end
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
+	watchCamera()
 end

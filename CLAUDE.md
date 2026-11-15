@@ -115,6 +115,8 @@ ProcessReceipt is idempotent (data.receipts).
 - Offline income: data.lastIncome/lastSeen, paid on join (`Config.OfflineMaxHours`, `OfflineShare`).
 - Upgrades have a MAX button (action BuyMax). Inventory sorted by real odds (Items.rank).
 
+- Phone layout: `hud` table + layoutHud (end of Main.client) scales HUD pieces with UIScale by viewport (s = 0.45..1);
+  on touch + small screens cash/rolls move to the top right (thumbstick is bottom-left), sprint button moves.
 - Super-rare finds (>= Config.ChatAllServersChance = 1/50M): chat system message on this server + every server via
   MessagingService topic "StarRNG_RareFind" (remote RareChat, client uses TextChatService RBXGeneral).
 - Falling stars: every 2.5–4.5 min one lands on the hub (World.dropStar), first to catch rolls with luck x10.
