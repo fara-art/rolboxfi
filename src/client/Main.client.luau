@@ -1299,10 +1299,11 @@ do
 		end
 		local tabs = make("Frame", { Size = UDim2.new(1, 0, 0, 46), LayoutOrder = 0, BackgroundTransparency = 1, ZIndex = 21, Parent = body })
 		for i, tab in { { id = "forge", key = "forgeTab", color = GOLD }, { id = "fusion", key = "fusionTab", color = Color3.fromRGB(170, 90, 255) } } do
-			btn(if forgeTab == tab.id then tab.color else Color3.fromRGB(110, 118, 150), { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new((i - 1) * 0.5, if i == 2 then 4 else 0, 0, 0), Text = t(tab.key), Max = 20, ZIndex = 22, Parent = tabs }, function()
+			local b = btn(if forgeTab == tab.id then tab.color else Color3.fromRGB(110, 118, 150), { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new((i - 1) * 0.5, if i == 2 then 4 else 0, 0, 0), Text = t(tab.key), Max = 20, ZIndex = 22, Parent = tabs }, function()
 				forgeTab = tab.id
 				renderers[forgeW]()
 			end)
+			uiIcon(if tab.id == "fusion" then "fusion" else "forge", { Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 6, 0.5, -20), ZIndex = 24, Parent = b })
 		end
 		if forgeTab == "fusion" then
 			fusionPage(body)
