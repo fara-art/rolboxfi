@@ -159,9 +159,22 @@ Config.DataStoreName = "ConstellationsRNG_v1"
 -- ================= Robux shop (Developer Products). id = 0 -> not created yet (free test purchases in Studio)
 Config.Shop = {
 	-- permanent, bought one after another, each tier much pricier
+	-- "DOUBLE your LUCK / SPEED": every tier adds one more x, every tier costs more
+	luckTiers = {
+		{ id = 0, price = 3 }, { id = 0, price = 8 }, { id = 0, price = 25 }, { id = 0, price = 50 },
+		{ id = 0, price = 99 }, { id = 0, price = 199 }, { id = 0, price = 399 }, { id = 0, price = 799 },
+	},
 	speedTiers = {
-		{ id = 0, price = 49 }, { id = 0, price = 149 }, { id = 0, price = 449 },
-		{ id = 0, price = 1299 }, { id = 0, price = 3499 }, { id = 0, price = 9999 },
+		{ id = 0, price = 5 }, { id = 0, price = 15 }, { id = 0, price = 45 },
+		{ id = 0, price = 99 }, { id = 0, price = 249 }, { id = 0, price = 599 },
+	},
+	-- coin packs: you get at least `base`, or `minutes` of your income if that is more
+	coins = {
+		{ id = 0, price = 25, base = 10000, minutes = 10, key = "coinSmall" },
+		{ id = 0, price = 125, base = 50000, minutes = 45, key = "coinMedium" },
+		{ id = 0, price = 600, base = 300000, minutes = 240, key = "coinBig" },
+		{ id = 0, price = 2250, base = 1200000, minutes = 900, key = "coinMega" },
+		{ id = 0, price = 6750, base = 5000000, minutes = 2880, key = "coinGigantic" },
 	},
 	multiTiers = {
 		{ id = 0, price = 99 }, { id = 0, price = 299 }, { id = 0, price = 899 },
@@ -171,7 +184,7 @@ Config.Shop = {
 	speedBoosts = { { id = 0, price = 39, minutes = 15 }, { id = 0, price = 69, minutes = 30 }, { id = 0, price = 119, minutes = 60 } },
 	-- paid random item: the odds are always shown before buying (Roblox rule)
 	crate = {
-		packs = { { id = 0, price = 99, count = 1 }, { id = 0, price = 249, count = 3 }, { id = 0, price = 799, count = 10 } },
+		packs = { { id = 0, price = 99, count = 1 }, { id = 0, price = 249, count = 3 }, { id = 0, price = 799, count = 10 }, { id = 0, price = 3499, count = 50, oldPrice = 5959 } },
 		odds = {
 			{ item = "hypergiant", p = 0.39 },
 			{ item = "quasar", p = 0.24 },
@@ -185,23 +198,48 @@ Config.Shop = {
 Config.RobuxSpeedStep = 0.85 -- each speed tier: roll time x0.85
 
 -- roll cooldown with every upgrade/boost (same formula on server and client)
-function Config.EffectiveCooldown(data, now: number): number
-	local cooldown = Config.RollCooldown(data.rollSpeedLevel or 0) * Config.RobuxSpeedStep ^ (data.robuxSpeed or 0)
+-- speed multiplier from bought tiers: x1 -> x1.5 -> x2 -> ...
+function Config.RobuxSpeedMult(tiers: number): number
+	return 1 + 0.5 * tiers
+end
+
+function Config.CoinPack(pack, income: number): number
+	return math.max(pack.base, math.floor(income * pack.minutes * 60))
+end
+
+function Config.EffectiveCooldown(data, now: number, passes): number
+	local cooldown = Config.RollCooldown(data.rollSpeedLevel or 0) / Config.RobuxSpeedMult(data.robuxSpeed or 0)
 	if (data.boostSpeedUntil or 0) > now then
 		cooldown *= 0.5
+	end
+	if passes and passes.FastRolls then
+		cooldown /= 1.25
 	end
 	return math.max(0.1, cooldown)
 end
 
-function Config.RollsPerClick(data): number
-	return 1 + (data.multiRollLevel or 0) + (data.robuxMulti or 0)
+function Config.RollsPerClick(data, passes): number
+	return 1 + (data.multiRollLevel or 0) + (data.robuxMulti or 0) + (if passes and passes.ExtraRoll then 1 else 0)
+end
+
+function Config.LuckyEvery(passes): number
+	return if passes and passes.LuckyHunter then 25 else Config.LuckyRoll.every
 end
 
 -- Game pass IDs. 0 = not created yet
-Config.GamePasses = {
-	Luck2x = 0,
-	Cash2x = 0,
+-- Game passes (one-time Robux purchases). id = 0 -> not created yet (free test in Studio)
+Config.Passes = {
+	{ key = "ExtraRoll", id = 0, price = 699, icon = "dice2", top = Color3.fromRGB(80, 200, 255), bottom = Color3.fromRGB(30, 90, 230) },
+	{ key = "FastRolls", id = 0, price = 199, icon = "bolt", top = Color3.fromRGB(255, 190, 80), bottom = Color3.fromRGB(240, 90, 30) },
+	{ key = "VIP", id = 0, price = 199, icon = "crown", top = Color3.fromRGB(255, 240, 120), bottom = Color3.fromRGB(240, 170, 20) },
+	{ key = "Luck2x", id = 0, price = 480, icon = "luck", top = Color3.fromRGB(130, 240, 140), bottom = Color3.fromRGB(30, 160, 80) },
+	{ key = "Cash2x", id = 0, price = 330, icon = "coins", top = Color3.fromRGB(255, 220, 110), bottom = Color3.fromRGB(220, 140, 20) },
+	{ key = "LuckyHunter", id = 0, price = 640, icon = "target", top = Color3.fromRGB(200, 120, 255), bottom = Color3.fromRGB(90, 40, 200) },
 }
+Config.GamePasses = {}
+for _, pass in Config.Passes do
+	Config.GamePasses[pass.key] = pass.id
+end
 
 -- Star icons: upload assets/icons/*.png to Roblox and paste the image IDs here.
 -- Empty = drawn fallback circle.
@@ -303,6 +341,13 @@ Config.UiIcons = {
 	rebirth = "73756458949010", -- ui_rebirth.png
 	build = "81422090060014", -- ui_build.png
 	codes = "135556107125294", -- ui_codes.png
+	robux = "", -- ui_robux.png
+	crate = "", -- ui_crate.png
+	shop = "", -- ui_shop.png
+	crown = "", -- ui_crown.png
+	bolt = "", -- ui_bolt.png
+	dice2 = "", -- ui_dice2.png
+	target = "", -- ui_target.png
 }
 
 -- Audio (assets/audio/*.ogg): upload and paste the IDs.

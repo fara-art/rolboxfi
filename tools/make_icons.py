@@ -324,6 +324,54 @@ img = shape(img, lambda d: d.ellipse((650, 300, 730, 380), fill=255), (255, 255,
 img = shape(img, lambda d: d.ellipse((675, 320, 715, 360), fill=255), (30, 30, 50), (20, 20, 40), outline=4, shadow=False, gloss=False)
 icons["ui_codes"] = save(img, "ui_codes")
 
+# ---- shop icons
+def hexagon(cx, cy, r, rot=math.pi / 6):
+    return [(cx + math.cos(rot + k * math.pi / 3) * r, cy + math.sin(rot + k * math.pi / 3) * r) for k in range(6)]
+# robux-style coin: rounded hexagon with a square hole
+img = shape(blank(), lambda d: d.polygon(hexagon(C, C, 420), fill=255), (130, 255, 150), (20, 170, 70), outline=32)
+img = shape(img, lambda d: d.polygon(hexagon(C, C, 300), fill=255), (40, 150, 70), (20, 110, 50), outline=14, gloss=False, shadow=False)
+img = shape(img, lambda d: d.rounded_rectangle((C - 110, C - 110, C + 110, C + 110), 30, fill=255), (240, 255, 240), (190, 240, 200), outline=14, shadow=False)
+icons["ui_robux"] = save(img, "ui_robux")
+# crate: purple crystal chest
+img = shape(blank(), lambda d: d.rounded_rectangle((150, 400, 874, 880), 50, fill=255), (190, 120, 255), (100, 40, 200), outline=32)
+img = shape(img, lambda d: d.rounded_rectangle((120, 290, 904, 450), 60, fill=255), (210, 150, 255), (120, 60, 220), outline=30)
+img = shape(img, lambda d: d.rectangle((450, 290, 574, 880), fill=255), (255, 230, 120), (235, 170, 40), outline=20, gloss=False, shadow=False)
+for (x, y, r) in [(330, 210, 120), (520, 150, 150), (700, 220, 110)]:
+    img = shape(img, lambda d, x=x, y=y, r=r: d.polygon([(x, y - r), (x + r * 0.5, y + r * 0.6), (x - r * 0.5, y + r * 0.6)], fill=255), (190, 250, 255), (90, 170, 255), outline=20, shadow=False)
+icons["ui_crate"] = save(sparkle(img, 860, 180, 70), "ui_crate")
+# shop: shopping bag with a star
+img = shape(blank(), lambda d: d.rounded_rectangle((180, 330, 844, 900), 60, fill=255), (120, 230, 130), (40, 160, 70), outline=32)
+handle = blank("L")
+ImageDraw.Draw(handle).arc((340, 120, 684, 470), 180, 360, fill=255, width=60)
+img = shape(img, lambda d: d.bitmap((0, 0), handle, fill=255), (255, 230, 120), (235, 170, 40), outline=20, gloss=False, shadow=False)
+img = shape(img, lambda d: d.polygon(star_points(C, 610, 170, 75), fill=255), (255, 245, 170), (255, 190, 50), outline=22, shadow=False)
+icons["ui_shop"] = save(img, "ui_shop")
+# crown (VIP)
+img = shape(blank(), lambda d: d.polygon([(150, 780), (150, 330), (340, 520), (512, 230), (684, 520), (874, 330), (874, 780)], fill=255), (255, 235, 120), (240, 160, 20), outline=32)
+for (x, y) in [(150, 330), (512, 230), (874, 330)]:
+    img = shape(img, lambda d, x=x, y=y: d.ellipse((x - 60, y - 60, x + 60, y + 60), fill=255), (255, 120, 140), (210, 40, 80), outline=16, shadow=False)
+img = shape(img, lambda d: d.rounded_rectangle((150, 700, 874, 820), 30, fill=255), (255, 215, 90), (220, 140, 20), outline=20, shadow=False)
+icons["ui_crown"] = save(sparkle(img, 820, 160, 70), "ui_crown")
+# bolt (fast rolls)
+img = shape(blank(), lambda d: d.polygon([(600, 80), (250, 560), (480, 560), (400, 950), (790, 420), (550, 420), (680, 80)], fill=255), (255, 240, 120), (255, 150, 30), outline=34)
+icons["ui_bolt"] = save(sparkle(img, 240, 220, 70), "ui_bolt")
+# two dice (extra roll)
+for name_, offs in [("ui_dice2", [(-170, 60, -12), (170, -60, 14)])]:
+    img = blank()
+    for (dx, dy, ang) in offs:
+        die = blank("L")
+        ImageDraw.Draw(die).rounded_rectangle((C - 230 + dx, C - 230 + dy, C + 230 + dx, C + 230 + dy), 70, fill=255)
+        die = die.rotate(ang, resample=Image.BICUBIC, center=(C + dx, C + dy))
+        img = shape(img, lambda d, die=die: d.bitmap((0, 0), die, fill=255), (255, 255, 255), (205, 215, 235), outline=30)
+        for (px, py) in [(-110, -110), (110, 110), (0, 0)]:
+            img = shape(img, lambda d, px=px, py=py, dx=dx, dy=dy: d.ellipse((C + dx + px - 45, C + dy + py - 45, C + dx + px + 45, C + dy + py + 45), fill=255), (60, 70, 120), (30, 30, 70), outline=6, gloss=False, shadow=False)
+    icons[name_] = save(img, name_)
+# target (lucky hunter)
+img = blank()
+for (r, top, bot) in [(420, (255, 120, 140), (210, 40, 80)), (300, (255, 255, 255), (225, 230, 240)), (180, (255, 120, 140), (210, 40, 80)), (70, (255, 230, 120), (235, 170, 40))]:
+    img = shape(img, lambda d, r=r: d.ellipse((C - r, C - r, C + r, C + r), fill=255), top, bot, outline=22, shadow=(r == 420), gloss=(r == 420))
+icons["ui_target"] = save(sparkle(img, 840, 180, 70), "ui_target")
+
 # preview sheet
 names = list(icons)
 sheet = Image.new("RGBA", (OUT * 10, OUT * 2), (190, 225, 255, 255))

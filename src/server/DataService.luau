@@ -42,6 +42,7 @@ local function default()
 		luckyProgress = 0, -- rolls towards the next x2 luck roll
 		robuxSpeed = 0, -- bought speed tiers
 		robuxMulti = 0, -- bought extra rolls per click
+		robuxLuck = 0, -- bought "double your luck" tiers
 		boostLuckUntil = 0, -- server time when the x2 luck boost ends
 		boostSpeedUntil = 0,
 		receipts = {}, -- processed purchase ids (never grant twice)

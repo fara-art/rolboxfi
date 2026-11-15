@@ -68,8 +68,9 @@ local function refreshPasses(player: Player)
 	local session = sessions[player]
 	if session then
 		for name in Config.GamePasses do
-			session.passes[name] = checkPass(player, name)
+			session.passes[name] = session.passes[name] or checkPass(player, name)
 		end
+		player:SetAttribute("VIP", session.passes.VIP == true)
 	end
 end
 
@@ -82,6 +83,7 @@ local function getLuck(player: Player, data): number
 	if sessions[player].passes.Luck2x then
 		luck *= 2
 	end
+	luck *= 1 + (data.robuxLuck or 0) -- "double your luck" tiers: x2, x3, x4...
 	if (data.boostLuckUntil or 0) > workspace:GetServerTimeNow() then
 		luck *= 2 -- bought x2 luck boost
 	end
@@ -96,7 +98,7 @@ local function incomePerSecond(player: Player, data): number
 	if not World.plotOf(player) or not session.eval then
 		return 0
 	end
-	local mult = (1 + data.rebirths * Config.RebirthIncomeBonus) * (if session.passes.Cash2x then 2 else 1)
+	local mult = (1 + data.rebirths * Config.RebirthIncomeBonus) * (if session.passes.Cash2x then 2 else 1) * (if session.passes.VIP then 1.5 else 1)
 	return session.eval.income * mult
 end
 
@@ -161,6 +163,7 @@ local function pushState(player: Player)
 		luckyProgress = data.luckyProgress,
 		robuxSpeed = data.robuxSpeed,
 		robuxMulti = data.robuxMulti,
+		robuxLuck = data.robuxLuck,
 		boostLuckUntil = data.boostLuckUntil,
 		boostSpeedUntil = data.boostSpeedUntil,
 		daily = data.daily,
@@ -424,7 +427,7 @@ RollFn.OnServerInvoke = function(player)
 		return nil
 	end
 	local now = os.clock()
-	if now - session.lastRoll < Config.EffectiveCooldown(data, workspace:GetServerTimeNow()) * 0.9 then
+	if now - session.lastRoll < Config.EffectiveCooldown(data, workspace:GetServerTimeNow(), session.passes) * 0.9 then
 		return nil
 	end
 	session.lastRoll = now
@@ -432,11 +435,11 @@ RollFn.OnServerInvoke = function(player)
 	local before = data.totalRolls
 	local luck = getLuck(player, data)
 	local results = {}
-	for i = 1, Config.RollsPerClick(data) do
+	for i = 1, Config.RollsPerClick(data, session.passes) do
 		-- lucky roll: every N rolls one gets boosted luck
 		data.luckyProgress += 1
 		local rollLuck = luck
-		if data.luckyProgress >= Config.LuckyRoll.every then
+		if data.luckyProgress >= Config.LuckyEvery(session.passes) then
 			data.luckyProgress = 0
 			rollLuck *= Config.LuckyRoll.mult
 			toast(player, "luckyNow", { Config.LuckyRoll.mult }, Color3.fromRGB(60, 200, 120))
@@ -930,6 +933,12 @@ local function registerProducts()
 	for i, pack in Config.Shop.crate.packs do
 		products[pack.id] = { kind = "crate", count = pack.count }
 	end
+	for i, tier in Config.Shop.luckTiers do
+		products[tier.id] = { kind = "luckTier", index = i }
+	end
+	for i, pack in Config.Shop.coins do
+		products[pack.id] = { kind = "coins", pack = pack }
+	end
 	products[0] = nil -- not created yet
 end
 registerProducts()
@@ -952,6 +961,10 @@ local function grantProduct(player: Player, data, product): boolean
 		data.robuxSpeed += 1
 	elseif product.kind == "multi" then
 		data.robuxMulti += 1
+	elseif product.kind == "luckTier" then
+		data.robuxLuck += 1
+	elseif product.kind == "coins" then
+		setCash(player, data, data.cash + Config.CoinPack(product.pack, incomePerSecond(player, data)))
 	elseif product.kind == "luckBoost" then
 		data.boostLuckUntil = math.max(now, data.boostLuckUntil) + product.minutes * 60
 	elseif product.kind == "speedBoost" then
@@ -973,6 +986,17 @@ local function grantProduct(player: Player, data, product): boolean
 	return true
 end
 
+local pendingGift: { [Player]: { target: Player, expires: number } } = {}
+
+actions.SetGift = function(player, data, targetUserId)
+	local target = type(targetUserId) == "number" and Players:GetPlayerByUserId(targetUserId)
+	if target and target ~= player and sessions[target] then
+		pendingGift[player] = { target = target, expires = os.clock() + 120 }
+	else
+		pendingGift[player] = nil
+	end
+end
+
 MarketplaceService.ProcessReceipt = function(receipt)
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	local data = player and DataService.get(player)
@@ -983,8 +1007,19 @@ MarketplaceService.ProcessReceipt = function(receipt)
 	if data.receipts[receipt.PurchaseId] then
 		return Enum.ProductPurchaseDecision.PurchaseGranted -- already given
 	end
-	if not grantProduct(player, data, product) then
+	-- a gift goes to the chosen player if they are still here, otherwise to the buyer
+	local gift = pendingGift[player]
+	pendingGift[player] = nil
+	local receiver, receiverData = player, data
+	if gift and gift.expires > os.clock() and gift.target.Parent and DataService.get(gift.target) and sessions[gift.target] then
+		receiver, receiverData = gift.target, DataService.get(gift.target)
+	end
+	if not grantProduct(receiver, receiverData, product) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if receiver ~= player then
+		toast(player, "giftSent", { receiver.DisplayName }, Color3.fromRGB(180, 110, 255))
+		toast(receiver, "giftGot", { player.DisplayName }, Color3.fromRGB(180, 110, 255))
 	end
 	data.receipts[receipt.PurchaseId] = true
 	-- keep the receipt list small
@@ -1004,10 +1039,24 @@ actions.ShopTest = function(player, data, kind, index)
 	if not RunService:IsStudio() or type(kind) ~= "string" or type(index) ~= "number" then
 		return
 	end
-	local list = ({ speed = Config.Shop.speedTiers, multi = Config.Shop.multiTiers, luckBoost = Config.Shop.luckBoosts, speedBoost = Config.Shop.speedBoosts, crate = Config.Shop.crate.packs })[kind]
+	if kind == "pass" then
+		local pass = Config.Passes[index]
+		local session = sessions[player]
+		if pass and session then
+			session.passes[pass.key] = true
+			player:SetAttribute("VIP", session.passes.VIP == true)
+			recompute(player, data)
+			pushState(player)
+		end
+		return
+	end
+	local list = ({
+		speed = Config.Shop.speedTiers, multi = Config.Shop.multiTiers, luckBoost = Config.Shop.luckBoosts, speedBoost = Config.Shop.speedBoosts,
+		crate = Config.Shop.crate.packs, luckTier = Config.Shop.luckTiers, coins = Config.Shop.coins,
+	})[kind]
 	local entry = list and list[index]
 	if entry then
-		grantProduct(player, data, { kind = kind, minutes = entry.minutes, count = entry.count })
+		grantProduct(player, data, { kind = kind, minutes = entry.minutes, count = entry.count, pack = entry })
 	end
 end
 
