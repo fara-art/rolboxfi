@@ -10049,7 +10049,7 @@ do
 		local color = if mutation and mutation.id ~= "normal" then mutation.color else star.color
 		local message = Lang.t(lang, if sameServer then "chatRareHere" else "chatRareGlobal", name, Lang.item(lang, key), Format.number(chance))
 		-- rainbow text: every letter its own colour (red -> yellow -> green -> blue -> purple)
-		local escaped = message:gsub("[<>local escaped = message:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")]", "") -- no markup characters inside the rainbow
+		local escaped = (message:gsub("[<>&]", "")) -- no markup characters inside the rainbow
 		local parts, i, count = {}, 0, utf8.len(message) or 1
 		for _, code in utf8.codes(escaped) do
 			local ch = utf8.char(code)
